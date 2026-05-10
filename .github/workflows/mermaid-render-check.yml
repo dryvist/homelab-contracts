@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: cachix/install-nix-action@v32
+      - uses: cachix/install-nix-action@v31
       - name: Re-render every .mmd to .svg (sibling file with .svg extension)
         run: bash .github/scripts/render-mermaid.sh
       - name: Fail on uncommitted SVG changes

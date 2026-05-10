@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Install check-jsonschema
-        uses: python-jsonschema/check-jsonschema@0.39.0
+        uses: python-jsonschema/check-jsonschema@0.37.2
         with:
           schemafile: schemas/ansible-inventory-v1.json
           files: examples/ansible_inventory.json

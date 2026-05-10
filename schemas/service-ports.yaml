@@ -1,7 +1,7 @@
 # Single source of truth for the dryvist homelab port constants.
 #
-# Ported verbatim from JacobPEvans/terraform-proxmox/locals.tf:pipeline_constants
-# (see https://github.com/JacobPEvans/terraform-proxmox/blob/main/locals.tf).
+# Ported verbatim from the pipeline_constants block in
+# JacobPEvans/terraform-proxmox/locals.tf (see github.com/JacobPEvans).
 #
 # Consumed by:
 #   - dryvist/tofu-proxmox-cluster (via Terragrunt include / yamldecode)
