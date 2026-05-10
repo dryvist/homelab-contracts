@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dryvist/homelab-schemas/schemas/ansible-inventory-v1.json",
+  "title": "dryvist homelab ansible_inventory contract (v1)",
+  "description": "Schema for the ansible_inventory.json artifact written by dryvist/tofu-proxmox-cluster and consumed by dryvist/ansible-proxmox-cluster + dryvist/ansible-server-apps. Versioned: breaking changes require a v2.0.0 release and a corresponding versions/v2.0.0/ directory.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "domain",
+    "cluster",
+    "hosts",
+    "constants"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "description": "Semantic version of this schema; consumers fail-fast if major differs.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "domain": {
+      "description": "Internal DNS domain used for FQDN resolution (e.g., example.local).",
+      "type": "string",
+      "minLength": 1
+    },
+    "cluster": {
+      "description": "Cluster-level metadata. fabric_cidr is a placeholder until 2.5 GbE Switch Flex IP plan is set.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Proxmox cluster name (e.g., 'dryvist')."
+        },
+        "fabric_cidr": {
+          "type": ["string", "null"],
+          "description": "Placeholder for the 2.5 GbE corosync fabric CIDR (e.g., '10.0.50.0/29'). Null until cluster forms.",
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$" }
+          ]
+        },
+        "node_names": {
+          "type": "array",
+          "description": "Ordered list of Proxmox node short names (e.g., ['proxmox-b','proxmox-c','proxmox-d']).",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "hosts": {
+      "description": "Map of physical host short-name -> host metadata. Includes Proxmox cluster nodes AND standalone bare-metal hosts (e.g., the AI host).",
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "$ref": "#/$defs/host"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ha_groups": {
+      "description": "Placeholder for Proxmox HA groups; populated only after Ceph lands. Empty object until then.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["nodes"],
+        "additionalProperties": false,
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "restricted": { "type": "boolean", "default": false },
+          "nofailback": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "replication_jobs": {
+      "description": "Placeholder for proxmox_replication jobs; populated only after Ceph lands. Empty array until then.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_vmid", "target_node", "schedule"],
+        "additionalProperties": false,
+        "properties": {
+          "source_vmid": { "type": "integer", "minimum": 100, "maximum": 999999 },
+          "target_node": { "type": "string", "minLength": 1 },
+          "schedule": { "type": "string", "minLength": 1, "description": "Systemd calendar event, e.g., '*/15'." },
+          "rate_mbps": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    },
+    "pbs_targets": {
+      "description": "Map of PBS instance name -> connection metadata. Each cluster node hosts one PBS LXC; the sync ring is described as targets.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["host", "port", "datastore"],
+        "additionalProperties": false,
+        "properties": {
+          "host": { "type": "string", "minLength": 1, "description": "FQDN or IP of the PBS instance." },
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 8007 },
+          "datastore": { "type": "string", "minLength": 1 },
+          "fingerprint": { "type": ["string", "null"], "description": "PBS server certificate fingerprint." },
+          "sync_targets": {
+            "type": "array",
+            "description": "Other pbs_targets keys this instance should sync TO (forms the ring).",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "openbao": {
+      "description": "OpenBao (Vault-compatible) endpoint placeholder. Populated once OpenBao LXC is deployed; null at scaffold time.",
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "Full URL including scheme and port (e.g., 'https://openbao.example.local:8200')."
+        },
+        "ca_bundle_path": {
+          "type": ["string", "null"],
+          "description": "Path on the Ansible controller to the CA bundle for TLS verification."
+        }
+      }
+    },
+    "containers": {
+      "description": "LXC containers managed by OpenTofu. Map of logical key -> container metadata.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/container" }
+    },
+    "vms": {
+      "description": "VMs (non-Docker, non-Splunk) managed by OpenTofu. Map of logical key -> VM metadata.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/vm" }
+    },
+    "docker_vms": {
+      "description": "Subset of VMs tagged 'docker' (e.g., GitHub Actions runners host).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/vm" }
+    },
+    "splunk_vm": {
+      "description": "Splunk Enterprise VM (vendor-only Docker deployment). Single-key object.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/vm" }
+    },
+    "constants": {
+      "description": "Port constants. Mirrored from schemas/service-ports.yaml. Consumers MUST cross-check against the YAML.",
+      "type": "object",
+      "required": [
+        "service_ports",
+        "syslog_ports",
+        "netflow_ports",
+        "notification_ports",
+        "vector_db_ports"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "service_ports": { "$ref": "#/$defs/portMap" },
+        "syslog_ports": { "$ref": "#/$defs/portMap" },
+        "netflow_ports": { "$ref": "#/$defs/portMap" },
+        "notification_ports": { "$ref": "#/$defs/portMap" },
+        "vector_db_ports": { "$ref": "#/$defs/portMap" }
+      }
+    },
+    "host_services": {
+      "description": "Host-level service config (e.g., NAS via ZFS+Samba). Free-form per-service object so Ansible roles own validation.",
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    }
+  },
+  "$defs": {
+    "host": {
+      "type": "object",
+      "required": ["mgmt_ip", "host_services"],
+      "additionalProperties": false,
+      "properties": {
+        "mgmt_ip": {
+          "type": "string",
+          "description": "Management network IP (1 GbE rack switch).",
+          "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$"
+        },
+        "fabric_ip": {
+          "type": ["string", "null"],
+          "description": "2.5 GbE cluster fabric IP. Null for non-cluster hosts (e.g., the AI host).",
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$" }
+          ]
+        },
+        "vmid_range": {
+          "type": ["array", "null"],
+          "description": "Two-element [min, max] inclusive range of VMIDs allocated to this node.",
+          "items": { "type": "integer", "minimum": 100, "maximum": 999999 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "zfs_pool_devices": {
+          "type": "array",
+          "description": "Per-host ZFS pool device list. Empty array if host does not own a ZFS pool.",
+          "items": {
+            "type": "object",
+            "required": ["pool_name", "vdev_type", "devices"],
+            "additionalProperties": false,
+            "properties": {
+              "pool_name": { "type": "string", "minLength": 1 },
+              "vdev_type": {
+                "type": "string",
+                "enum": ["mirror", "raidz1", "raidz2", "raidz3", "stripe"]
+              },
+              "devices": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            }
+          }
+        },
+        "host_services": {
+          "type": "object",
+          "description": "Per-host service config (e.g., NAS, healthchecks). Free-form; Ansible roles own validation.",
+          "additionalProperties": { "type": "object" }
+        },
+        "pbs_ctid": {
+          "type": ["integer", "null"],
+          "description": "VMID of the PBS LXC running on this host. Null if host does not run PBS.",
+          "minimum": 100,
+          "maximum": 999999
+        },
+        "hc_slug": {
+          "type": ["string", "null"],
+          "description": "healthchecks.io slug for this host's heartbeat.",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "description": "Logical role of this host.",
+          "enum": ["proxmox_node", "ai_host", "pxe_host"]
+        }
+      }
+    },
+    "container": {
+      "type": "object",
+      "required": ["vmid", "hostname", "ip", "node", "ansible_connection"],
+      "additionalProperties": false,
+      "properties": {
+        "vmid": { "type": "integer", "minimum": 100, "maximum": 999999 },
+        "hostname": { "type": "string", "minLength": 1 },
+        "ip": { "type": "string", "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$" },
+        "node": { "type": "string", "minLength": 1 },
+        "ansible_connection": {
+          "type": "string",
+          "enum": ["community.proxmox.proxmox_pct_remote", "ssh", "local"]
+        },
+        "ansible_pct_vmid": { "type": ["integer", "null"], "minimum": 100, "maximum": 999999 },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "pool_id": { "type": ["string", "null"] }
+      }
+    },
+    "vm": {
+      "type": "object",
+      "required": ["vmid", "hostname", "ip", "node", "ansible_connection"],
+      "additionalProperties": false,
+      "properties": {
+        "vmid": { "type": "integer", "minimum": 100, "maximum": 999999 },
+        "hostname": { "type": "string", "minLength": 1 },
+        "ip": { "type": "string", "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$" },
+        "node": { "type": "string", "minLength": 1 },
+        "ansible_connection": {
+          "type": "string",
+          "enum": ["ssh", "local", "community.proxmox.proxmox_pct_remote"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "pool_id": { "type": ["string", "null"] }
+      }
+    },
+    "portMap": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

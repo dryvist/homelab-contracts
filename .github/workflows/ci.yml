@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-schema:
+    name: validate example against schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install check-jsonschema
+        uses: python-jsonschema/check-jsonschema@0.39.0
+        with:
+          schemafile: schemas/ansible-inventory-v1.json
+          files: examples/ansible_inventory.json
+
+  validate-ports-yaml:
+    name: lint service-ports.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: schemas/service-ports.yaml
+          strict: true
+
+  semver-bump-gate:
+    name: enforce major bump on shape change
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Diff schemas/ against latest versions/
+        run: bash .github/scripts/diff-against-latest-version.sh
