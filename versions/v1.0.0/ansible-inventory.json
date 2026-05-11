@@ -8,8 +8,7 @@
     "schema_version",
     "domain",
     "cluster",
-    "hosts",
-    "constants"
+    "hosts"
   ],
   "additionalProperties": false,
   "properties": {
@@ -116,19 +115,26 @@
       }
     },
     "openbao": {
-      "description": "OpenBao (Vault-compatible) endpoint placeholder. Populated once OpenBao LXC is deployed; null at scaffold time.",
-      "type": ["object", "null"],
-      "additionalProperties": false,
-      "properties": {
-        "endpoint": {
-          "type": "string",
-          "description": "Full URL including scheme and port (e.g., 'https://openbao.example.local:8200')."
-        },
-        "ca_bundle_path": {
-          "type": ["string", "null"],
-          "description": "Path on the Ansible controller to the CA bundle for TLS verification."
+      "description": "OpenBao (Vault-compatible) endpoint placeholder. Populated once OpenBao LXC is deployed; null at scaffold time. When non-null, endpoint is required.",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["endpoint"],
+          "additionalProperties": false,
+          "properties": {
+            "endpoint": {
+              "type": "string",
+              "format": "uri",
+              "description": "Full URL including scheme and port (e.g., 'https://openbao.example.local:8200')."
+            },
+            "ca_bundle_path": {
+              "type": ["string", "null"],
+              "description": "Path on the Ansible controller to the CA bundle for TLS verification."
+            }
+          }
         }
-      }
+      ]
     },
     "containers": {
       "description": "LXC containers managed by OpenTofu. Map of logical key -> container metadata.",
@@ -148,10 +154,12 @@
     "splunk_vm": {
       "description": "Splunk Enterprise VM (vendor-only Docker deployment). Single-key object.",
       "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
       "additionalProperties": { "$ref": "#/$defs/vm" }
     },
     "constants": {
-      "description": "Port constants. Mirrored from schemas/service-ports.yaml. Consumers MUST cross-check against the YAML.",
+      "description": "OPTIONAL convenience block. Canonical port constants live in schemas/service-ports.yaml — see AGENTS.md rule 4 (no duplication). This property exists only for legacy consumers; new consumers should read service-ports.yaml directly.",
       "type": "object",
       "required": [
         "service_ports",
@@ -266,6 +274,17 @@
           "uniqueItems": true
         },
         "pool_id": { "type": ["string", "null"] }
+      },
+      "if": {
+        "properties": {
+          "ansible_connection": { "const": "community.proxmox.proxmox_pct_remote" }
+        }
+      },
+      "then": {
+        "required": ["ansible_pct_vmid"],
+        "properties": {
+          "ansible_pct_vmid": { "type": "integer", "minimum": 100, "maximum": 999999 }
+        }
       }
     },
     "vm": {
@@ -279,7 +298,7 @@
         "node": { "type": "string", "minLength": 1 },
         "ansible_connection": {
           "type": "string",
-          "enum": ["ssh", "local", "community.proxmox.proxmox_pct_remote"]
+          "enum": ["ssh", "local"]
         },
         "tags": {
           "type": "array",

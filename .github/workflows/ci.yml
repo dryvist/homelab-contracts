@@ -37,8 +37,8 @@ jobs:
           file_or_dir: schemas/service-ports.yaml
           strict: true
 
-  semver-bump-gate:
-    name: enforce major bump on shape change
+  shape-snapshot-gate:
+    name: enforce snapshot on shape change
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

@@ -49,7 +49,7 @@ Centralising the schema gives us:
 | --- | --- |
 | Compile-time parity | Both Ansible repos pull the schema via `requirements.yml` git source |
 | IaC parity | OpenTofu repo includes constants via Terragrunt include |
-| Breaking-change gate | CI compares `schemas/` against latest `versions/<vX.Y.Z>/` and requires a major bump on shape change |
+| Breaking-change gate | CI compares `schemas/` against latest `versions/<vX.Y.Z>/` and requires a `versions/<vX.Y.Z>/` snapshot on shape change (per ADR 0003); major-bump enforcement is human-reviewed via release-please manifest edits |
 | One human-edit surface | Port constants live in `schemas/service-ports.yaml`, never duplicated in HCL or Ansible vars |
 
 ## Repository layout
