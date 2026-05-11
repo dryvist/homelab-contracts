@@ -19,11 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Install check-jsonschema
-        uses: python-jsonschema/check-jsonschema@0.37.2
+      - uses: actions/setup-python@v6
         with:
-          schemafile: schemas/ansible-inventory-v1.json
-          files: examples/ansible_inventory.json
+          python-version: "3.13"
+      - name: Install check-jsonschema
+        run: pip install 'check-jsonschema==0.37.2'
+      - name: Validate example against schema
+        run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
 
   validate-ports-yaml:
     name: lint service-ports.yaml

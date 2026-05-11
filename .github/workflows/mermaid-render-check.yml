@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/assets/**.mmd"
       - "docs/assets/**.svg"
+      - ".github/scripts/render-mermaid.sh"
       - ".github/workflows/mermaid-render-check.yml"
 
 permissions:
@@ -15,8 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: cachix/install-nix-action@v31
-      - name: Re-render every .mmd to .svg (sibling file with .svg extension)
+      - name: Re-render every .mmd to .svg
         run: bash .github/scripts/render-mermaid.sh
       - name: Fail on uncommitted SVG changes
         run: git diff --exit-code -- 'docs/assets/*.svg'

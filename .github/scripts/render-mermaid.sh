@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
-# Re-render every docs/assets/*.mmd to its sibling .svg using mermaid-cli via nix.
-# Used by .github/workflows/mermaid-render-check.yml; CI fails the PR if `git diff`
-# reports any uncommitted .svg changes after this runs.
+# Re-render every docs/assets/*.mmd to a sibling .svg using the
+# minlag/mermaid-cli docker image. Same image is used in CI; same image is
+# used locally; SVG output stays byte-identical so the diff gate is trustable.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-PUPPETEER_CONFIG="${SCRIPT_DIR}/puppeteer-config.json"
+IMAGE="${MERMAID_CLI_IMAGE:-minlag/mermaid-cli:latest}"
 
 for src in docs/assets/*.mmd; do
-  nix run nixpkgs#mermaid-cli -- \
-    -i "$src" -o "${src%.mmd}.svg" \
-    --puppeteerConfigFile "$PUPPETEER_CONFIG" \
-    --quiet
+  [ -f "$src" ] || continue
+  echo "rendering $src"
+  docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/data" "$IMAGE" \
+    -i "/data/$src" -o "/data/${src%.mmd}.svg" --quiet
 done
