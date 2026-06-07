@@ -1,0 +1,24 @@
+flowchart TD
+  pr["PR opens with shape change"]
+  diff{"diff schemas/<br/>vs latest versions/"}
+  noDiff["No diff<br/>(docs/CI-only PR)"]
+  hasSnapshot{"PR adds new<br/>versions/&lt;vX.Y.Z&gt;/?"}
+  fail["CI fails:<br/>missing snapshot"]
+  pass["CI passes"]
+  merge["Merge to main"]
+  releasePR["release-please opens<br/>release PR"]
+  tag["Tag vX.Y.Z + draft release"]
+  publish["Human promotes draft<br/>to published release"]
+  consumers["Renovate auto-PRs<br/>in consumer repos"]
+
+  pr --> diff
+  diff -->|same| noDiff
+  diff -->|differs| hasSnapshot
+  noDiff --> pass
+  hasSnapshot -->|yes| pass
+  hasSnapshot -->|no| fail
+  pass --> merge
+  merge --> releasePR
+  releasePR --> tag
+  tag --> publish
+  publish --> consumers

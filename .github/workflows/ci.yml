@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-schema:
+    name: validate example against schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install check-jsonschema
+        run: pip install 'check-jsonschema==0.37.2'
+      - name: Validate example against schema
+        run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
+
+  validate-ports-yaml:
+    name: lint service-ports.yaml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: schemas/service-ports.yaml
+          strict: true
+
+  shape-snapshot-gate:
+    name: enforce snapshot on shape change
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Diff schemas/ against latest versions/
+        run: bash .github/scripts/diff-against-latest-version.sh

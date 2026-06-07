@@ -1,0 +1,171 @@
+{
+  "schema_version": "1.0.0",
+  "domain": "example.local",
+  "cluster": {
+    "name": "dryvist",
+    "fabric_cidr": null,
+    "node_names": ["proxmox-b", "proxmox-c", "proxmox-d"]
+  },
+  "hosts": {
+    "proxmox-b": {
+      "mgmt_ip": "192.168.0.11",
+      "fabric_ip": null,
+      "vmid_range": [200, 299],
+      "zfs_pool_devices": [
+        {
+          "pool_name": "rpool",
+          "vdev_type": "mirror",
+          "devices": [
+            "/dev/disk/by-id/ata-PLACEHOLDER-B-DISK-1",
+            "/dev/disk/by-id/ata-PLACEHOLDER-B-DISK-2"
+          ]
+        }
+      ],
+      "host_services": {},
+      "pbs_ctid": 210,
+      "hc_slug": "proxmox-b-heartbeat",
+      "role": "proxmox_node"
+    },
+    "proxmox-c": {
+      "mgmt_ip": "192.168.0.12",
+      "fabric_ip": null,
+      "vmid_range": [300, 399],
+      "zfs_pool_devices": [
+        {
+          "pool_name": "rpool",
+          "vdev_type": "mirror",
+          "devices": [
+            "/dev/disk/by-id/ata-PLACEHOLDER-C-DISK-1",
+            "/dev/disk/by-id/ata-PLACEHOLDER-C-DISK-2"
+          ]
+        }
+      ],
+      "host_services": {},
+      "pbs_ctid": 310,
+      "hc_slug": "proxmox-c-heartbeat",
+      "role": "proxmox_node"
+    },
+    "proxmox-d": {
+      "mgmt_ip": "192.168.0.13",
+      "fabric_ip": null,
+      "vmid_range": [400, 499],
+      "zfs_pool_devices": [
+        {
+          "pool_name": "rpool",
+          "vdev_type": "mirror",
+          "devices": [
+            "/dev/disk/by-id/ata-PLACEHOLDER-D-DISK-1",
+            "/dev/disk/by-id/ata-PLACEHOLDER-D-DISK-2"
+          ]
+        }
+      ],
+      "host_services": {},
+      "pbs_ctid": 410,
+      "hc_slug": "proxmox-d-heartbeat",
+      "role": "proxmox_node"
+    },
+    "ai-server-a": {
+      "mgmt_ip": "192.168.0.10",
+      "fabric_ip": null,
+      "vmid_range": null,
+      "zfs_pool_devices": [
+        {
+          "pool_name": "tank",
+          "vdev_type": "raidz2",
+          "devices": [
+            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-1",
+            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-2",
+            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-3",
+            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-4"
+          ]
+        }
+      ],
+      "host_services": {},
+      "pbs_ctid": null,
+      "hc_slug": "ai-server-a-heartbeat",
+      "role": "ai_host"
+    }
+  },
+  "ha_groups": {},
+  "replication_jobs": [],
+  "pbs_targets": {
+    "pbs-b": {
+      "host": "192.168.0.210",
+      "port": 8007,
+      "datastore": "pbs-store-b",
+      "fingerprint": null,
+      "sync_targets": ["pbs-c"]
+    },
+    "pbs-c": {
+      "host": "192.168.0.310",
+      "port": 8007,
+      "datastore": "pbs-store-c",
+      "fingerprint": null,
+      "sync_targets": ["pbs-d"]
+    },
+    "pbs-d": {
+      "host": "192.168.0.410",
+      "port": 8007,
+      "datastore": "pbs-store-d",
+      "fingerprint": null,
+      "sync_targets": ["pbs-b"]
+    }
+  },
+  "openbao": null,
+  "containers": {
+    "haproxy-edge": {
+      "vmid": 250,
+      "hostname": "haproxy-edge",
+      "ip": "192.168.0.250",
+      "node": "proxmox-b",
+      "ansible_connection": "community.proxmox.proxmox_pct_remote",
+      "ansible_pct_vmid": 250,
+      "tags": ["haproxy", "edge"],
+      "pool_id": "edge"
+    },
+    "cribl-edge-1": {
+      "vmid": 251,
+      "hostname": "cribl-edge-1",
+      "ip": "192.168.0.251",
+      "node": "proxmox-c",
+      "ansible_connection": "community.proxmox.proxmox_pct_remote",
+      "ansible_pct_vmid": 251,
+      "tags": ["cribl", "edge"],
+      "pool_id": "edge"
+    }
+  },
+  "vms": {
+    "openbao": {
+      "vmid": 220,
+      "hostname": "openbao",
+      "ip": "192.168.0.220",
+      "node": "proxmox-b",
+      "ansible_connection": "ssh",
+      "tags": ["openbao", "secrets"],
+      "pool_id": "core"
+    }
+  },
+  "docker_vms": {
+    "gh-runners": {
+      "vmid": 230,
+      "hostname": "gh-runners",
+      "ip": "192.168.0.230",
+      "node": "proxmox-c",
+      "ansible_connection": "ssh",
+      "tags": ["docker", "ci"],
+      "pool_id": "ci"
+    }
+  },
+  "splunk_vm": {
+    "splunk": {
+      "vmid": 200,
+      "hostname": "splunk",
+      "ip": "192.168.0.200",
+      "node": "proxmox-b",
+      "ansible_connection": "ssh",
+      "tags": ["splunk", "docker"],
+      "pool_id": "observability"
+    }
+  },
+  "host_services": {}
+}

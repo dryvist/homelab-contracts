@@ -1,0 +1,22 @@
+sequenceDiagram
+  autonumber
+  participant Tofu as dryvist/tofu-proxmox-cluster
+  participant Schemas as dryvist/homelab-schemas
+  participant AnsCluster as dryvist/ansible-proxmox-cluster
+  participant AnsApps as dryvist/ansible-server-apps
+  participant Cluster as Proxmox cluster<br/>(B+C+D)
+
+  Note over Schemas: Tagged release v1.0.0<br/>schemas/ansible-inventory-v1.json<br/>schemas/service-ports.yaml
+
+  Tofu->>Schemas: Terragrunt include service-ports.yaml<br/>(via .cache/ at pinned tag)
+  Tofu->>Tofu: tofu apply
+  Tofu->>AnsCluster: write ansible_inventory.json<br/>(local_file resource)
+  Tofu->>AnsApps: write ansible_inventory.json<br/>(local_file resource)
+
+  AnsCluster->>Schemas: requirements.yml git source<br/>(pinned by SHA or tag)
+  AnsCluster->>AnsCluster: ansible.utils.validate<br/>against ansible-inventory-v1.json
+  AnsCluster->>Cluster: ansible-playbook -i inventory ...
+
+  AnsApps->>Schemas: requirements.yml git source<br/>(pinned by SHA or tag)
+  AnsApps->>AnsApps: ansible.utils.validate<br/>against ansible-inventory-v1.json
+  AnsApps->>Cluster: ansible-playbook -i inventory ...
