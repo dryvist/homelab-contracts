@@ -117,6 +117,8 @@
       "vmid": 250,
       "hostname": "haproxy-edge",
       "ip": "192.168.0.250",
+      "mac": null,
+      "reserved_ip": null,
       "node": "proxmox-b",
       "ansible_connection": "community.proxmox.proxmox_pct_remote",
       "ansible_pct_vmid": 250,
@@ -132,6 +134,18 @@
       "ansible_pct_vmid": 251,
       "tags": ["cribl", "edge"],
       "pool_id": "edge"
+    },
+    "plex": {
+      "vmid": 252,
+      "hostname": "plex",
+      "ip": "plex.example.local",
+      "mac": "02:00:c0:a8:00:fc",
+      "reserved_ip": "192.168.0.252",
+      "node": "proxmox-d",
+      "ansible_connection": "community.proxmox.proxmox_pct_remote",
+      "ansible_pct_vmid": 252,
+      "tags": ["plex", "media"],
+      "pool_id": "media"
     }
   },
   "vms": {
