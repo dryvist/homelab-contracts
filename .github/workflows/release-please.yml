@@ -1,18 +1,22 @@
 name: release-please
 
+# Inherits the org-native release-please pipeline from dryvist/.github: the
+# release App token (so release PRs trigger CI), eager auto-merge, and identical
+# logic across every repo. Replaces the prior standalone setup whose
+# `draft: true` config produced untagged draft releases, which broke release
+# anchoring ("No latest release found") and looped a new minor on every push.
+
 on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   release-please:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: googleapis/release-please-action@v4
-        with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: dryvist/.github/.github/workflows/_release-please.yml@main
+    secrets:
+      GH_ACTION_RELEASE_PLEASE_PRIVATE_KEY: ${{ secrets.GH_ACTION_RELEASE_PLEASE_PRIVATE_KEY }}
