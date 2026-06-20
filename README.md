@@ -5,11 +5,13 @@
 
 Single source of truth for the **dryvist homelab inventory contract**:
 
-- JSON Schema for `ansible_inventory.json` (the artifact OpenTofu writes and Ansible reads)
+- JSON Schema for `ansible_inventory.json` (the inventory artifact produced by IaC and consumed downstream)
 - YAML constants for service / syslog / NetFlow / notification / vector-DB ports
 - Versioned history under `versions/<vX.Y.Z>/` so breaking changes are structurally enforceable
 
 This repo carries no runtime code — it only ships the contract and validates it in CI.
+The contract defines the exact shape any consumer must match; describing that shape
+here is the whole point of the repo.
 
 ## Installation
 
@@ -23,8 +25,6 @@ nix run nixpkgs#check-jsonschema -- --version
 nix run nixpkgs#mermaid-cli -- --version
 ```
 
-Consumers pin this repo by tag or SHA — see [How consumers pin](#how-consumers-pin) below.
-
 ## Usage
 
 ```sh
@@ -35,22 +35,25 @@ bash tests/validate.sh
 nix run nixpkgs#mermaid-cli -- -i docs/assets/ecosystem-context.mmd -o docs/assets/ecosystem-context.svg --quiet
 ```
 
-See [How consumers pin](#how-consumers-pin) for Ansible / OpenTofu integration patterns.
+A consumer pins this repo by tag or full SHA and reads the schema and port
+constants from the pinned checkout — for example, a JSON Schema validation step
+against `schemas/ansible-inventory-v1.json`, or `yamldecode` of
+`schemas/service-ports.yaml` for port values. Pinning by tag or SHA keeps the
+resolution deterministic.
 
 ## Why
 
-Until now, the inventory shape lived in three places: `terraform-proxmox/outputs.tf`,
-`ansible-proxmox/playbooks/load_terraform.yml`, and `ansible-proxmox-apps/inventory/load_terraform.yml`.
-Drift between them was caught only at runtime, usually mid-deploy.
+Before this repo existed, the inventory shape was duplicated across multiple
+places and drift between copies was caught only at runtime, usually mid-deploy.
 
 Centralising the schema gives us:
 
 | Benefit | Mechanism |
 | --- | --- |
-| Compile-time parity | Both Ansible repos pull the schema via `requirements.yml` git source |
-| IaC parity | OpenTofu repo includes constants via Terragrunt include |
+| Compile-time parity | One published schema, pinned by tag or SHA, validated wherever the inventory is read |
+| Single constants surface | Port values live in `schemas/service-ports.yaml`, never duplicated downstream |
 | Breaking-change gate | CI compares `schemas/` against latest `versions/<vX.Y.Z>/` and requires a `versions/<vX.Y.Z>/` snapshot on shape change (per ADR 0003); major-bump enforcement is human-reviewed via release-please manifest edits |
-| One human-edit surface | Port constants live in `schemas/service-ports.yaml`, never duplicated in HCL or Ansible vars |
+| One human-edit surface | The schema and port constants are edited here once, then republished |
 
 ## Repository layout
 
@@ -74,49 +77,6 @@ docs/
   mermaid-render-check.yml     # Re-renders .mmd; fails PR on diff
 ```
 
-## How consumers pin
-
-### Ansible (both `dryvist/ansible-proxmox-cluster` and `dryvist/ansible-server-apps`)
-
-`requirements.yml`:
-
-```yaml
-collections:
-  # ...other collections...
-
-# Schema repo pinned by SHA (recommended) or tag for reproducibility
-roles:
-  - src: https://github.com/dryvist/homelab-schemas
-    scm: git
-    version: v1.0.0  # or a full SHA for hard pin
-    name: homelab_schemas
-```
-
-In playbooks:
-
-```yaml
-- name: Validate ansible_inventory.json against shared schema
-  ansible.utils.validate:
-    data: "{{ lookup('file', 'inventory/ansible_inventory.json') | from_json }}"
-    criteria:
-      - "{{ lookup('file', role_path ~ '/files/homelab_schemas/schemas/ansible-inventory-v1.json') | from_json }}"
-    engine: ansible.utils.jsonschema
-```
-
-### OpenTofu (`dryvist/tofu-proxmox-cluster`)
-
-`environments/homelab/terragrunt.hcl`:
-
-```hcl
-locals {
-  # CI fetches a tagged release of dryvist/homelab-schemas into .cache/
-  ports = yamldecode(file("${get_repo_root()}/.cache/homelab-schemas/schemas/service-ports.yaml"))
-}
-```
-
-The Tofu repo's CI fetches a tagged release of this repo into `.cache/` so the
-include resolves deterministically.
-
 ## How to bump the schema
 
 1. **Patch / additive change** (new optional field, new constant): bump `1.0.x` → `1.0.x+1`.
@@ -130,7 +90,7 @@ include resolves deterministically.
    - Major bumps are **human-only**: edit `.release-please-manifest.json` manually
    - Add a `versions/v2.0.0/` directory with the new shape
    - Add a `docs/adr/<NNNN>-v2-migration.md` explaining the break + migration path
-   - Open a tracking issue in every consumer repo BEFORE merging
+   - Open a tracking issue in every consumer before merging
 
 CI gate:
 
@@ -152,3 +112,7 @@ nix run nixpkgs#mermaid-cli -- -i docs/assets/ecosystem-context.mmd -o docs/asse
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+> Part of the [dryvist homelab](https://docs.dryvist.com) — how the private repos and infrastructure connect (gated).
