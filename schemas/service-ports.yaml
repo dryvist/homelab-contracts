@@ -1,8 +1,13 @@
 ---
 # Single source of truth for the dryvist homelab port constants.
 #
-# Ported verbatim from the pipeline_constants block in
-# JacobPEvans/terraform-proxmox/locals.tf (see github.com/JacobPEvans).
+# Mirrors the pipeline_constants block in dryvist/terraform-proxmox
+# constants.tf. Resynced 2026-07-01 (the previous copy had drifted:
+# ~15 service ports vs ~46 upstream). Keep the two in lockstep.
+#
+# Divergences from upstream are deliberate, per AGENTS.md:
+#   - infisical_api (8080 upstream) is intentionally omitted — hard rule 1:
+#     the runtime secret store is OpenBao; no infisical references here.
 #
 # Consumed by:
 #   - dryvist/tofu-proxmox-cluster (via Terragrunt include / yamldecode)
@@ -17,16 +22,57 @@ service_ports:
   splunk_web: 8000
   splunk_hec: 8088
   splunk_mgmt: 8089
+  splunk_forwarding: 9997
   cribl_edge_api: 9420
   cribl_stream_api: 9000
+  cribl_s2s: 10300  # Cribl-to-Cribl S2S: Edge -> HAProxy -> Stream
+  cribl_prometheus_rw: 9201  # Stream Prometheus remote_write (internal)
   apt_cacher_ng: 3142
   minio_api: 9000
   minio_console: 9001
-  # OpenBao (Vault-compatible) HTTP API — default Vault port (8200/tcp).
-  # New in v1.0.0 vs upstream pipeline_constants.
+  # RustFS replaces MinIO; both kept during the migration soak. Remove the
+  # minio_* pair once object-storage cutover is stable.
+  object_storage_s3: 9000
+  object_storage_console: 9001
+  # OpenBao (Vault-compatible): HTTP API 8200, cluster 8201.
   openbao: 8200
+  openbao_cluster: 8201
+  postgres_default: 5432
+  redis_default: 6379
+  ntp: 123
+  idrac_kvm_r410: 5410
+  idrac_kvm_r710: 5710
+  # Traefik-fronted web UIs with no other constant home.
+  technitium_web: 5380
+  phpipam_web: 80
+  homeassistant_web: 8123
+  openproject_web: 80
+  prometheus_web: 9090
+  proxmox_web: 8006  # Traefik-fronted, LB across commissioned nodes
+  ollama_api: 11434
+  open_webui_web: 8080
+  # AI orchestration web UIs (Traefik-fronted): Dify, LangFlow, Langfuse.
+  dify_web: 80
+  langflow_web: 7860
+  langfuse_web: 3000
+  # OpenTelemetry OTLP ingest on Cribl Edge (one port per signal + proto).
+  otel_traces_grpc: 4317
+  otel_traces_http: 4318
+  otel_metrics_grpc: 4327
+  otel_metrics_http: 4328
+  otel_logs_grpc: 4337
+  otel_logs_http: 4338
+  # Network-quality monitoring (Prometheus-native stack).
+  smokeping_web: 80
+  speedtest_exporter: 9798
+  smokeping_prober: 9374
+  blackbox_exporter: 9115
+  atlas_exporter: 9400
+  irtt: 2112
+  satellite_exporter: 9817  # per-uplink netmon satellite gRPC exporter
 
 syslog_ports:
+  default: 514
   unifi: 1514
   palo_alto: 1515
   cisco_asa: 1516
