@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.8.2](https://github.com/dryvist/homelab-schemas/compare/v1.8.1...v1.8.2) (2026-07-02)
+
+
+### Bug Fixes
+
+* **schemas:** resync service-ports.yaml with terraform-proxmox constants ([#17](https://github.com/dryvist/homelab-schemas/issues/17)) ([96273d8](https://github.com/dryvist/homelab-schemas/commit/96273d83cf350ae51d0091e79172a1c0062e0ec0))
+
 ## [1.8.1](https://github.com/dryvist/homelab-schemas/compare/v1.8.0...v1.8.1) (2026-06-29)
 
 
