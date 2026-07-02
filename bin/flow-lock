@@ -290,9 +290,9 @@ cmd_run() {
   renew_loop "$ttl_s" "$LEASE_VERSION" &
   local renewer_pid=$!
 
-  # shellcheck disable=SC2329,SC2317  # invoked via the EXIT trap below, not
-  # unreachable (SC2317/SC2329 are the same false positive on different
-  # shellcheck versions)
+  # Invoked via the EXIT trap below — SC2317/SC2329 are the same "unreachable
+  # function" false positive reported under different shellcheck versions.
+  # shellcheck disable=SC2329,SC2317
   cleanup() {
     kill "$renewer_pid" 2>/dev/null || true
     wait "$renewer_pid" 2>/dev/null || true
