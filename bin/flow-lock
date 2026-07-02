@@ -84,8 +84,9 @@ BAO_TOKEN_CACHED=""
 bao_token() {
   if [ -n "$BAO_TOKEN_CACHED" ]; then printf '%s' "$BAO_TOKEN_CACHED"; return; fi
   if [ -n "${BAO_TOKEN:-}" ]; then BAO_TOKEN_CACHED="$BAO_TOKEN"; printf '%s' "$BAO_TOKEN_CACHED"; return; fi
-  [ -n "${FLOW_LOCK_ROLE_ID:-}" ] && [ -n "${FLOW_LOCK_SECRET_ID:-}" ] \
-    || die "no BAO_TOKEN and no FLOW_LOCK_ROLE_ID/FLOW_LOCK_SECRET_ID" "$EX_USAGE"
+  if [ -z "${FLOW_LOCK_ROLE_ID:-}" ] || [ -z "${FLOW_LOCK_SECRET_ID:-}" ]; then
+    die "no BAO_TOKEN and no FLOW_LOCK_ROLE_ID/FLOW_LOCK_SECRET_ID" "$EX_USAGE"
+  fi
   local resp
   resp="$(curl -sS -X POST "$BAO_ADDR/v1/auth/approle/login" \
     -d "{\"role_id\":\"$FLOW_LOCK_ROLE_ID\",\"secret_id\":\"$FLOW_LOCK_SECRET_ID\"}")" \
@@ -289,7 +290,9 @@ cmd_run() {
   renew_loop "$ttl_s" "$LEASE_VERSION" &
   local renewer_pid=$!
 
-  # shellcheck disable=SC2329  # invoked via the EXIT trap below
+  # shellcheck disable=SC2329,SC2317  # invoked via the EXIT trap below, not
+  # unreachable (SC2317/SC2329 are the same false positive on different
+  # shellcheck versions)
   cleanup() {
     kill "$renewer_pid" 2>/dev/null || true
     wait "$renewer_pid" 2>/dev/null || true

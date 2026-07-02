@@ -75,5 +75,7 @@ jobs:
           python-version: "3.13"
       - name: Install ansible-lint
         run: pip install 'ansible-lint==25.*' 'ansible-core==2.18.*'
+      - name: Install required collections
+        run: ansible-galaxy collection install amazon.aws
       - name: Lint the shared role
         run: ansible-lint ansible/roles/inventory_resolve
