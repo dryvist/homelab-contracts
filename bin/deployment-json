@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# deployment-json — locked, schema-gated access to the canonical deployment.json.
+#
+# The canonical copy is ONE versioned object in the on-prem S3 store; any local
+# file is a transient fetch artifact. Every mutation must happen under the
+# global flow lease:
+#
+#   doppler run -- flow-lock run --flow deployment-edit --creds rustfs -- \
+#     deployment-json edit --schema ./deployment.schema.json
+#
+# This tool REFUSES to run without FLOW_LOCK_LEASE_ID in the environment
+# (i.e. outside `flow-lock run`), except in FLOW_LOCK_BOOTSTRAP=1 mode.
+#
+# Environment (injected by flow-lock from OpenBao secret/infra/rustfs):
+#   S3_ENDPOINT / S3_ACCESS_KEY / S3_SECRET_KEY   on-prem store credentials
+#   DEPLOYMENT_JSON_S3_URI    override object location
+#                             (default: s3://iac-inventory/deployment.json)
+#   DEPLOYMENT_JSON_IF_MATCH=1  send If-Match on upload (leave OFF until the
+#                             store supports conditional writes — rustfs#1458)
+#
+# Exit codes: 64 usage/refused, 65 schema validation failed, 70 store error.
+
+set -euo pipefail
+
+EX_USAGE=64
+EX_DATAERR=65
+EX_SOFTWARE=70
+
+URI="${DEPLOYMENT_JSON_S3_URI:-s3://iac-inventory/deployment.json}"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  deployment-json fetch [FILE]                  # object -> FILE (default: stdout)
+  deployment-json edit  --schema SCHEMA [--patch JQ_PROGRAM]
+  deployment-json put   FILE --schema SCHEMA
+  deployment-json help
+
+edit fetches the object, applies $EDITOR (or --patch, a jq program), validates
+against SCHEMA, and uploads. put validates FILE and uploads it.
+EOF
+}
+
+log() { printf 'deployment-json: %s\n' "$*" >&2; }
+die() { log "$1"; exit "${2:-$EX_SOFTWARE}"; }
+
+require_lease() {
+  [ "${FLOW_LOCK_BOOTSTRAP:-}" = "1" ] && { log "BOOTSTRAP MODE: proceeding without a lease"; return; }
+  [ -n "${FLOW_LOCK_LEASE_ID:-}" ] \
+    || die "refusing: no FLOW_LOCK_LEASE_ID — run under 'flow-lock run --flow deployment-edit --creds rustfs -- ...'" "$EX_USAGE"
+}
+
+require_store() {
+  [ -n "${S3_ENDPOINT:-}" ] && [ -n "${S3_ACCESS_KEY:-}" ] && [ -n "${S3_SECRET_KEY:-}" ] \
+    || die "missing S3_ENDPOINT/S3_ACCESS_KEY/S3_SECRET_KEY — flow-lock --creds rustfs injects these" "$EX_USAGE"
+  command -v aws >/dev/null || die "aws CLI not found"
+}
+
+# aws CLI against the on-prem store, isolated from any ambient AWS session
+s3() {
+  env -u AWS_PROFILE -u AWS_SESSION_TOKEN \
+    AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+    AWS_REGION="${S3_REGION:-us-east-1}" \
+    aws --endpoint-url "$S3_ENDPOINT" "$@"
+}
+
+fetch_to() {
+  local dest="$1"
+  s3 s3 cp "$URI" "$dest" --quiet || die "fetch failed: $URI"
+  [ -s "$dest" ] || die "fetched object is EMPTY — refusing (a blank input must never plan a destroy)"
+}
+
+validate() {
+  local file="$1" schema="$2"
+  [ -n "$schema" ] || die "--schema is required for mutations" "$EX_USAGE"
+  [ -f "$schema" ] || die "schema not found: $schema" "$EX_USAGE"
+  command -v check-jsonschema >/dev/null || die "check-jsonschema not found"
+  jq -e . "$file" >/dev/null 2>&1 || die "not valid JSON: $file" "$EX_DATAERR"
+  check-jsonschema --schemafile "$schema" "$file" \
+    || die "schema validation FAILED — nothing uploaded" "$EX_DATAERR"
+}
+
+upload() {
+  local file="$1" bucket key etag=""
+  bucket="$(sed -E 's|^s3://([^/]+)/.*|\1|' <<<"$URI")"
+  key="$(sed -E 's|^s3://[^/]+/||' <<<"$URI")"
+  if [ "${DEPLOYMENT_JSON_IF_MATCH:-}" = "1" ]; then
+    etag="$(s3 s3api head-object --bucket "$bucket" --key "$key" --query ETag --output text 2>/dev/null || true)"
+  fi
+  if [ -n "$etag" ] && [ "$etag" != "None" ]; then
+    s3 s3api put-object --bucket "$bucket" --key "$key" --body "$file" \
+      --content-type application/json --if-match "$etag" >/dev/null \
+      || die "conditional upload failed (If-Match $etag) — object changed underneath the lease?"
+    log "uploaded $URI (If-Match $etag)"
+  else
+    s3 s3api put-object --bucket "$bucket" --key "$key" --body "$file" \
+      --content-type application/json >/dev/null || die "upload failed: $URI"
+    log "uploaded $URI"
+  fi
+}
+
+cmd_fetch() {
+  require_store
+  local dest="${1:--}"
+  if [ "$dest" = "-" ]; then
+    local tmp
+    tmp="$(mktemp)"
+    fetch_to "$tmp"
+    cat "$tmp"
+    rm -f "$tmp"
+  else
+    fetch_to "$dest"
+    log "fetched $URI -> $dest"
+  fi
+}
+
+cmd_edit() {
+  local schema="" patch=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --schema) schema="$2"; shift 2 ;;
+      --patch) patch="$2"; shift 2 ;;
+      *) die "unknown option for edit: $1" "$EX_USAGE" ;;
+    esac
+  done
+  require_lease
+  require_store
+  local tmp
+  tmp="$(mktemp -t deployment.json.XXXXXX)"
+  trap 'rm -f "$tmp" "$tmp.new"' EXIT
+  fetch_to "$tmp"
+  if [ -n "$patch" ]; then
+    jq "$patch" "$tmp" > "$tmp.new" || die "jq patch failed" "$EX_DATAERR"
+    mv "$tmp.new" "$tmp"
+  else
+    "${EDITOR:-vi}" "$tmp"
+  fi
+  validate "$tmp" "$schema"
+  upload "$tmp"
+}
+
+cmd_put() {
+  local file="" schema=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --schema) schema="$2"; shift 2 ;;
+      -*) die "unknown option for put: $1" "$EX_USAGE" ;;
+      *) file="$1"; shift ;;
+    esac
+  done
+  [ -n "$file" ] && [ -f "$file" ] || die "put: FILE is required and must exist" "$EX_USAGE"
+  require_lease
+  require_store
+  validate "$file" "$schema"
+  upload "$file"
+}
+
+case "${1:-}" in
+  fetch) shift; cmd_fetch "$@" ;;
+  edit) shift; cmd_edit "$@" ;;
+  put) shift; cmd_put "$@" ;;
+  help|--help|-h) usage ;;
+  '') usage >&2; exit "$EX_USAGE" ;;
+  *) log "unknown subcommand: $1"; usage >&2; exit "$EX_USAGE" ;;
+esac

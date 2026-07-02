@@ -8,7 +8,7 @@
   "prerelease": false,
   "packages": {
     ".": {
-      "package-name": "homelab-schemas",
+      "package-name": "homelab-contracts",
       "changelog-path": "CHANGELOG.md",
       "extra-files": []
     }

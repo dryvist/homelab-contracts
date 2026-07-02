@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: inventory_resolve
+  author: dryvist
+  description: >-
+    Shared resolution of the published OpenTofu inventory (explicit path →
+    on-prem store → legacy AWS bucket → explicitly-allowed local cache),
+    ending with tofu_data loaded.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: GenericLinux
+      versions: [all]
+    - name: MacOSX
+      versions: [all]
+  galaxy_tags: [inventory, homelab]
+dependencies: []

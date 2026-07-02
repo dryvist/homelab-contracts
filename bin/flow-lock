@@ -1,0 +1,397 @@
+#!/usr/bin/env bash
+# flow-lock — the single global homelab flow lease + gated credential injection.
+#
+# Every mutating flow (tofu plan/apply, ansible-playbook, deployment.json edits,
+# inventory sync) runs as:
+#
+#   doppler run -- flow-lock run --flow tofu --creds rustfs,state,proxmox -- <cmd...>
+#
+# The lease is one OpenBao KV v2 key (create-if-absent via cas=0; the KV version
+# number is the fencing token). Runtime credentials live ONLY in OpenBao and are
+# injected into the child environment after the lease is held — no lease, no
+# creds, so concurrent flows are excluded by construction, not convention.
+#
+# Environment (normally provided by `doppler run`):
+#   BAO_ADDR                 OpenBao URL (required)
+#   FLOW_LOCK_ROLE_ID        AppRole role_id  (or provide BAO_TOKEN directly)
+#   FLOW_LOCK_SECRET_ID      AppRole secret_id
+#   BAO_TOKEN                pre-issued token (skips AppRole login)
+#   FLOW_LOCK_MOUNT          KV v2 mount            (default: secret)
+#   FLOW_LOCK_KEY            lease key              (default: locks/global)
+#   FLOW_LOCK_CREDS_BASE     creds path prefix      (default: infra)
+#   FLOW_LOCK_BOOTSTRAP=1    escape hatch: NO lease, NO creds, loud banner —
+#                            only for managing OpenBao itself when it is down.
+#
+# Exit codes: child's own code on success path; 75 lease acquire timeout
+# (EX_TEMPFAIL, scriptable retry); 70 OpenBao/internal error; 64 usage.
+
+set -euo pipefail
+
+FLOW_LOCK_MOUNT="${FLOW_LOCK_MOUNT:-secret}"
+FLOW_LOCK_KEY="${FLOW_LOCK_KEY:-locks/global}"
+FLOW_LOCK_CREDS_BASE="${FLOW_LOCK_CREDS_BASE:-infra}"
+
+EX_USAGE=64
+EX_SOFTWARE=70
+EX_TEMPFAIL=75
+
+usage() {
+  cat <<'EOF'
+Usage:
+  flow-lock run [--flow NAME] [--ttl 15m] [--timeout 10m] [--creds a,b,...] -- CMD [ARGS...]
+  flow-lock status
+  flow-lock break --reason STR [--yes]
+  flow-lock release --lease-id UUID
+  flow-lock help
+
+run      Acquire the global lease, inject gated creds, exec CMD, release.
+status   Show the current lease holder (if any).
+break    Force-break a stuck lease (audited; prompts unless --yes).
+release  Clean up a lease left by a crashed wrapper (lease-id must match).
+EOF
+}
+
+log() { printf 'flow-lock: %s\n' "$*" >&2; }
+die() { log "$1"; exit "${2:-$EX_SOFTWARE}"; }
+
+# "15m" / "2h" / "90s" / bare seconds -> seconds
+ttl_to_seconds() {
+  local v="$1" n unit
+  case "$v" in
+    *[hms]) n="${v%?}"; unit="${v#"${v%?}"}" ;;
+    *) n="$v"; unit="s" ;;
+  esac
+  case "$n" in
+    ''|*[!0-9]*) die "invalid duration: $v" "$EX_USAGE" ;;
+  esac
+  case "$unit" in
+    h) printf '%d' "$(( n * 3600 ))" ;;
+    m) printf '%d' "$(( n * 60 ))" ;;
+    s) printf '%d' "$(( n ))" ;;
+  esac
+}
+
+require_env() {
+  [ -n "${BAO_ADDR:-}" ] || die "BAO_ADDR is not set" "$EX_USAGE"
+  command -v curl >/dev/null || die "curl not found"
+  command -v jq >/dev/null || die "jq not found"
+}
+
+# ---- OpenBao HTTP helpers ---------------------------------------------------
+
+BAO_TOKEN_CACHED=""
+
+bao_token() {
+  if [ -n "$BAO_TOKEN_CACHED" ]; then printf '%s' "$BAO_TOKEN_CACHED"; return; fi
+  if [ -n "${BAO_TOKEN:-}" ]; then BAO_TOKEN_CACHED="$BAO_TOKEN"; printf '%s' "$BAO_TOKEN_CACHED"; return; fi
+  [ -n "${FLOW_LOCK_ROLE_ID:-}" ] && [ -n "${FLOW_LOCK_SECRET_ID:-}" ] \
+    || die "no BAO_TOKEN and no FLOW_LOCK_ROLE_ID/FLOW_LOCK_SECRET_ID" "$EX_USAGE"
+  local resp
+  resp="$(curl -sS -X POST "$BAO_ADDR/v1/auth/approle/login" \
+    -d "{\"role_id\":\"$FLOW_LOCK_ROLE_ID\",\"secret_id\":\"$FLOW_LOCK_SECRET_ID\"}")" \
+    || die "AppRole login request failed (is OpenBao up at $BAO_ADDR?)"
+  BAO_TOKEN_CACHED="$(jq -er '.auth.client_token' <<<"$resp" 2>/dev/null)" \
+    || die "AppRole login rejected: $(jq -r '.errors[0] // "unknown error"' <<<"$resp")"
+  printf '%s' "$BAO_TOKEN_CACHED"
+}
+
+# bao_api METHOD PATH [JSON_BODY] -> body on stdout; returns curl/HTTP status
+bao_api() {
+  local method="$1" path="$2" body="${3:-}"
+  local args=(-sS -X "$method" -H "X-Vault-Token: $(bao_token)" \
+    -H "Content-Type: application/json" -w '\n%{http_code}' "$BAO_ADDR/v1/$path")
+  [ -n "$body" ] && args+=(-d "$body")
+  curl "${args[@]}"
+}
+
+# splits the bao_api combined output into BAO_BODY / BAO_STATUS globals
+bao_call() {
+  local out
+  out="$(bao_api "$@")" || die "OpenBao unreachable at $BAO_ADDR"
+  BAO_STATUS="${out##*$'\n'}"
+  BAO_BODY="${out%$'\n'*}"
+}
+
+kv_data_path() { printf '%s/data/%s' "$FLOW_LOCK_MOUNT" "$1"; }
+kv_meta_path() { printf '%s/metadata/%s' "$FLOW_LOCK_MOUNT" "$1"; }
+
+# ---- lease primitives -------------------------------------------------------
+
+lease_payload() {
+  local lease_id="$1" ttl_s="$2" renewals="$3"
+  jq -nc \
+    --arg lease_id "$lease_id" \
+    --arg holder_user "${USER:-unknown}" \
+    --arg holder_host "$(hostname -s 2>/dev/null || echo unknown)" \
+    --arg holder_pid "$$" \
+    --arg flow "$FLOW_NAME" \
+    --arg repo "$(basename "$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")")" \
+    --argjson acquired_at "$(date +%s)" \
+    --argjson expires_at "$(( $(date +%s) + ttl_s ))" \
+    --argjson renewals "$renewals" \
+    '{lease_id:$lease_id,
+      holder:{user:$holder_user,host:$holder_host,pid:($holder_pid|tonumber)},
+      flow:$flow, repo:$repo,
+      acquired_at:$acquired_at, expires_at:$expires_at, renewals:$renewals}'
+}
+
+# try_put CAS PAYLOAD -> sets PUT_VERSION on success, returns 1 on CAS conflict
+try_put() {
+  local cas="$1" payload="$2"
+  bao_call POST "$(kv_data_path "$FLOW_LOCK_KEY")" \
+    "$(jq -nc --argjson cas "$cas" --argjson data "$payload" '{options:{cas:$cas},data:$data}')"
+  case "$BAO_STATUS" in
+    200) PUT_VERSION="$(jq -r '.data.version' <<<"$BAO_BODY")"; return 0 ;;
+    400) return 1 ;;  # CAS mismatch — someone else holds/beat us
+    *) die "lease write failed (HTTP $BAO_STATUS): $(jq -r '.errors[0] // .' <<<"$BAO_BODY" 2>/dev/null)" ;;
+  esac
+}
+
+# reads current lease; sets CUR_VERSION (0 = absent) and CUR_DATA (json or empty)
+read_lease() {
+  bao_call GET "$(kv_data_path "$FLOW_LOCK_KEY")"
+  case "$BAO_STATUS" in
+    200)
+      CUR_VERSION="$(jq -r '.data.metadata.version' <<<"$BAO_BODY")"
+      CUR_DATA="$(jq -c '.data.data' <<<"$BAO_BODY")"
+      # a soft-deleted version reads as null data — treat as absent
+      if [ "$CUR_DATA" = "null" ]; then CUR_DATA=""; fi
+      ;;
+    404) CUR_VERSION=0; CUR_DATA="" ;;
+    *) die "lease read failed (HTTP $BAO_STATUS)" ;;
+  esac
+}
+
+meta_delete() {
+  bao_call DELETE "$(kv_meta_path "$FLOW_LOCK_KEY")"
+  case "$BAO_STATUS" in
+    204|200) return 0 ;;
+    *) die "lease delete failed (HTTP $BAO_STATUS)" ;;
+  esac
+}
+
+describe_holder() {
+  jq -r '"held by \(.holder.user)@\(.holder.host) pid \(.holder.pid) — flow=\(.flow) repo=\(.repo) — expires \(.expires_at | todate) (renewals: \(.renewals))"' \
+    <<<"$1" 2>/dev/null || echo "held (unparseable payload)"
+}
+
+new_lease_id() {
+  if command -v uuidgen >/dev/null; then
+    uuidgen | tr '[:upper:]' '[:lower:]'
+  else
+    od -An -N16 -tx1 /dev/urandom | tr -d ' \n'
+  fi
+}
+
+# acquire TTL_S TIMEOUT_S -> sets LEASE_ID + LEASE_VERSION
+acquire() {
+  local ttl_s="$1" timeout_s="$2" deadline=$(( $(date +%s) + $2 ))
+  LEASE_ID="$(new_lease_id)"
+  while :; do
+    if try_put 0 "$(lease_payload "$LEASE_ID" "$ttl_s" 0)"; then
+      LEASE_VERSION="$PUT_VERSION"; return 0
+    fi
+    read_lease
+    if [ -n "$CUR_DATA" ]; then
+      local expires_at
+      expires_at="$(jq -r '.expires_at // 0' <<<"$CUR_DATA")"
+      if [ "$(date +%s)" -gt "$expires_at" ]; then
+        # expired lease: takeover via CAS on the exact observed version —
+        # exactly one contender wins; never delete-then-create (that races)
+        if try_put "$CUR_VERSION" "$(lease_payload "$LEASE_ID" "$ttl_s" 0)"; then
+          log "took over an EXPIRED lease ($(describe_holder "$CUR_DATA"))"
+          LEASE_VERSION="$PUT_VERSION"; return 0
+        fi
+        continue
+      fi
+      log "waiting: $(describe_holder "$CUR_DATA")"
+    else
+      # key exists but data soft-deleted/empty: cas=0 will keep failing until a
+      # metadata delete; recover by taking over the version we just observed
+      if try_put "$CUR_VERSION" "$(lease_payload "$LEASE_ID" "$ttl_s" 0)"; then
+        LEASE_VERSION="$PUT_VERSION"; return 0
+      fi
+      continue
+    fi
+    [ "$(date +%s)" -lt "$deadline" ] || { log "timed out after ${timeout_s}s"; exit "$EX_TEMPFAIL"; }
+    sleep $(( 5 + RANDOM % 10 ))
+  done
+}
+
+# background renewer: rewrites the lease with cas=<own version> every ttl/3.
+# On CAS failure (someone force-broke us) it warns loudly but does NOT kill the
+# child — killing a mid-flight apply is worse than a brief overlap.
+renew_loop() {
+  local ttl_s="$1" version="$2" renewals=0 payload
+  while :; do
+    sleep $(( ttl_s / 3 )) || return 0
+    renewals=$(( renewals + 1 ))
+    payload="$(lease_payload "$LEASE_ID" "$ttl_s" "$renewals")"
+    if try_put "$version" "$payload" 2>/dev/null; then
+      version="$PUT_VERSION"
+      printf '%s' "$version" > "$RENEW_STATE"
+    else
+      log "WARNING: lease renewal lost (force-break or takeover?) — child keeps running; investigate with 'flow-lock status'"
+      printf 'LOST' > "$RENEW_STATE"
+      return 0
+    fi
+  done
+}
+
+# ---- creds injection --------------------------------------------------------
+
+# fetch secret/<base>/<name> and export every data key verbatim
+inject_creds() {
+  local name="$1"
+  bao_call GET "$(kv_data_path "$FLOW_LOCK_CREDS_BASE/$name")"
+  [ "$BAO_STATUS" = 200 ] || die "creds '$name' not readable (HTTP $BAO_STATUS) — is $FLOW_LOCK_CREDS_BASE/$name seeded and your AppRole policy correct?"
+  local kv
+  while IFS= read -r kv; do
+    export "${kv%%=*}"="${kv#*=}"
+  done < <(jq -r '.data.data | to_entries[] | "\(.key)=\(.value)"' <<<"$BAO_BODY")
+  log "injected creds: $name ($(jq -r '.data.data | keys | join(", ")' <<<"$BAO_BODY"))"
+}
+
+# ---- subcommands ------------------------------------------------------------
+
+cmd_run() {
+  FLOW_NAME="manual"; local ttl="15m" timeout="10m" creds=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --flow) FLOW_NAME="$2"; shift 2 ;;
+      --ttl) ttl="$2"; shift 2 ;;
+      --timeout) timeout="$2"; shift 2 ;;
+      --creds) creds="$2"; shift 2 ;;
+      --) shift; break ;;
+      *) die "unknown option for run: $1" "$EX_USAGE" ;;
+    esac
+  done
+  [ $# -gt 0 ] || die "run: no command given (use: flow-lock run [opts] -- CMD)" "$EX_USAGE"
+
+  if [ "${FLOW_LOCK_BOOTSTRAP:-}" = "1" ]; then
+    log "==============================================================="
+    log "BOOTSTRAP MODE: NO lease held, NO gated creds injected."
+    log "Only valid for managing OpenBao itself while it is down."
+    log "==============================================================="
+    "$@"; exit $?
+  fi
+
+  require_env
+  local ttl_s timeout_s
+  ttl_s="$(ttl_to_seconds "$ttl")"
+  timeout_s="$(ttl_to_seconds "$timeout")"
+
+  acquire "$ttl_s" "$timeout_s"
+  log "lease acquired (lease_id=$LEASE_ID version=$LEASE_VERSION ttl=${ttl_s}s flow=$FLOW_NAME)"
+
+  RENEW_STATE="$(mktemp)"
+  printf '%s' "$LEASE_VERSION" > "$RENEW_STATE"
+  renew_loop "$ttl_s" "$LEASE_VERSION" &
+  local renewer_pid=$!
+
+  # shellcheck disable=SC2329  # invoked via the EXIT trap below
+  cleanup() {
+    kill "$renewer_pid" 2>/dev/null || true
+    wait "$renewer_pid" 2>/dev/null || true
+    if [ "$(cat "$RENEW_STATE" 2>/dev/null)" != "LOST" ]; then
+      read_lease
+      if [ -n "$CUR_DATA" ] && [ "$(jq -r '.lease_id' <<<"$CUR_DATA")" = "$LEASE_ID" ]; then
+        meta_delete && log "lease released"
+      fi
+    fi
+    rm -f "$RENEW_STATE"
+  }
+  trap cleanup EXIT
+
+  if [ -n "$creds" ]; then
+    local c
+    for c in ${creds//,/ }; do inject_creds "$c"; done
+  fi
+
+  export FLOW_LOCK_LEASE_ID="$LEASE_ID"
+  export FLOW_LOCK_VERSION="$LEASE_VERSION"
+  export FLOW_LOCK_EXPIRES_AT="$(( $(date +%s) + ttl_s ))"
+
+  local rc=0
+  "$@" || rc=$?
+  local renew_state
+  renew_state="$(cat "$RENEW_STATE" 2>/dev/null || true)"
+  if [ "$renew_state" = "LOST" ]; then
+    log "ERROR: lease was lost mid-run — treat this run's exclusivity as compromised"
+    [ "$rc" -eq 0 ] && rc="$EX_SOFTWARE"
+  fi
+  exit "$rc"
+}
+
+cmd_status() {
+  require_env
+  read_lease
+  if [ -z "$CUR_DATA" ]; then
+    echo "flow-lock: free (no lease held)"
+  else
+    echo "flow-lock: $(describe_holder "$CUR_DATA")"
+    if [ "$(date +%s)" -gt "$(jq -r '.expires_at // 0' <<<"$CUR_DATA")" ]; then
+      echo "flow-lock: lease is EXPIRED — next acquire will take over"
+    fi
+  fi
+}
+
+cmd_break() {
+  local reason="" yes=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --reason) reason="$2"; shift 2 ;;
+      --yes) yes=1; shift ;;
+      *) die "unknown option for break: $1" "$EX_USAGE" ;;
+    esac
+  done
+  [ -n "$reason" ] || die "break: --reason is required" "$EX_USAGE"
+  require_env
+  read_lease
+  [ -n "$CUR_DATA" ] || { echo "flow-lock: nothing to break (free)"; exit 0; }
+  echo "flow-lock: about to FORCE-BREAK: $(describe_holder "$CUR_DATA")"
+  if [ -z "$yes" ]; then
+    printf 'Type "break" to confirm: '
+    read -r confirm
+    [ "$confirm" = "break" ] || die "aborted" "$EX_USAGE"
+  fi
+  local audit_key
+  audit_key="locks/audit/$(date -u +%Y%m%dT%H%M%SZ)"
+  bao_call POST "$(kv_data_path "$audit_key")" \
+    "$(jq -nc --arg reason "$reason" --arg by "${USER:-unknown}@$(hostname -s 2>/dev/null || echo unknown)" \
+        --argjson victim "$CUR_DATA" \
+        '{data:{action:"force-break", reason:$reason, by:$by, at:(now|floor), victim:$victim}}')"
+  [ "$BAO_STATUS" = 200 ] || log "WARNING: audit write failed (HTTP $BAO_STATUS) — breaking anyway"
+  meta_delete
+  echo "flow-lock: lease broken (audited at $audit_key)"
+}
+
+cmd_release() {
+  local lease_id=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --lease-id) lease_id="$2"; shift 2 ;;
+      *) die "unknown option for release: $1" "$EX_USAGE" ;;
+    esac
+  done
+  [ -n "$lease_id" ] || die "release: --lease-id is required" "$EX_USAGE"
+  require_env
+  read_lease
+  [ -n "$CUR_DATA" ] || { echo "flow-lock: already free"; exit 0; }
+  local held_id
+  held_id="$(jq -r '.lease_id' <<<"$CUR_DATA")"
+  [ "$held_id" = "$lease_id" ] \
+    || die "refusing: current lease is $held_id, not $lease_id (use 'flow-lock break' if it is truly stuck)"
+  meta_delete
+  echo "flow-lock: lease $lease_id released"
+}
+
+case "${1:-}" in
+  run) shift; cmd_run "$@" ;;
+  status) shift; cmd_status "$@" ;;
+  break) shift; cmd_break "$@" ;;
+  release) shift; cmd_release "$@" ;;
+  help|--help|-h) usage ;;
+  '') usage >&2; exit "$EX_USAGE" ;;
+  *) log "unknown subcommand: $1"; usage >&2; exit "$EX_USAGE" ;;
+esac
