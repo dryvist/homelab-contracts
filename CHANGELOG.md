@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.9.0](https://github.com/dryvist/homelab-contracts/compare/v1.8.2...v1.9.0) (2026-07-03)
+
+
+### Features
+
+* add review-thread-resolver caller for instant bot-thread resolution ([#20](https://github.com/dryvist/homelab-contracts/issues/20)) ([b686a9b](https://github.com/dryvist/homelab-contracts/commit/b686a9bfc98f1fb7a9e0b18ec2cb836d0bcbe515))
+
 ## [1.8.2](https://github.com/dryvist/homelab-schemas/compare/v1.8.1...v1.8.2) (2026-07-02)
 
 
