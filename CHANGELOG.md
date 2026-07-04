@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.10.0](https://github.com/dryvist/homelab-contracts/compare/v1.9.0...v1.10.0) (2026-07-04)
+
+
+### Features
+
+* flow-lock global lease tooling + shared inventory_resolve role ([#19](https://github.com/dryvist/homelab-contracts/issues/19)) ([132758f](https://github.com/dryvist/homelab-contracts/commit/132758f9c069b1ab41adbec2ce362597085477a5))
+
 ## [1.9.0](https://github.com/dryvist/homelab-contracts/compare/v1.8.2...v1.9.0) (2026-07-03)
 
 
