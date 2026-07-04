@@ -1,17 +1,37 @@
-# homelab-schemas
+# homelab-contracts
 
-[![CI](https://github.com/dryvist/homelab-schemas/actions/workflows/ci.yml/badge.svg)](https://github.com/dryvist/homelab-schemas/actions/workflows/ci.yml)
+[![CI](https://github.com/dryvist/homelab-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/dryvist/homelab-contracts/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Single source of truth for the **dryvist homelab inventory contract**:
+Single source of truth for the **dryvist homelab cross-repo contracts** —
+both the data shapes and the small shared tools that enforce them:
 
 - JSON Schema for `ansible_inventory.json` (the inventory artifact produced by IaC and consumed downstream)
 - YAML constants for service / syslog / NetFlow / notification / vector-DB ports
 - Versioned history under `versions/<vX.Y.Z>/` so breaking changes are structurally enforceable
+- `bin/flow-lock` — the global flow lease + gated credential injection every
+  mutating flow (tofu, ansible, deployment.json edits) runs under
+- `bin/deployment-json` — locked, schema-gated access to the canonical
+  `deployment.json` object
+- `ansible/roles/inventory_resolve` — the shared inventory-resolution role
+  consumed by the ansible repos (replaces per-repo copy-paste)
 
-This repo carries no runtime code — it only ships the contract and validates it in CI.
-The contract defines the exact shape any consumer must match; describing that shape
-here is the whole point of the repo.
+Formerly `homelab-schemas`; renamed when the shared flow tooling moved in
+(the contract repo now ships the enforcement, not just the shape).
+
+## flow-lock in one line
+
+```sh
+doppler run -- flow-lock run --flow tofu --creds rustfs,state,proxmox -- terragrunt apply
+```
+
+One OpenBao KV v2 lease (`secret/data/locks/global`, create-if-absent via
+`cas=0`, TTL + background renewal, CAS takeover of expired leases) is the only
+path to runtime credentials — no lease, no creds, so two flows cannot mutate
+the estate concurrently by construction. `flow-lock status` shows the holder;
+`flow-lock break --reason ...` force-breaks with an audit entry. Consumers pin
+this repo by release tag (Nix flake input) and get `flow-lock` in their dev
+shell.
 
 ## Installation
 
@@ -61,6 +81,11 @@ Centralising the schema gives us:
 schemas/
   ansible-inventory-v1.json    # JSON Schema (draft 2020-12) for the inventory artifact
   service-ports.yaml           # Single source of truth for service / syslog / NetFlow / notification / vector-DB ports
+bin/
+  flow-lock                    # Global flow lease + gated credential injection
+  deployment-json              # Locked, schema-gated deployment.json fetch/edit/put
+ansible/
+  roles/inventory_resolve/     # Shared inventory-resolution role (pin via requirements.yml)
 examples/
   ansible_inventory.json       # Reference example matching the v1 schema (used as CI fixture)
 versions/
@@ -68,11 +93,13 @@ versions/
     ansible-inventory.json     # Frozen v1.0.0 schema (compared against schemas/ on every PR)
 tests/
   validate.sh                  # One-line check-jsonschema invocation
+  flow-lock.bats               # CLI-contract tests for bin/
 docs/
   adr/                         # Architectural decision records
   assets/                      # Mermaid `.mmd` sources + rendered `.svg`
+flake.nix                      # packages.flow-lock + dev shell (consumers pin by tag)
 .github/workflows/
-  ci.yml                       # Runs tests/validate.sh + semver-bump validation
+  ci.yml                       # validate.sh + semver gate + shellcheck + bats + ansible-lint
   release-please.yml           # release-please managed CHANGELOG + tags
   mermaid-render-check.yml     # Re-renders .mmd; fails PR on diff
 ```

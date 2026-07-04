@@ -46,3 +46,36 @@ jobs:
           fetch-depth: 0
       - name: Diff schemas/ against latest versions/
         run: bash .github/scripts/diff-against-latest-version.sh
+
+  lint-shell:
+    name: shellcheck bin/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck
+        run: shellcheck bin/flow-lock bin/deployment-json
+
+  test-cli:
+    name: bats CLI-contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install bats
+        run: sudo apt-get update -q && sudo apt-get install -y -q bats
+      - name: Run bats
+        run: bats tests/flow-lock.bats
+
+  lint-ansible-role:
+    name: ansible-lint inventory_resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install ansible-lint
+        run: pip install 'ansible-lint==25.*' 'ansible-core==2.18.*'
+      - name: Install required collections
+        run: ansible-galaxy collection install amazon.aws
+      - name: Lint the shared role
+        run: ansible-lint ansible/roles/inventory_resolve

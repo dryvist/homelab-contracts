@@ -1,0 +1,37 @@
+---
+# inventory_resolve — shared resolution of the published OpenTofu inventory.
+#
+# Source priority (first that resolves wins):
+#   1. TOFU_INVENTORY_PATH        explicit local path / pin (tests, overrides)
+#   2. published S3 artifact      on-prem store when S3_ENDPOINT is set
+#                                 (flow-lock --creds rustfs injects it),
+#                                 else the legacy AWS state bucket
+#   3. local gitignored cache     ONLY with TOFU_INVENTORY_ALLOW_STALE=1
+#
+# The role ends with `tofu_data` loaded and `tofu_inventory_resolved` set.
+# Repo-specific asserts and add_host group mapping stay in the consumer.
+
+inventory_resolve_path: "{{ lookup('env', 'TOFU_INVENTORY_PATH') | default('', true) }}"
+inventory_resolve_local_cache: "{{ playbook_dir }}/../inventory/tofu_inventory.json"
+
+# Explicit object URI override (either store)
+inventory_resolve_s3_uri: "{{ lookup('env', 'TOFU_INVENTORY_S3_URI') | default('', true) }}"
+
+# On-prem store (RustFS/MinIO): active when S3_ENDPOINT is present — normally
+# injected by `flow-lock run --creds rustfs`.
+inventory_resolve_s3_endpoint: "{{ lookup('env', 'S3_ENDPOINT') | default('', true) }}"
+inventory_resolve_s3_access_key: "{{ lookup('env', 'S3_ACCESS_KEY') | default('', true) }}"
+inventory_resolve_s3_secret_key: "{{ lookup('env', 'S3_SECRET_KEY') | default('', true) }}"
+inventory_resolve_onprem_default_uri: "s3://iac-inventory/ansible_inventory.json"
+
+# Legacy AWS state-bucket path (retires with the state migration)
+inventory_resolve_s3_region: "{{ lookup('env', 'TOFU_INVENTORY_S3_REGION') | default('us-east-2', true) }}"
+inventory_resolve_aws_bucket_prefix: "terraform-proxmox-state-useast2-"
+inventory_resolve_aws_key: "terraform-proxmox/inventory/ansible_inventory.json"
+
+# Escape hatch: the local cache is a STALE-inventory footgun (wrong VMIDs/IPs),
+# so it now ALWAYS requires explicit opt-in — not only when creds are present.
+inventory_resolve_allow_stale: "{{ lookup('env', 'TOFU_INVENTORY_ALLOW_STALE') | default('', true) }}"
+
+# Top-level keys the consumer requires in tofu_data (checked after load)
+inventory_resolve_required_keys: []

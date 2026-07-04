@@ -1,7 +1,9 @@
-# AI Agents Configuration — dryvist/homelab-schemas
+# AI Agents Configuration — dryvist/homelab-contracts
 
-This repo is the **single source of truth** for the dryvist homelab inventory contract.
-It carries no runtime code; only the schema, port constants, examples, and CI gates.
+This repo is the **single source of truth** for the dryvist homelab cross-repo
+contracts: the inventory shape, the port constants, and the small shared tools
+that enforce the contracts at runtime (flow lease, deployment.json access,
+inventory resolution). Formerly `homelab-schemas`.
 
 ## Scope
 
@@ -9,15 +11,23 @@ This repo owns:
 
 - `schemas/ansible-inventory-v1.json` — JSON Schema (draft 2020-12) for the inventory artifact
 - `schemas/service-ports.yaml` — service / syslog / NetFlow / notification / vector-DB port constants
+- `bin/flow-lock` — the global flow lease + gated credential injection (OpenBao KV v2 CAS)
+- `bin/deployment-json` — locked, schema-gated deployment.json fetch/edit/put
+- `ansible/roles/inventory_resolve` — shared inventory-resolution role for the ansible repos
 - `examples/ansible_inventory.json` — reference fixture used by CI
 - `versions/<vX.Y.Z>/` — frozen historical schemas for breaking-change detection
 - `tests/validate.sh` — one-line `check-jsonschema` invocation
+- `tests/flow-lock.bats` — CLI-contract tests for `bin/`
+- `flake.nix` — `packages.flow-lock` + dev shell; consumers pin by release tag
 
 This repo does **not** own:
 
-- Ansible playbooks, roles, or inventories (live in `dryvist/ansible-proxmox-cluster` and `dryvist/ansible-server-apps`)
-- OpenTofu modules (live in `dryvist/tofu-proxmox-cluster`)
-- Runtime code of any kind
+- Ansible playbooks, repo-specific roles, or inventories (live in
+  `dryvist/ansible-proxmox` and `dryvist/ansible-proxmox-apps`)
+- OpenTofu modules (live in `dryvist/terraform-proxmox`)
+- The OpenBao deployment itself (role lives in `dryvist/ansible-proxmox-apps`)
+- Business logic of any kind — `bin/` tools are pure contract enforcement
+  (lease, creds injection, validation); anything flow-specific stays downstream
 
 ## Hard rules
 
@@ -35,6 +45,10 @@ This repo does **not** own:
 5. **Mermaid round-trip CI gate**: every `.mmd` change must include a
    re-rendered `.svg`. The `mermaid-render-check.yml` workflow fails the PR if
    `.svg` doesn't match.
+6. **`bin/` tools stay dependency-light and shellcheck-clean.** bash + curl +
+   jq (+ aws CLI / check-jsonschema for `deployment-json`) only — no Python,
+   no per-flow logic. Every behavior change needs a matching
+   `tests/flow-lock.bats` case.
 
 ## Conventional commits
 
@@ -63,9 +77,9 @@ release-please drives version bumps from these prefixes. Major bumps are human-i
 
 | Repo | Relationship |
 | --- | --- |
-| `dryvist/ansible-proxmox-cluster` | Consumes via `requirements.yml` git source; validates inventory in CI |
-| `dryvist/ansible-server-apps` | Consumes via `requirements.yml` git source; validates inventory in CI |
-| `dryvist/tofu-proxmox-cluster` | Consumes `service-ports.yaml` via Terragrunt include (cached locally); writes `ansible_inventory.json` matching the schema |
+| `dryvist/ansible-proxmox` | Consumes `inventory_resolve` via `requirements.yml` git source + `flow-lock` via flake input; validates inventory in CI |
+| `dryvist/ansible-proxmox-apps` | Same as above; also owns the OpenBao deployment role the lease lives on |
+| `dryvist/terraform-proxmox` | Consumes `service-ports.yaml` via Terragrunt include (cached locally); runs under `flow-lock`; writes `ansible_inventory.json` matching the schema |
 
 ## ADRs
 
