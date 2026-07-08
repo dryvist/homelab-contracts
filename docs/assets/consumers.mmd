@@ -1,9 +1,9 @@
 sequenceDiagram
   autonumber
-  participant Tofu as dryvist/tofu-proxmox-cluster
-  participant Schemas as dryvist/homelab-schemas
-  participant AnsCluster as dryvist/ansible-proxmox-cluster
-  participant AnsApps as dryvist/ansible-server-apps
+  participant Tofu as dryvist/terraform-proxmox
+  participant Schemas as dryvist/homelab-contracts
+  participant AnsCluster as dryvist/ansible-proxmox
+  participant AnsApps as dryvist/ansible-proxmox-apps
   participant Cluster as Proxmox cluster<br/>(B+C+D)
 
   Note over Schemas: Tagged release v1.0.0<br/>schemas/ansible-inventory-v1.json<br/>schemas/service-ports.yaml
