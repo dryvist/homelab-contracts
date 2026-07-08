@@ -140,4 +140,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-> Part of the [dryvist homelab](https://docs.dryvist.com) — how the private repos and infrastructure connect (gated).
+> Part of a [larger ecosystem of ~40 repos](https://docs.jacobpevans.com) — see how it all fits together.

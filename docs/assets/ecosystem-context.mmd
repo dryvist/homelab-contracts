@@ -2,19 +2,16 @@ flowchart LR
   classDef schemaRepo fill:#e0f7fa,stroke:#00695c,stroke-width:2px,color:#000
   classDef tofuRepo fill:#fff3e0,stroke:#e65100,color:#000
   classDef ansibleRepo fill:#f3e5f5,stroke:#4a148c,color:#000
-  classDef nixRepo fill:#e8f5e9,stroke:#1b5e20,color:#000
 
-  schemas["dryvist/homelab-schemas<br/>JSON Schema + port constants"]:::schemaRepo
+  schemas["dryvist/homelab-contracts<br/>JSON Schema + port constants"]:::schemaRepo
 
-  tofu["dryvist/tofu-proxmox-cluster<br/>OpenTofu IaC"]:::tofuRepo
-  ansibleCluster["dryvist/ansible-proxmox-cluster<br/>Host config (B+C+D)"]:::ansibleRepo
-  ansibleApps["dryvist/ansible-server-apps<br/>App config inside VMs/LXCs"]:::ansibleRepo
-  nixAi["dryvist/nix-ai-server<br/>NixOS bare-metal (A)"]:::nixRepo
+  tofu["dryvist/terraform-proxmox<br/>OpenTofu IaC"]:::tofuRepo
+  ansibleCluster["dryvist/ansible-proxmox<br/>Host config (B+C+D)"]:::ansibleRepo
+  ansibleApps["dryvist/ansible-proxmox-apps<br/>App config inside VMs/LXCs"]:::ansibleRepo
 
   schemas -->|Terragrunt include<br/>service-ports.yaml| tofu
   schemas -->|requirements.yml<br/>ansible-inventory-v1.json| ansibleCluster
   schemas -->|requirements.yml<br/>ansible-inventory-v1.json| ansibleApps
-  schemas -.->|future: machine-readable<br/>Vault paths| nixAi
 
   tofu -->|writes ansible_inventory.json| ansibleCluster
   tofu -->|writes ansible_inventory.json| ansibleApps
