@@ -6,8 +6,7 @@
 Single source of truth for the **dryvist homelab cross-repo contracts** —
 both the data shapes and the small shared tools that enforce them:
 
-- JSON Schema for `ansible_inventory.json` (the inventory artifact produced by IaC and consumed downstream)
-- YAML constants for service / syslog / NetFlow / notification / vector-DB ports
+- JSON Schema for `ansible_inventory.json` (the inventory artifact produced by IaC and consumed downstream) — including the `constants` block that carries the service / syslog / NetFlow / notification / vector-DB port values
 - Versioned history under `versions/<vX.Y.Z>/` so breaking changes are structurally enforceable
 - `bin/flow-lock` — the global flow lease + gated credential injection every
   mutating flow (tofu, ansible, deployment.json edits) runs under
@@ -55,11 +54,11 @@ bash tests/validate.sh
 nix run nixpkgs#mermaid-cli -- -i docs/assets/ecosystem-context.mmd -o docs/assets/ecosystem-context.svg --quiet
 ```
 
-A consumer pins this repo by tag or full SHA and reads the schema and port
-constants from the pinned checkout — for example, a JSON Schema validation step
-against `schemas/ansible-inventory-v1.json`, or `yamldecode` of
-`schemas/service-ports.yaml` for port values. Pinning by tag or SHA keeps the
-resolution deterministic.
+A consumer pins this repo by tag or full SHA and reads the schema from the
+pinned checkout — for example, a JSON Schema validation step against
+`schemas/ansible-inventory-v1.json`. Port values are not a separate file; they
+ride in the inventory artifact's `constants` block, validated by that schema.
+Pinning by tag or SHA keeps the resolution deterministic.
 
 ## Why
 
@@ -71,7 +70,7 @@ Centralising the schema gives us:
 | Benefit | Mechanism |
 | --- | --- |
 | Compile-time parity | One published schema, pinned by tag or SHA, validated wherever the inventory is read |
-| Single constants surface | Port values live in `schemas/service-ports.yaml`, never duplicated downstream |
+| Single constants surface | Port values ride in the inventory artifact's `constants` block (schema-validated), defined once upstream and never re-duplicated here |
 | Breaking-change gate | CI compares `schemas/` against latest `versions/<vX.Y.Z>/` and requires a `versions/<vX.Y.Z>/` snapshot on shape change (per ADR 0003); major-bump enforcement is human-reviewed via release-please manifest edits |
 | One human-edit surface | The schema and port constants are edited here once, then republished |
 
@@ -79,8 +78,7 @@ Centralising the schema gives us:
 
 ```text
 schemas/
-  ansible-inventory-v1.json    # JSON Schema (draft 2020-12) for the inventory artifact
-  service-ports.yaml           # Single source of truth for service / syslog / NetFlow / notification / vector-DB ports
+  ansible-inventory-v1.json    # JSON Schema (draft 2020-12) for the inventory artifact, incl. the `constants` port block
 bin/
   flow-lock                    # Global flow lease + gated credential injection
   deployment-json              # Locked, schema-gated deployment.json fetch/edit/put
@@ -107,7 +105,7 @@ flake.nix                      # packages.flow-lock + dev shell (consumers pin b
 ## How to bump the schema
 
 1. **Patch / additive change** (new optional field, new constant): bump `1.0.x` → `1.0.x+1`.
-   - Edit `schemas/ansible-inventory-v1.json` (or `service-ports.yaml`)
+   - Edit `schemas/ansible-inventory-v1.json`
    - Copy current `schemas/` contents to `versions/v1.0.x+1/`
    - release-please picks up the `fix:` commit and tags
 2. **Minor / additive in a backward-compatible way** (new required field with a default in consumers,

@@ -37,5 +37,5 @@ roles:
   - name: inventory_resolve
     src: https://github.com/dryvist/homelab-contracts.git
     scm: git
-    version: v1.9.0   # release tag
+    version: v1.10.0   # release tag
 ```
