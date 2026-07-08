@@ -9,8 +9,7 @@ inventory resolution). Formerly `homelab-schemas`.
 
 This repo owns:
 
-- `schemas/ansible-inventory-v1.json` — JSON Schema (draft 2020-12) for the inventory artifact
-- `schemas/service-ports.yaml` — service / syslog / NetFlow / notification / vector-DB port constants
+- `schemas/ansible-inventory-v1.json` — JSON Schema (draft 2020-12) for the inventory artifact, including the `constants` block that carries the service / syslog / NetFlow / notification / vector-DB port values
 - `bin/flow-lock` — the global flow lease + gated credential injection (OpenBao KV v2 CAS)
 - `bin/deployment-json` — locked, schema-gated deployment.json fetch/edit/put
 - `ansible/roles/inventory_resolve` — shared inventory-resolution role for the ansible repos
@@ -39,8 +38,11 @@ This repo does **not** own:
 3. **Breaking changes require a major version bump and a `versions/<vX.Y.Z>/`
    directory.** CI enforces this by diffing `schemas/` against the latest
    `versions/`.
-4. **Port constants only live in `schemas/service-ports.yaml`.** No duplication
-   in HCL, Ansible vars, or examples. Examples reference the canonical names by
+4. **Port values are defined once, upstream.** They originate in
+   `dryvist/terraform-proxmox` `pipeline_constants` and reach consumers through
+   the inventory artifact's `constants` block — whose shape (`portMap`) this
+   schema enforces. Do not re-declare port values here, or duplicate them in
+   HCL, Ansible vars, or examples; examples reference the canonical names by
    lookup pattern only.
 5. **Mermaid round-trip CI gate**: every `.mmd` change must include a
    re-rendered `.svg`. The `mermaid-render-check.yml` workflow fails the PR if
@@ -79,7 +81,7 @@ release-please drives version bumps from these prefixes. Major bumps are human-i
 | --- | --- |
 | `dryvist/ansible-proxmox` | Consumes `inventory_resolve` via `requirements.yml` git source + `flow-lock` via flake input; validates inventory in CI |
 | `dryvist/ansible-proxmox-apps` | Same as above; also owns the OpenBao deployment role the lease lives on |
-| `dryvist/terraform-proxmox` | Consumes `service-ports.yaml` via Terragrunt include (cached locally); runs under `flow-lock`; writes `ansible_inventory.json` matching the schema |
+| `dryvist/terraform-proxmox` | Defines the port values (`pipeline_constants`) and writes them into `ansible_inventory.json` (the `constants` block) matching the schema; runs under `flow-lock` |
 
 ## ADRs
 

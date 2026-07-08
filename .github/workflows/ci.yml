@@ -27,16 +27,6 @@ jobs:
       - name: Validate example against schema
         run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
 
-  validate-ports-yaml:
-    name: lint service-ports.yaml
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ibiqlik/action-yamllint@v3
-        with:
-          file_or_dir: schemas/service-ports.yaml
-          strict: true
-
   shape-snapshot-gate:
     name: enforce snapshot on shape change
     runs-on: ubuntu-latest
