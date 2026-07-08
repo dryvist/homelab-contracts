@@ -6,12 +6,12 @@ sequenceDiagram
   participant AnsApps as dryvist/ansible-proxmox-apps
   participant Cluster as Proxmox cluster<br/>(B+C+D)
 
-  Note over Schemas: Tagged release v1.0.0<br/>schemas/ansible-inventory-v1.json<br/>schemas/service-ports.yaml
+  Note over Schemas: Tagged release v1.0.0<br/>schemas/ansible-inventory-v1.json
 
-  Tofu->>Schemas: Terragrunt include service-ports.yaml<br/>(via .cache/ at pinned tag)
+  Tofu->>Tofu: define pipeline_constants<br/>(port values owned upstream)
   Tofu->>Tofu: tofu apply
-  Tofu->>AnsCluster: write ansible_inventory.json<br/>(local_file resource)
-  Tofu->>AnsApps: write ansible_inventory.json<br/>(local_file resource)
+  Tofu->>AnsCluster: write ansible_inventory.json<br/>(constants block + local_file resource)
+  Tofu->>AnsApps: write ansible_inventory.json<br/>(constants block + local_file resource)
 
   AnsCluster->>Schemas: requirements.yml git source<br/>(pinned by SHA or tag)
   AnsCluster->>AnsCluster: ansible.utils.validate<br/>against ansible-inventory-v1.json
