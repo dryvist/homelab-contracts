@@ -18,7 +18,7 @@
     "schema_version": {
       "description": "Semantic version of this contract. Consumers fail-fast when the major differs.",
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "pattern": "^1\\.\\d+\\.\\d+$",
       "examples": ["1.0.0"]
     },
     "vlans": {

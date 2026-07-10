@@ -24,7 +24,7 @@
     "schema_version": {
       "description": "Semantic version of this contract. Consumers fail-fast when the major differs. Emitted by terraform-proxmox inventory_publish.tf; must be '2.x.y' for this schema.",
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "pattern": "^2\\.\\d+\\.\\d+$",
       "examples": ["2.0.0"]
     },
     "domain": {
