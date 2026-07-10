@@ -6,7 +6,9 @@
 Single source of truth for the **dryvist homelab cross-repo contracts** —
 both the data shapes and the small shared tools that enforce them:
 
-- JSON Schema for `ansible_inventory.json` (the inventory artifact produced by IaC and consumed downstream) — including the `constants` block that carries the service / syslog / NetFlow / notification / vector-DB port values
+- JSON Schema for `ansible_inventory.json` (the inventory artifact produced by IaC and
+  consumed downstream) — including the `constants` block that carries the service /
+  syslog / NetFlow / notification / vector-DB port values
 - Versioned history under `versions/<vX.Y.Z>/` so breaking changes are structurally enforceable
 - `bin/flow-lock` — the global flow lease + gated credential injection every
   mutating flow (tofu, ansible, deployment.json edits) runs under
@@ -70,8 +72,8 @@ Centralising the schema gives us:
 | Benefit | Mechanism |
 | --- | --- |
 | Compile-time parity | One published schema, pinned by tag or SHA, validated wherever the inventory is read |
-| Single constants surface | Port values ride in the inventory artifact's `constants` block (schema-validated), defined once upstream and never re-duplicated here |
-| Breaking-change gate | CI compares `schemas/` against latest `versions/<vX.Y.Z>/` and requires a `versions/<vX.Y.Z>/` snapshot on shape change (per ADR 0003); major-bump enforcement is human-reviewed via release-please manifest edits |
+| Single constants surface | Port values ride in the inventory's `constants` block (schema-validated), defined once upstream and never duplicated here |
+| Breaking-change gate | CI diffs `schemas/` vs `versions/<vX.Y.Z>/`; shape changes need a snapshot (ADR 0003), major bumps human-reviewed via release-please |
 | One human-edit surface | The schema and port constants are edited here once, then republished |
 
 ## Repository layout

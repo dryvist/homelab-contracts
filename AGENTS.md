@@ -9,7 +9,9 @@ inventory resolution). Formerly `homelab-schemas`.
 
 This repo owns:
 
-- `schemas/ansible-inventory-v1.json` — JSON Schema (draft 2020-12) for the inventory artifact, including the `constants` block that carries the service / syslog / NetFlow / notification / vector-DB port values
+- `schemas/ansible-inventory-v1.json` — JSON Schema (draft 2020-12) for the inventory
+  artifact, including the `constants` block that carries the service / syslog / NetFlow /
+  notification / vector-DB port values
 - `bin/flow-lock` — the global flow lease + gated credential injection (OpenBao KV v2 CAS)
 - `bin/deployment-json` — locked, schema-gated deployment.json fetch/edit/put
 - `ansible/roles/inventory_resolve` — shared inventory-resolution role for the ansible repos
@@ -81,7 +83,7 @@ release-please drives version bumps from these prefixes. Major bumps are human-i
 | --- | --- |
 | `dryvist/ansible-proxmox` | Consumes `inventory_resolve` via `requirements.yml` git source + `flow-lock` via flake input; validates inventory in CI |
 | `dryvist/ansible-proxmox-apps` | Same as above; also owns the OpenBao deployment role the lease lives on |
-| `dryvist/terraform-proxmox` | Defines the port values (`pipeline_constants`) and writes them into `ansible_inventory.json` (the `constants` block) matching the schema; runs under `flow-lock` |
+| `dryvist/terraform-proxmox` | Defines `pipeline_constants` (ports) and writes them into `ansible_inventory.json` per the schema; runs under `flow-lock` |
 
 ## ADRs
 
