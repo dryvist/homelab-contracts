@@ -1,185 +1,183 @@
 {
-  "schema_version": "1.0.0",
-  "domain": "example.local",
-  "cluster": {
-    "name": "dryvist",
-    "fabric_cidr": null,
-    "node_names": ["proxmox-b", "proxmox-c", "proxmox-d"]
-  },
-  "hosts": {
-    "proxmox-b": {
-      "mgmt_ip": "192.168.0.11",
-      "fabric_ip": null,
-      "vmid_range": [200, 299],
-      "zfs_pool_devices": [
-        {
-          "pool_name": "rpool",
-          "vdev_type": "mirror",
-          "devices": [
-            "/dev/disk/by-id/ata-PLACEHOLDER-B-DISK-1",
-            "/dev/disk/by-id/ata-PLACEHOLDER-B-DISK-2"
-          ]
-        }
-      ],
-      "host_services": {},
-      "pbs_ctid": 210,
-      "hc_slug": "proxmox-b-heartbeat",
-      "role": "proxmox_node"
-    },
-    "proxmox-c": {
-      "mgmt_ip": "192.168.0.12",
-      "fabric_ip": null,
-      "vmid_range": [300, 399],
-      "zfs_pool_devices": [
-        {
-          "pool_name": "rpool",
-          "vdev_type": "mirror",
-          "devices": [
-            "/dev/disk/by-id/ata-PLACEHOLDER-C-DISK-1",
-            "/dev/disk/by-id/ata-PLACEHOLDER-C-DISK-2"
-          ]
-        }
-      ],
-      "host_services": {},
-      "pbs_ctid": 310,
-      "hc_slug": "proxmox-c-heartbeat",
-      "role": "proxmox_node"
-    },
-    "proxmox-d": {
-      "mgmt_ip": "192.168.0.13",
-      "fabric_ip": null,
-      "vmid_range": [400, 499],
-      "zfs_pool_devices": [
-        {
-          "pool_name": "rpool",
-          "vdev_type": "mirror",
-          "devices": [
-            "/dev/disk/by-id/ata-PLACEHOLDER-D-DISK-1",
-            "/dev/disk/by-id/ata-PLACEHOLDER-D-DISK-2"
-          ]
-        }
-      ],
-      "host_services": {},
-      "pbs_ctid": 410,
-      "hc_slug": "proxmox-d-heartbeat",
-      "role": "proxmox_node"
-    },
-    "ai-server-a": {
-      "mgmt_ip": "192.168.0.10",
-      "fabric_ip": null,
-      "vmid_range": null,
-      "zfs_pool_devices": [
-        {
-          "pool_name": "tank",
-          "vdev_type": "raidz2",
-          "devices": [
-            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-1",
-            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-2",
-            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-3",
-            "/dev/disk/by-id/ata-PLACEHOLDER-A-HDD-4"
-          ]
-        }
-      ],
-      "host_services": {},
-      "pbs_ctid": null,
-      "hc_slug": "ai-server-a-heartbeat",
-      "role": "ai_host"
-    }
-  },
-  "ha_groups": {},
-  "replication_jobs": [],
-  "pbs_targets": {
-    "pbs-b": {
-      "host": "192.168.0.210",
-      "port": 8007,
-      "datastore": "pbs-store-b",
-      "fingerprint": null,
-      "sync_targets": ["pbs-c"]
-    },
-    "pbs-c": {
-      "host": "192.168.0.310",
-      "port": 8007,
-      "datastore": "pbs-store-c",
-      "fingerprint": null,
-      "sync_targets": ["pbs-d"]
-    },
-    "pbs-d": {
-      "host": "192.168.0.410",
-      "port": 8007,
-      "datastore": "pbs-store-d",
-      "fingerprint": null,
-      "sync_targets": ["pbs-b"]
-    }
-  },
-  "openbao": null,
+  "schema_version": "2.0.0",
+  "domain": "example.com",
   "containers": {
-    "haproxy-edge": {
-      "vmid": 250,
-      "hostname": "haproxy-edge",
-      "ip": "192.168.0.250",
+    "example-static": {
+      "vmid": 200,
+      "hostname": "example-static",
+      "ip": "192.0.2.10",
       "mac": null,
       "reserved_ip": null,
-      "node": "proxmox-b",
+      "node": "node-1",
       "ansible_connection": "community.proxmox.proxmox_pct_remote",
-      "ansible_pct_vmid": 250,
-      "tags": ["haproxy", "edge"],
-      "pool_id": "edge"
+      "ansible_pct_vmid": 200,
+      "tags": ["example"],
+      "pool_id": "example"
     },
-    "cribl-edge-1": {
-      "vmid": 251,
-      "hostname": "cribl-edge-1",
-      "ip": "192.168.0.251",
-      "node": "proxmox-c",
+    "example-dhcp": {
+      "vmid": 201,
+      "hostname": "example-dhcp",
+      "ip": "app-01.example.com",
+      "mac": "02:00:00:00:00:01",
+      "reserved_ip": "192.0.2.11",
+      "node": "node-2",
       "ansible_connection": "community.proxmox.proxmox_pct_remote",
-      "ansible_pct_vmid": 251,
-      "tags": ["cribl", "edge"],
-      "pool_id": "edge"
-    },
-    "plex": {
-      "vmid": 252,
-      "hostname": "plex",
-      "ip": "plex.example.local",
-      "mac": "02:00:c0:a8:00:fc",
-      "reserved_ip": "192.168.0.252",
-      "node": "proxmox-d",
-      "ansible_connection": "community.proxmox.proxmox_pct_remote",
-      "ansible_pct_vmid": 252,
-      "tags": ["plex", "media"],
-      "pool_id": "media"
+      "ansible_pct_vmid": 201,
+      "tags": ["example", "ingress"],
+      "pool_id": "example"
     }
   },
   "vms": {
-    "openbao": {
-      "vmid": 220,
-      "hostname": "openbao",
-      "ip": "192.168.0.220",
-      "node": "proxmox-b",
+    "example-vm": {
+      "vmid": 210,
+      "hostname": "example-vm",
+      "ip": "192.0.2.12",
+      "node": "node-1",
       "ansible_connection": "ssh",
-      "tags": ["openbao", "secrets"],
-      "pool_id": "core"
+      "tags": ["example"],
+      "pool_id": "example"
+    },
+    "example-dhcp-vm": {
+      "vmid": 212,
+      "hostname": "example-dhcp-vm",
+      "ip": "vm-01.example.com",
+      "mac": "02:00:00:00:00:02",
+      "reserved_ip": "192.0.2.15",
+      "node": "node-2",
+      "ansible_connection": "ssh",
+      "tags": ["example"],
+      "pool_id": "example"
     }
   },
   "docker_vms": {
-    "gh-runners": {
-      "vmid": 230,
-      "hostname": "gh-runners",
-      "ip": "192.168.0.230",
-      "node": "proxmox-c",
+    "example-docker": {
+      "vmid": 211,
+      "hostname": "example-docker",
+      "ip": "192.0.2.13",
+      "node": "node-2",
       "ansible_connection": "ssh",
-      "tags": ["docker", "ci"],
-      "pool_id": "ci"
+      "tags": ["docker", "example"],
+      "pool_id": "example"
     }
   },
   "splunk_vm": {
     "splunk": {
-      "vmid": 200,
-      "hostname": "splunk",
-      "ip": "192.168.0.200",
-      "node": "proxmox-b",
-      "ansible_connection": "ssh",
-      "tags": ["splunk", "docker"],
-      "pool_id": "observability"
+      "vmid": 220,
+      "hostname": "example-splunk",
+      "ip": "192.0.2.14",
+      "node": "node-1",
+      "ansible_connection": "ssh"
     }
   },
-  "host_services": {}
+  "constants": {
+    "service_ports": {
+      "example_service_web": 10001,
+      "example_api": 10002
+    },
+    "syslog_ports": {
+      "default": 10010,
+      "example_family": 11010
+    },
+    "netflow_ports": {
+      "example_netflow": 10020
+    },
+    "notification_ports": {
+      "example_smtp": 10030
+    },
+    "vector_db_ports": {
+      "example_http": 10040,
+      "example_grpc": 10041
+    },
+    "media_ports": {
+      "example_media_web": 10050
+    },
+    "syslog_port_map": {
+      "example_family": {
+        "standard": 10010,
+        "high": 11010,
+        "index": "example",
+        "sourcetype": "example:family"
+      }
+    },
+    "ai_log_routing": {
+      "example_source": {
+        "port": 10060,
+        "index": "example",
+        "sourcetype": "example:source"
+      }
+    },
+    "custom_example_ports": {
+      "example_custom": 10070
+    }
+  },
+  "ingress": [
+    {
+      "name": "example-ui",
+      "ip": "192.0.2.20",
+      "port": 10001
+    },
+    {
+      "name": "splunk",
+      "ip": "192.0.2.30",
+      "port": 10002,
+      "scheme": "https",
+      "insecure_tls": true
+    },
+    {
+      "name": "example-pool",
+      "backends": ["192.0.2.40", "192.0.2.41"],
+      "port": 10003,
+      "sticky": true,
+      "health_check": true,
+      "health_check_path": "/health"
+    },
+    {
+      "name": "example-apex",
+      "apex": true,
+      "backends": ["node-1.example.com", "node-2.example.com"],
+      "port": 10004,
+      "scheme": "https",
+      "insecure_tls": true,
+      "sticky": true,
+      "health_check": true
+    }
+  ],
+  "ingress_vip": "192.0.2.2",
+  "ingress_hosts": ["192.0.2.40", "192.0.2.41"],
+  "host_services": {},
+  "nodes": {
+    "node-1": {
+      "role": "node-1",
+      "hardware": "example-server",
+      "commissioned": true
+    },
+    "node-2": {
+      "role": "node-2",
+      "hardware": null,
+      "commissioned": false
+    }
+  },
+  "node_storage": {
+    "node-1": {
+      "pools": {
+        "rpool": {
+          "type": "zfspool",
+          "raid": "mirror",
+          "protected": true,
+          "register": true,
+          "content": ["images", "rootdir"],
+          "datasets": {
+            "data": {
+              "quota": "100G",
+              "mountpoint": "/rpool/data",
+              "nfs_export": null,
+              "properties": {
+                "compression": "zstd"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

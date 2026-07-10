@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "vlans": [
+    { "vid": 10, "name": "example-mgmt", "group": "example-group" },
+    { "vid": 20, "name": "example-servers", "group": null }
+  ],
+  "prefixes": [
+    { "cidr": "192.0.2.0/24", "vlan": 10, "role": "mgmt" },
+    { "cidr": "198.51.100.0/24", "vlan": 20, "role": null }
+  ],
+  "ip_addresses": [
+    {
+      "address": "192.0.2.10/24",
+      "dns_name": "node-1.example.com",
+      "mac": "02:00:00:00:00:10",
+      "assigned_interface": { "device": "example-node-1", "name": "eth0" }
+    },
+    {
+      "address": "192.0.2.50",
+      "dns_name": null,
+      "mac": null,
+      "assigned_interface": null
+    }
+  ],
+  "devices": [
+    {
+      "name": "example-node-1",
+      "role": "proxmox_node",
+      "rack": "rack-1",
+      "bmc": { "address": "192.0.2.60", "mac": null }
+    },
+    {
+      "name": "example-switch",
+      "role": "switch",
+      "rack": null,
+      "bmc": null
+    }
+  ],
+  "racks": [
+    { "name": "rack-1", "site": "example-site" }
+  ],
+  "interfaces": [
+    { "name": "eth0", "device": "example-node-1", "mac": "02:00:00:00:00:10", "mgmt_only": false },
+    { "name": "idrac", "device": "example-node-1", "mac": null, "mgmt_only": true }
+  ]
+}
