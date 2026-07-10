@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   validate-schema:
-    name: validate example against schema
+    name: validate examples against schemas
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -24,8 +24,10 @@ jobs:
           python-version: "3.13"
       - name: Install check-jsonschema
         run: pip install 'check-jsonschema==0.37.2'
-      - name: Validate example against schema
+      - name: Validate ansible_inventory example against schema
         run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
+      - name: Validate nautobot_export example against schema
+        run: check-jsonschema --schemafile schemas/nautobot-export-v1.json examples/nautobot_export.json
 
   shape-snapshot-gate:
     name: enforce snapshot on shape change
