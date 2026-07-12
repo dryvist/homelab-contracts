@@ -54,7 +54,6 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             bashInteractive
-            shellcheck
             bats
             jq
             curl
