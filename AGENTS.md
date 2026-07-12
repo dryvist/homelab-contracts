@@ -49,7 +49,7 @@ This repo does **not** own:
 5. **Mermaid round-trip CI gate**: every `.mmd` change must include a
    re-rendered `.svg`. The `mermaid-render-check.yml` workflow fails the PR if
    `.svg` doesn't match.
-6. **`bin/` tools stay dependency-light.** bash + curl +
+6. **`bin/` tools stay dependency-light and shellcheck-clean.** bash + curl +
    jq (+ aws CLI / check-jsonschema for `deployment-json`) only — no Python,
    no per-flow logic. Every behavior change needs a matching
    `tests/flow-lock.bats` case.
