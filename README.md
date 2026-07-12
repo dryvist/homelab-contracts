@@ -99,7 +99,7 @@ docs/
   assets/                      # Mermaid `.mmd` sources + rendered `.svg`
 flake.nix                      # packages.flow-lock + dev shell (consumers pin by tag)
 .github/workflows/
-  ci.yml                       # validate.sh + semver gate + shellcheck + bats + ansible-lint
+  ci.yml                       # validate.sh + semver gate + bats + ansible-lint
   release-please.yml           # release-please managed CHANGELOG + tags
   mermaid-render-check.yml     # Re-renders .mmd; fails PR on diff
 ```
