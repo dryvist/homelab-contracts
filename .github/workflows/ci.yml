@@ -39,6 +39,14 @@ jobs:
       - name: Diff schemas/ against latest versions/
         run: bash .github/scripts/diff-against-latest-version.sh
 
+  lint-shell:
+    name: shellcheck bin/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: shellcheck
+        run: shellcheck bin/flow-lock bin/deployment-json
+
   test-cli:
     name: bats CLI-contract tests
     runs-on: ubuntu-latest
