@@ -83,7 +83,7 @@ release-please drives version bumps from these prefixes. Major bumps are human-i
 | --- | --- |
 | `dryvist/ansible-proxmox` | Consumes `inventory_resolve` via `requirements.yml` git source; validates inventory in CI |
 | `dryvist/ansible-proxmox-apps` | Same as above; also owns the OpenBao deployment role the lease lives on |
-| `dryvist/tofu-proxmox` | Defines `pipeline_constants` (ports) and writes them into `ansible_inventory.json` per the schema; Terrakube serializes runs per workspace |
+| `dryvist/tofu-proxmox` | Defines `pipeline_constants` and writes them into the inventory; Terrakube serializes workspace runs |
 
 ## ADRs
 

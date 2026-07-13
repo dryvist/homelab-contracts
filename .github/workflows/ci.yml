@@ -68,6 +68,6 @@ jobs:
       - name: Install ansible-lint
         run: pip install 'ansible-lint==25.*' 'ansible-core==2.18.*'
       - name: Install required collections
-        run: ansible-galaxy collection install amazon.aws
+        run: ansible-galaxy collection install amazon.aws community.hashi_vault
       - name: Lint the shared role
         run: ansible-lint ansible/roles/inventory_resolve
