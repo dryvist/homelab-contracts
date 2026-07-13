@@ -5,7 +5,7 @@
 # file is a transient fetch artifact. Every mutation must happen under the
 # global flow lease:
 #
-#   doppler run -- flow-lock run --flow deployment-edit --creds rustfs -- \
+#   flow-lock run --flow deployment-edit --creds rustfs -- \
 #     deployment-json edit --schema ./deployment.schema.json
 #
 # This tool REFUSES to run without FLOW_LOCK_LEASE_ID in the environment

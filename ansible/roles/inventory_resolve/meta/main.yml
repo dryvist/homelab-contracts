@@ -4,7 +4,7 @@ galaxy_info:
   author: dryvist
   description: >-
     Shared resolution of the published OpenTofu inventory (explicit path →
-    on-prem store → legacy AWS bucket → explicitly-allowed local cache),
+    homelab RustFS via native OpenBao credentials → explicitly-allowed local cache),
     ending with tofu_data loaded.
   license: MIT
   min_ansible_version: "2.16"

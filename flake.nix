@@ -1,5 +1,5 @@
 {
-  description = "dryvist homelab contracts — inventory schema, port constants, and the flow-lock tooling";
+  description = "dryvist homelab contracts — inventory schema, port constants, and non-IaC mutation tooling";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";

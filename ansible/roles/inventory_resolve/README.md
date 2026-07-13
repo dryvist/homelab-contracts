@@ -7,9 +7,8 @@ copy-pasted resolution block that previously lived in each ansible repo's
 Source priority (first match wins):
 
 1. `TOFU_INVENTORY_PATH` — explicit local path (tests, pins)
-2. Published S3 artifact — the on-prem store when `S3_ENDPOINT` is present
-   (injected by `flow-lock run --creds rustfs`), else the legacy AWS state
-   bucket via the ambient credential chain
+2. Published S3 artifact — the homelab RustFS object, using credentials read
+   natively from OpenBao `secret/platform/object-storage`
 3. Local gitignored cache — **only** with `TOFU_INVENTORY_ALLOW_STALE=1`
    (a stale inventory deploys wrong VMIDs/IPs; the opt-in is deliberate)
 
@@ -20,6 +19,13 @@ On success the role leaves two facts for the consumer:
 
 Repo-specific validation and `add_host` group mapping stay in the consumer —
 pass `inventory_resolve_required_keys` for top-level key checks.
+Set `inventory_resolve_fail_when_unresolved: false` only when the consumer has
+its own explicit static or DNS fallback.
+
+The controller supplies only `BAO_ADDR` and `BAO_TOKEN`. The OpenBao path must
+contain `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and optionally
+`S3_REGION`. Object-store credentials remain in Ansible memory and are never
+exported into the shell.
 
 ```yaml
 # consumer playbook (localhost play)

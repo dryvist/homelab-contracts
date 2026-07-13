@@ -10,8 +10,8 @@ both the data shapes and the small shared tools that enforce them:
   consumed downstream) — including the `constants` block that carries the service /
   syslog / NetFlow / notification / vector-DB port values
 - Versioned history under `versions/<vX.Y.Z>/` so breaking changes are structurally enforceable
-- `bin/flow-lock` — the global flow lease + gated credential injection every
-  mutating flow (tofu, ansible, deployment.json edits) runs under
+- `bin/flow-lock` — the OpenBao-backed lease for coordinated non-IaC mutation
+  tools such as `deployment.json` edits
 - `bin/deployment-json` — locked, schema-gated access to the canonical
   `deployment.json` object
 - `ansible/roles/inventory_resolve` — the shared inventory-resolution role
@@ -20,16 +20,15 @@ both the data shapes and the small shared tools that enforce them:
 Formerly `homelab-schemas`; renamed when the shared flow tooling moved in
 (the contract repo now ships the enforcement, not just the shape).
 
-## flow-lock in one line
+## Locking boundaries
 
-```sh
-doppler run -- flow-lock run --flow tofu --creds rustfs,state,proxmox -- terragrunt apply
-```
+Terrakube serializes OpenTofu runs with its native per-workspace lock. Do not
+wrap a Terrakube or local OpenTofu run in the global `flow-lock` lease.
 
-One OpenBao KV v2 lease (`secret/data/locks/global`, create-if-absent via
+For the remaining non-IaC multi-step mutation tools, one OpenBao KV v2 lease
+(`secret/data/locks/global`, create-if-absent via
 `cas=0`, TTL + background renewal, CAS takeover of expired leases) is the only
-path to runtime credentials — no lease, no creds, so two flows cannot mutate
-the estate concurrently by construction. `flow-lock status` shows the holder;
+path to runtime credentials. `flow-lock status` shows the holder;
 `flow-lock break --reason ...` force-breaks with an audit entry. Consumers pin
 this repo by release tag (Nix flake input) and get `flow-lock` in their dev
 shell.
@@ -82,7 +81,7 @@ Centralising the schema gives us:
 schemas/
   ansible-inventory-v1.json    # JSON Schema (draft 2020-12) for the inventory artifact, incl. the `constants` port block
 bin/
-  flow-lock                    # Global flow lease + gated credential injection
+  flow-lock                    # Non-IaC mutation lease + gated credential injection
   deployment-json              # Locked, schema-gated deployment.json fetch/edit/put
 ansible/
   roles/inventory_resolve/     # Shared inventory-resolution role (pin via requirements.yml)
