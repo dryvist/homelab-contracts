@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# flow-lock — the single global homelab flow lease + gated credential injection.
+# flow-lock — non-IaC homelab mutation lease + gated credential injection.
 #
 # Every mutating flow (tofu plan/apply, ansible-playbook, deployment.json edits,
 # inventory sync) runs as:
 #
-#   doppler run -- flow-lock run --flow tofu --creds rustfs,state,proxmox -- <cmd...>
+#   flow-lock run --flow deployment-edit --creds rustfs -- deployment-json edit
 #
 # The lease is one OpenBao KV v2 key (create-if-absent via cas=0; the KV version
 # number is the fencing token). Runtime credentials live ONLY in OpenBao and are
 # injected into the child environment after the lease is held — no lease, no
 # creds, so concurrent flows are excluded by construction, not convention.
 #
-# Environment (normally provided by `doppler run`):
+# Environment (OpenBao connection plus the secret-zero token):
 #   BAO_ADDR                 OpenBao URL (required)
 #   FLOW_LOCK_ROLE_ID        AppRole role_id  (or provide BAO_TOKEN directly)
 #   FLOW_LOCK_SECRET_ID      AppRole secret_id

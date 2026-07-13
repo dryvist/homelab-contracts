@@ -30,7 +30,7 @@ Carve the contract out into `dryvist/homelab-schemas` as the single source of tr
 - Frozen historical snapshots — `versions/<vX.Y.Z>/`
 
 Both Ansible repos pin this repo via `requirements.yml` git source. The OpenTofu
-repo includes the YAML constants via Terragrunt include (cached locally from a
+repo consumes the constants from the published OpenTofu inventory (cached locally from a
 tagged release).
 
 ## Consequences
