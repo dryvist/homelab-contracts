@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.2.0](https://github.com/dryvist/homelab-contracts/compare/v2.1.0...v2.2.0) (2026-07-13)
+
+
+### Features
+
+* migrate inventory resolution to OpenBao and RustFS ([#38](https://github.com/dryvist/homelab-contracts/issues/38)) ([285f428](https://github.com/dryvist/homelab-contracts/commit/285f428a30c39edcbba513165389bac43bb2b92f))
+
 ## [2.1.0](https://github.com/dryvist/homelab-contracts/compare/v2.0.0...v2.1.0) (2026-07-10)
 
 
