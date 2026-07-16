@@ -25,7 +25,7 @@ This repo does **not** own:
 
 - Ansible playbooks, repo-specific roles, or inventories (live in
   `dryvist/ansible-proxmox` and `dryvist/ansible-proxmox-apps`)
-- OpenTofu modules (live in `dryvist/terraform-proxmox`)
+- OpenTofu modules (live in `dryvist/tofu-proxmox`)
 - The OpenBao deployment itself (role lives in `dryvist/ansible-proxmox-apps`)
 - Business logic of any kind — `bin/` tools are pure contract enforcement
   (lease, creds injection, validation); anything flow-specific stays downstream
@@ -41,7 +41,7 @@ This repo does **not** own:
    directory.** CI enforces this by diffing `schemas/` against the latest
    `versions/`.
 4. **Port values are defined once, upstream.** They originate in
-   `dryvist/terraform-proxmox` `pipeline_constants` and reach consumers through
+   `dryvist/tofu-proxmox` `pipeline_constants` and reach consumers through
    the inventory artifact's `constants` block — whose shape (`portMap`) this
    schema enforces. Do not re-declare port values here, or duplicate them in
    HCL, Ansible vars, or examples; examples reference the canonical names by
