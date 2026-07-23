@@ -142,3 +142,5 @@ MIT — see [LICENSE](LICENSE).
 ---
 
 > Part of a [larger ecosystem of ~40 repos](https://docs.jacobpevans.com) — see how it all fits together.
+
+<!-- CI gate verification run 2026-07-23: exercises the shared _ci-gate duration report; PR is closed unmerged. -->
