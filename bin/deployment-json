@@ -32,11 +32,16 @@ usage() {
 Usage:
   deployment-json fetch [FILE]                  # object -> FILE (default: stdout)
   deployment-json edit  --schema SCHEMA [--patch JQ_PROGRAM]
-  deployment-json put   FILE --schema SCHEMA
+  deployment-json put   FILE --schema SCHEMA [--allow-delete NAME[,NAME...]]
   deployment-json help
 
 edit fetches the object, applies $EDITOR (or --patch, a jq program), validates
 against SCHEMA, and uploads. put validates FILE and uploads it.
+
+put REFUSES when any containers.* key present in the published object is
+missing from FILE, unless every vanishing key is named in --allow-delete. This
+catches a stale re-base: a file transformed from an out-of-date working copy
+silently drops every guest added since, and a schema check will not notice.
 EOF
 }
 
@@ -79,6 +84,43 @@ validate() {
   jq -e . "$file" >/dev/null 2>&1 || die "not valid JSON: $file" "$EX_DATAERR"
   check-jsonschema --schemafile "$schema" "$file" \
     || die "schema validation FAILED — nothing uploaded" "$EX_DATAERR"
+}
+
+# Refuse a put that drops containers.* keys unless each is named in
+# --allow-delete. fetch_to already rejects a blank object ("a blank input must
+# never plan a destroy"); this is the non-empty-but-lossy case that guard
+# misses — a file re-based off a stale working copy drops every guest added
+# since, and schema validation passes it happily.
+guard_deletions() {
+  local file="$1" allow="$2" cur vanishing rc=0
+  if [ "${FLOW_LOCK_BOOTSTRAP:-}" = "1" ]; then
+    log "BOOTSTRAP MODE: skipping the container-deletion guard"
+    return 0
+  fi
+  cur="$(mktemp)"
+  # An unreadable or empty current object must REFUSE, never assume "deletes
+  # nothing" — fetch_to dies on both.
+  fetch_to "$cur"
+  if ! jq -e '(.containers | type) == "object"' "$cur" >/dev/null 2>&1; then
+    rm -f "$cur"
+    die "published object has no readable .containers map — refusing (cannot prove this put deletes nothing)"
+  fi
+  vanishing="$(jq -r --slurpfile new "$file" --arg allow "$allow" '
+      ($allow | split(",") | map(select(length > 0))) as $ok
+      | (.containers | keys) - ((($new[0] // {}).containers // {}) | keys) - $ok
+      | .[]' "$cur")" || rc=$?
+  rm -f "$cur"
+  [ "$rc" -eq 0 ] || die "deletion guard could not compare the objects — refusing"
+  # explicit 0: a bare `return` here would propagate the test's own exit status
+  [ -n "$vanishing" ] || return 0
+
+  log "REFUSING: this put would DELETE container(s) present in the published object:"
+  while IFS= read -r k; do
+    [ -n "$k" ] && log "    - $k"
+  done <<<"$vanishing"
+  log "If every deletion above is intended, re-run with:"
+  log "    --allow-delete $(printf '%s' "$vanishing" | tr '\n' ',' | sed 's/,$//')"
+  die "refusing to publish an unacknowledged deletion" "$EX_DATAERR"
 }
 
 upload() {
@@ -141,10 +183,11 @@ cmd_edit() {
 }
 
 cmd_put() {
-  local file="" schema=""
+  local file="" schema="" allow=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --schema) schema="$2"; shift 2 ;;
+      --allow-delete) allow="$2"; shift 2 ;;
       -*) die "unknown option for put: $1" "$EX_USAGE" ;;
       *) file="$1"; shift ;;
     esac
@@ -155,6 +198,7 @@ cmd_put() {
   require_lease
   require_store
   validate "$file" "$schema"
+  guard_deletions "$file" "$allow"
   upload "$file"
 }
 

@@ -25,6 +25,22 @@ Formerly `homelab-schemas`; renamed when the shared flow tooling moved in
 Terrakube serializes OpenTofu runs with its native per-workspace lock. Do not
 wrap a Terrakube or local OpenTofu run in the global `flow-lock` lease.
 
+## Deletion guard on `deployment-json put`
+
+`put` compares the file against the currently published object and **refuses**
+when any `containers.*` key would disappear, unless every vanishing key is named:
+
+```sh
+deployment-json put FILE --schema SCHEMA --allow-delete NAME[,NAME...]
+```
+
+The lease guarantees exclusivity, not correctness, and schema validation cannot
+see a deletion — so a file re-based off a stale working copy silently drops every
+guest added since. This is the non-empty-but-lossy sibling of the existing
+"a blank input must never plan a destroy" check. An unreadable, empty, or
+`containers`-less published object refuses rather than assuming nothing is lost.
+`FLOW_LOCK_BOOTSTRAP=1` skips it, as it skips the lease.
+
 For the remaining non-IaC multi-step mutation tools, one OpenBao KV v2 lease
 (`secret/data/locks/global`, create-if-absent via
 `cas=0`, TTL + background renewal, CAS takeover of expired leases) is the only
