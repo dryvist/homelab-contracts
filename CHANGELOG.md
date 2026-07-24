@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.3.0](https://github.com/dryvist/homelab-contracts/compare/v2.2.0...v2.3.0) (2026-07-24)
+
+
+### Features
+
+* **deployment-json:** refuse a put that drops containers keys ([#46](https://github.com/dryvist/homelab-contracts/issues/46)) ([c866606](https://github.com/dryvist/homelab-contracts/commit/c8666062465076c5565693954947fdc4bfa25eee))
+
 ## [2.2.0](https://github.com/dryvist/homelab-contracts/compare/v2.1.0...v2.2.0) (2026-07-13)
 
 
