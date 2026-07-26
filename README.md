@@ -16,6 +16,13 @@ both the data shapes and the small shared tools that enforce them:
   `deployment.json` object
 - `ansible/roles/inventory_resolve` — the shared inventory-resolution role
   consumed by the ansible repos (replaces per-repo copy-paste)
+- `ansible/roles/cribl_edge` — native Cribl Edge install (tarball, `mode-edge`,
+  systemd). Needed by both `ansible-proxmox-apps` (Edge containers) and
+  `ansible-proxmox` (every Proxmox host), so it lives here rather than in
+  either
+- `ansible/roles/cribl_packs` — installs versioned Cribl packs from GitHub
+  releases into the local config tree. Packs are the unit of Cribl config;
+  prefer them over templating `inputs.yml` / `routes.yml` per node
 
 Formerly `homelab-schemas`; renamed when the shared flow tooling moved in
 (the contract repo now ships the enforcement, not just the shape).
@@ -101,6 +108,8 @@ bin/
   deployment-json              # Locked, schema-gated deployment.json fetch/edit/put
 ansible/
   roles/inventory_resolve/     # Shared inventory-resolution role (pin via requirements.yml)
+  roles/cribl_edge/            # Cribl Edge install — hosts AND containers
+  roles/cribl_packs/           # Versioned Cribl packs from GitHub releases
 examples/
   ansible_inventory.json       # Reference example matching the v1 schema (used as CI fixture)
 versions/
