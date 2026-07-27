@@ -2,13 +2,15 @@
 # Cribl Edge native installation defaults
 
 # Installation
-# Pinned to 4.12.2 for the OTel routes fan-out (routes CAN split one input
-# across outputs from 4.12; the 4.8.0-alpha "cannot split" limitation is
-# gone). GATED on the L19 single-node 4.12.2 spike — do not roll out before.
+# Always the rolling "latest" release: Cribl's CDN prunes old versioned
+# builds (4.12.2 vanished 2026-07, breaking every fresh install on a pin),
+# and the 4.12+ OTel routes fan-out this role depends on is present in all
+# newer releases. Install is fresh-install-only (gated on the binary's
+# absence), so a moving tag never mutates a running Edge.
 # NOTE: the cribl_edge group_vars override the tarball URL with the MinIO
-# mirror; the mirrored infra/cribl-linux-x64.tgz object must be re-staged
-# with the 4.12.2 build as part of the same rollout.
-cribl_edge_version: "4.12.2"
+# mirror; keep the mirrored infra/cribl-linux-x64.tgz object current when
+# re-staging Edge containers.
+cribl_edge_version: "latest"
 # Upstream release URL. Cribl's CDN uses two different filename patterns:
 #   - versioned release: https://cdn.cribl.io/dl/4.12.2/cribl-4.12.2-linux-x64.tgz
 #   - rolling "latest":  https://cdn.cribl.io/dl/latest/cribl-linux-x64.tgz    (no version in filename)
