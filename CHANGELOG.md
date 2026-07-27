@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.4.1](https://github.com/dryvist/homelab-contracts/compare/v2.4.0...v2.4.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **ansible:** install Cribl Edge from the rolling latest release ([#50](https://github.com/dryvist/homelab-contracts/issues/50)) ([6ac94ab](https://github.com/dryvist/homelab-contracts/commit/6ac94ab28b6d546d105e08a7b585aee8e22d97f6))
+* **ansible:** resolve Cribl latest via the dl/latest CDN pointer ([#52](https://github.com/dryvist/homelab-contracts/issues/52)) ([5cdb9f0](https://github.com/dryvist/homelab-contracts/commit/5cdb9f0131ee38ab3fa6c113e5b17de517b056c4))
+
 ## [2.4.0](https://github.com/dryvist/homelab-contracts/compare/v2.3.0...v2.4.0) (2026-07-27)
 
 
