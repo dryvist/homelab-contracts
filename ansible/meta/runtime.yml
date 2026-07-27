@@ -1,0 +1,5 @@
+---
+# Minimum ansible-core the roles in this collection are exercised against.
+# Without this file ansible-galaxy warns that the collection ships no
+# requires_ansible metadata on every install.
+requires_ansible: ">=2.16"

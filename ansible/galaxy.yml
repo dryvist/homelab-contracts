@@ -1,0 +1,31 @@
+---
+# Collection metadata for the shared Ansible roles in this contracts repo.
+#
+# Why a collection and not plain `roles:` entries in a consumer's
+# requirements.yml: `ansible-galaxy role install` installs a git repo's ROOT as
+# the role. It cannot address a role that lives in a subdirectory, so a repo
+# holding several roles under ansible/roles/ is unreachable that way. A
+# collection can be installed from a subdirectory (`#/ansible/`), and it ships
+# every role under its own roles/ directory in one artifact.
+#
+# Collection root is this directory, so ansible/roles/<name> is already the
+# layout a collection requires.
+namespace: dryvist
+name: homelab
+version: 0.1.0
+readme: README.md
+authors:
+  - JacobPEvans <20714140+JacobPEvans-personal@users.noreply.github.com>
+description: Shared Ansible roles for the homelab estate (Cribl Edge, Cribl packs, inventory resolution).
+license:
+  - MIT
+tags:
+  - homelab
+  - infrastructure
+  - cribl
+  - ansible
+repository: https://github.com/dryvist/homelab-contracts
+issues: https://github.com/dryvist/homelab-contracts/issues
+build_ignore:
+  - "*.tar.gz"
+  - .DS_Store
