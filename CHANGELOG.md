@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.4.0](https://github.com/dryvist/homelab-contracts/compare/v2.3.0...v2.4.0) (2026-07-27)
+
+
+### Features
+
+* **ansible:** promote cribl_edge and cribl_packs to shared roles ([#48](https://github.com/dryvist/homelab-contracts/issues/48)) ([01e42fa](https://github.com/dryvist/homelab-contracts/commit/01e42fafa33ec0a2be62d2f4225ad2029153e06a))
+
 ## [2.3.0](https://github.com/dryvist/homelab-contracts/compare/v2.2.0...v2.3.0) (2026-07-24)
 
 
