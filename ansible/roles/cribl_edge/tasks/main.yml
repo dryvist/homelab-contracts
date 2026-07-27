@@ -51,6 +51,31 @@
     state: directory
     mode: "0755"
 
+# The CDN's `dl/latest/cribl-linux-x64.tgz` object is abandoned (still the
+# 2024 4.8.0-alpha build). The authoritative rolling release is the
+# `dl/latest` POINTER, whose body is the full URL of the current hashed
+# tarball (e.g. dl/4.19.0/cribl-4.19.0-<hash>-linux-x64.tgz). Resolve it at
+# run time — but never clobber a mirror override (the container group_vars
+# point cribl_edge_tarball_url at MinIO, which this must leave alone).
+- name: Resolve the rolling latest release from the CDN pointer
+  ansible.builtin.uri:
+    url: https://cdn.cribl.io/dl/latest
+    return_content: true
+  register: cribl_edge_latest_pointer
+  delegate_to: localhost
+  become: false
+  run_once: true
+  when:
+    - cribl_edge_version == 'latest'
+    - "'cdn.cribl.io' in cribl_edge_tarball_url"
+
+- name: Pin the tarball URL to the resolved release
+  ansible.builtin.set_fact:
+    cribl_edge_tarball_url: "{{ cribl_edge_latest_pointer.content | trim }}"
+  when:
+    - cribl_edge_version == 'latest'
+    - "'cdn.cribl.io' in cribl_edge_tarball_url"
+
 - name: Download and extract Cribl Edge tarball
   ansible.builtin.unarchive:
     src: "{{ cribl_edge_tarball_url }}"
