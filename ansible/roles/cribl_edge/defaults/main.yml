@@ -17,6 +17,10 @@ cribl_edge_version: "latest"
 # Group vars for the `cribl_edge` group override this with a MinIO mirror URL
 # because the cribl-edge containers have the `outbound-internal` firewall and
 # cannot reach cdn.cribl.io directly.
+# With version == latest this default is a placeholder that tasks/main.yml
+# replaces with the URL body of the `dl/latest` CDN pointer at run time (the
+# static dl/latest/cribl-linux-x64.tgz object is abandoned upstream — it
+# still serves the 2024 4.8.0-alpha build).
 cribl_edge_tarball_url: >-
   https://cdn.cribl.io/dl/{{ cribl_edge_version }}/{{
   'cribl-linux-x64.tgz' if cribl_edge_version == 'latest'
