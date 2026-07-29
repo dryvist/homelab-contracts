@@ -81,6 +81,32 @@ cribl_edge_unifi_fw_match: >-
 cribl_edge_hardware_match: >-
   smartd|medium error|failed command|I\/O error|vdev_state=|\bZED\b|\bZFS\b
 
+# os catch-all decomposition, by HOST.
+#
+# index=os accumulated as a catch-all: measured 2026-07-26 it held 39.3M events
+# over 13 months from 30+ unrelated hosts, 96.9% of it a single `syslog`
+# sourcetype. That defeats per-index retention and access control, and makes
+# every index=os search scan unrelated data.
+#
+# The split axis is HOST, not sourcetype, because sourcetype does not
+# distinguish these sources — they are all syslog. Measured 24h shares of the
+# os syslog volume:
+#   proxmox hypervisors  68.7 MB/day  38.3%   (pve2 alone is 33.9% of all os)
+#   AI/agent stack       63.1 MB/day  35.2%
+# Together 73.5%. The remaining hosts are each under 2% and stay in os; the
+# next candidates if this is taken further are zammad (11.2%) and
+# download-vpn (8.5%).
+#
+# Same mechanism as the hardware reclassify above: the pipeline stamps the new
+# index, the output router reads the stamped value. The match lives ONLY here,
+# never duplicated into a route filter. Matching is anchored on the host field
+# so a hostname appearing inside a log line cannot reroute an unrelated event.
+#
+# An empty mapping disables the split entirely and everything stays in os.
+cribl_edge_os_host_routing:
+  os_proxmox: '^pve(\d+|-scripts-local)$'
+  os_ai: '^(llm-router-\d+|llm-light|open-webui|hermes-agent|agentgateway|agent-exec)$'
+
 # Edge API bind port from tofu constants (no hardcoded values).
 # Templated into local/edge/cribl.yml with host 0.0.0.0 so the API is
 # reachable from the internal network, not just 127.0.0.1.
@@ -125,6 +151,13 @@ cribl_edge_per_index_indexes:
   # plus the Cribl exec packs. Gets a dedicated splunk_hec_hardware output
   # whose token matches the standalone hardware index in ansible-splunk.
   - hardware
+
+# The os decomposition targets need their own HEC outputs, exactly like
+# hardware. Derived from cribl_edge_os_host_routing so the index list and the
+# match rules cannot drift apart — adding a mapping above is the only edit
+# needed to route a new slice out of the os catch-all.
+cribl_edge_all_index_outputs: >-
+  {{ cribl_edge_per_index_indexes + (cribl_edge_os_host_routing.keys() | list) }}
 
 # netmon Telegraf HEC ingestion. The per-WAN probers (roles/netmon) push
 # Splunk-HEC to this Edge on cribl_hec_input_port (group_vars/all.yml); the

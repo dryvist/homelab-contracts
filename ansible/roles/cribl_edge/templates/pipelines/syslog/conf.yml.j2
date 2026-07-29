@@ -92,6 +92,34 @@ functions:
         - name: host
           value: log_host
 
+{% if cribl_edge_os_host_routing | default({}, true) %}
+  # os catch-all decomposition by host.
+  #
+  # POSITION MATTERS: this must come after `host` is populated from the
+  # regex-extracted log_host above. Placed with the hardware reclassify instead
+  # — which is the intuitive spot, since both narrow index=='os' — every event
+  # would read an unset host, fall through to 'os', and the split would look
+  # configured while doing nothing.
+  #
+  # Still narrower than the hardware reclassify in effect: that one runs earlier
+  # on _raw, so a disk-failure line from a Proxmox host reaches index=hardware
+  # and never arrives here. The more specific classification keeps priority.
+  #
+  # Anchored on the host field, never on _raw, so a hostname mentioned inside a
+  # log line cannot reroute an unrelated event.
+  - id: eval
+    filter: "index == 'os'"
+    disabled: false
+    conf:
+      add:
+        - name: index
+          value: >-
+{% for target, pattern in cribl_edge_os_host_routing | default({}, true) | dictsort %}
+            /{{ pattern }}/.test(host||'') ? '{{ target }}' :
+{% endfor %}
+            'os'
+{% endif %}
+
   - id: eval
     filter: "true"
     disabled: false

@@ -26,7 +26,7 @@ outputs:
     failedRequestLoggingMode: payload
     safeHeaders: []
 {% if (cribl_edge_hec_namespace | default('')) | length > 0 %}
-{% for idx in cribl_edge_per_index_indexes %}
+{% for idx in cribl_edge_all_index_outputs | default(cribl_edge_per_index_indexes, true) %}
   # Dedicated HEC output for index '{{ idx }}'. Token derived from HEC_NAMESPACE
   # (uuid5('splunk-hec-{{ idx }}', namespace)) — identical to the Splunk-side token.
   splunk_hec_{{ idx }}:
@@ -68,6 +68,12 @@ outputs:
         output: splunk_hec_hardware
         final: true
         description: SMART/ZFS/kernel disk-failure syslog -> hardware index
+{% for target in cribl_edge_os_host_routing | default({}, true) | sort %}
+      - filter: "index=='{{ target }}'"
+        output: splunk_hec_{{ target }}
+        final: true
+        description: os catch-all decomposition -> {{ target }} index
+{% endfor %}
       - filter: "true"
         output: splunk_hec_os
         final: true
