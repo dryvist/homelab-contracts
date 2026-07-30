@@ -151,6 +151,10 @@ cribl_edge_per_index_indexes:
   # plus the Cribl exec packs. Gets a dedicated splunk_hec_hardware output
   # whose token matches the standalone hardware index in ansible-splunk.
   - hardware
+  # os_metrics: host CPU/memory/disk/network series from the in_system_metrics
+  # source (inputs.yml.j2). A metric index, so it stays out of the event
+  # indexes above rather than adding a dense regular series to a free-text one.
+  - os_metrics
 
 # The os decomposition targets need their own HEC outputs, exactly like
 # hardware. Derived from cribl_edge_os_host_routing so the index list and the
