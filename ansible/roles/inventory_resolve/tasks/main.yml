@@ -48,13 +48,41 @@
     # import; the AppRole read the path with HTTP 200 the whole time.)
     #
     # Keep the fall-through, keep the secret out of the log, carry the reason.
-    # Only the module's own message, capped — never the registered result.
+    #
+    # The reason cannot come from the read itself. With no_log the registered
+    # result keeps only changed/failed/failed_when_result/
+    # failed_when_suppressed_exception — no msg, and the exception reads
+    # "(traceback unavailable)". So `.msg` is always absent here and any
+    # message built from it is a fixed string wearing a diagnosis.
+    #
+    # Ask the server something whose answer holds no secret instead, and only
+    # when the read came back empty, so the happy path pays nothing for it.
+    - name: Probe the credential store to find out why the read was empty
+      ansible.builtin.uri:
+        url: "{{ inventory_resolve_openbao_addr }}/v1/sys/health"
+        method: GET
+        # Sealed/standby/DR are all "reachable" for this purpose — the question
+        # is whether the controller can talk to it at all, not its HA role.
+        status_code: [200, 429, 472, 473, 501, 503]
+        validate_certs: "{{ inventory_resolve_openbao_validate_certs }}"
+        timeout: 10
+      register: inventory_resolve_openbao_probe
+      failed_when: false
+      changed_when: false
+      check_mode: false
+      when: inventory_resolve_object_storage.secret is not defined
+
     - name: Note why the credential read returned nothing
       ansible.builtin.set_fact:
         inventory_resolve_openbao_error: >-
-          {{ (inventory_resolve_object_storage.msg
-              | default('the module reported no error and no secret'))
-             | string | truncate(300, true) }}
+          {{ ('cannot reach ' ~ inventory_resolve_openbao_addr ~ ' — ' ~
+              (inventory_resolve_openbao_probe.msg | default('no response')))
+             if (inventory_resolve_openbao_probe.status | default(0)) <= 0
+             else ('store answered HTTP ' ~
+                   inventory_resolve_openbao_probe.status ~
+                   ' — not connectivity. Check that the token may read the' ~
+                   ' path, and that hvac is installed for the interpreter' ~
+                   ' running this play.') }}
       when: inventory_resolve_object_storage.secret is not defined
 
     - name: Compute the effective on-prem object URI
@@ -118,6 +146,26 @@
         tofu_inventory_resolved: "{{ inventory_resolve_tmp.path }}"
       when: (inventory_resolve_s3_stat.stat.size | default(0)) > 0
 
+# Both failure paths below need this, so compose it once. It used to live
+# inline in the stale-cache message only, which meant a controller with no
+# local cache — a fresh clone, a git worktree, CI — fell through to the other
+# message and got none of it: the one case with the least context to work from
+# was the one told the least.
+- name: Compose what actually went wrong
+  ansible.builtin.set_fact:
+    inventory_resolve_why: |
+      {% if inventory_resolve_openbao_error is defined %}
+        credential read ({{ inventory_resolve_openbao_mount }}/{{ inventory_resolve_openbao_path }}):
+          {{ inventory_resolve_openbao_error }}
+      {% elif inventory_resolve_openbao_addr | length == 0 or inventory_resolve_openbao_token | length == 0 %}
+        credential read: skipped — BAO_ADDR and/or BAO_TOKEN not set in the environment.
+      {% endif %}
+      {%- if inventory_resolve_s3_error is defined %}
+        object download ({{ inventory_resolve_s3_effective | default('(no URI)', true) }}):
+          {{ inventory_resolve_s3_error }}
+      {% endif %}
+  when: tofu_inventory_resolved is not defined
+
 # --- stale-cache gate: local cache is ALWAYS explicit opt-in ----------------
 - name: Stat the local inventory cache
   ansible.builtin.stat:
@@ -138,17 +186,7 @@
         3. local cache         : {{ inventory_resolve_local_cache }}
 
       What actually went wrong:
-      {% if inventory_resolve_openbao_error is defined %}
-        credential read ({{ inventory_resolve_openbao_mount }}/{{ inventory_resolve_openbao_path }}):
-          {{ inventory_resolve_openbao_error }}
-      {% elif inventory_resolve_openbao_addr | length == 0 or inventory_resolve_openbao_token | length == 0 %}
-        credential read: skipped — BAO_ADDR and/or BAO_TOKEN not set in the environment.
-      {% endif %}
-      {% if inventory_resolve_s3_error is defined %}
-        object download ({{ inventory_resolve_s3_effective | default('(no URI)', true) }}):
-          {{ inventory_resolve_s3_error }}
-      {% endif %}
-
+      {{ inventory_resolve_why | default('  (not determined)') }}
       Read that reason before changing anything. It is frequently a missing
       Python library on the controller (community.hashi_vault needs hvac,
       amazon.aws needs boto3) rather than a permission at all — those fail on
@@ -185,7 +223,15 @@
         2. published artifact  : {{ inventory_resolve_s3_effective | default('(no store creds / URI)', true) }}
         3. local cache         : {{ inventory_resolve_local_cache }} (missing)
 
-      Provide ONE of:
+      What actually went wrong:
+      {{ inventory_resolve_why | default('  (not determined)') }}
+      Read that reason first. It is frequently a missing Python library on the
+      controller (community.hashi_vault needs hvac, amazon.aws needs boto3), or
+      the controller being unable to reach the credential store at all, rather
+      than a permission — those fail on import or on connect and look nothing
+      like an access error.
+
+      Otherwise provide ONE of:
         - BAO_ADDR and BAO_TOKEN with read access to
           {{ inventory_resolve_openbao_mount }}/{{ inventory_resolve_openbao_path }}.
         - Optionally TOFU_INVENTORY_S3_URI for a non-default RustFS object.
