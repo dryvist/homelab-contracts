@@ -13,7 +13,8 @@
 #
 # Environment (injected by flow-lock from OpenBao secret/infra/rustfs):
 #   S3_ENDPOINT / S3_ACCESS_KEY / S3_SECRET_KEY   on-prem store credentials
-#   DEPLOYMENT_JSON_S3_URI    object location (required — no built-in default)
+#   DEPLOYMENT_JSON_S3_URI    object location (defaults to the canonical object;
+#                             set it only to target a copy)
 #   DEPLOYMENT_JSON_IF_MATCH=1  send If-Match on upload (leave OFF until the
 #                             store supports conditional writes — rustfs#1458)
 #
@@ -25,7 +26,14 @@ EX_USAGE=64
 EX_DATAERR=65
 EX_SOFTWARE=70
 
-URI="${DEPLOYMENT_JSON_S3_URI:-}"
+# The canonical object has exactly one location, so default to it rather than
+# making every caller re-state it. `--creds rustfs` injects the store
+# credentials but NOT this, so requiring it meant every invocation carried an
+# `env DEPLOYMENT_JSON_S3_URI=...` prefix that was identical every time — a
+# constant restated at each call site is a constant that can be typo'd at each
+# call site. Override the env var to point at a copy. Mirrors the existing
+# `inventory_resolve_onprem_default_uri` default for the sibling object.
+URI="${DEPLOYMENT_JSON_S3_URI:-s3://iac-inventory/deployment.json}"
 
 usage() {
   cat <<'EOF'
