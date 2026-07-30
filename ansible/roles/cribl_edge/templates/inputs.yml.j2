@@ -37,6 +37,34 @@ inputs:
         value: "'syslog'"
 
 {% endfor %}
+  # Host CPU / memory / disk / network metrics, collected by Edge itself.
+  #
+  # Edge ships this source enabled in its default config, but this template is
+  # the whole of local/edge/inputs.yml — anything not declared here is gone
+  # after the first converge. That is why every Edge host had node_exporter
+  # running on :9100 with nothing consuming it and no host metrics in Splunk:
+  # the collector existed, the route never did.
+  #
+  # Declaring it here uses the agent already on the box instead of scraping a
+  # second one, so there is no extra listener and no firewall rule. Metric
+  # events carry __criblMetrics; the Splunk HEC destination serialises them in
+  # metric format and the per-index token lands them in the os_metrics metric
+  # index without a pipeline.
+  in_system_metrics:
+    id: in_system_metrics
+    type: system_metrics
+    disabled: false
+    sendToRoutes: false
+    persistence:
+      enable: true
+      maxDataSize: 100MB
+    connections:
+{% if (cribl_edge_hec_namespace | default('')) | length > 0 %}
+      - output: splunk_hec_os_metrics
+{% else %}
+      - output: splunk_hec
+{% endif %}
+
   # Splunk-HEC source for the per-WAN netmon probers (roles/netmon Telegraf
   # outputs.http). Routed to the netmon pipeline -> Splunk netmon index.
   in_netmon_hec:
