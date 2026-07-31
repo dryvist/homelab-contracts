@@ -136,6 +136,19 @@ fake_store() {
   export FLOW_LOCK_LEASE_ID=test-lease
 }
 
+@test "the object location defaults instead of demanding an env prefix" {
+  pub="$BATS_TEST_TMPDIR/pub.json"
+  echo '{"containers":{"keep":{}}}' > "$pub"
+  fake_store "$pub"
+  # The one thing this guards: unset, it must still resolve a location rather
+  # than dying on a missing variable. Every caller used to restate the same
+  # constant, which is a constant that can be typo'd at each call site.
+  unset DEPLOYMENT_JSON_S3_URI
+  run "$DEPLOYMENT_JSON" fetch "$BATS_TEST_TMPDIR/out.json"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"missing DEPLOYMENT_JSON_S3_URI"* ]]
+}
+
 @test "put REFUSES when a containers key would vanish" {
   pub="$BATS_TEST_TMPDIR/pub.json"
   new="$BATS_TEST_TMPDIR/new.json"
