@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.5.0](https://github.com/dryvist/homelab-contracts/compare/v2.4.1...v2.5.0) (2026-07-31)
+
+
+### Features
+
+* **cribl_edge:** decompose the os catch-all index by host ([#54](https://github.com/dryvist/homelab-contracts/issues/54)) ([1e5bac0](https://github.com/dryvist/homelab-contracts/commit/1e5bac0088693091e7ccbc7e794229addf5eea17))
+* **cribl_edge:** route host metrics to Splunk via the Edge's own collector ([#56](https://github.com/dryvist/homelab-contracts/issues/56)) ([3356d60](https://github.com/dryvist/homelab-contracts/commit/3356d6095040f59887e553948e6cd0a84cb85bc5))
+
+
+### Bug Fixes
+
+* **deployment-json:** default the object location instead of demanding it ([#59](https://github.com/dryvist/homelab-contracts/issues/59)) ([3454b7d](https://github.com/dryvist/homelab-contracts/commit/3454b7dccb763cd61a91df476b97880343562e4d))
+* **inventory_resolve:** report the real reason, on every failure path ([#58](https://github.com/dryvist/homelab-contracts/issues/58)) ([c5e139c](https://github.com/dryvist/homelab-contracts/commit/c5e139cb7ccb286016020dd85c2f1d9c3b5a376f))
+* **inventory_resolve:** say what actually failed instead of guessing ([#57](https://github.com/dryvist/homelab-contracts/issues/57)) ([d700771](https://github.com/dryvist/homelab-contracts/commit/d7007718f1532fb29dc920e7e53664676fe31734))
+
 ## [2.4.1](https://github.com/dryvist/homelab-contracts/compare/v2.4.0...v2.4.1) (2026-07-27)
 
 
