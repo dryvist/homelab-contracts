@@ -4,8 +4,8 @@ galaxy_info:
   author: dryvist
   description: >-
     Shared resolution of the published OpenTofu inventory (explicit path →
-    homelab RustFS via native OpenBao credentials → explicitly-allowed local cache),
-    ending with tofu_data loaded.
+    homelab RustFS via native OpenBao credentials), ending with tofu_data
+    loaded.
   license: MIT
   min_ansible_version: "2.16"
   platforms:
