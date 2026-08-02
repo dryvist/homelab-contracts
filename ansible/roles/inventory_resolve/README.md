@@ -10,8 +10,8 @@ Source priority (first match wins):
 2. Published S3 artifact — the homelab RustFS object, using credentials read
    natively from OpenBao `secret/platform/object-storage`
 
-There is no third source. The published object is the only source of live
-infrastructure data; a local on-disk copy cannot know whether it is current,
+Those two are the whole list. The published object is the only source of live
+infrastructure data: a local on-disk copy cannot know whether it is current,
 and one that has fallen behind deploys wrong VMIDs and IPs while every task
 reports success. An inventory that does not resolve is a hard failure.
 
