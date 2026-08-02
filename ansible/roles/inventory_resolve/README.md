@@ -9,8 +9,14 @@ Source priority (first match wins):
 1. `TOFU_INVENTORY_PATH` — explicit local path (tests, pins)
 2. Published S3 artifact — the homelab RustFS object, using credentials read
    natively from OpenBao `secret/platform/object-storage`
-3. Local gitignored cache — **only** with `TOFU_INVENTORY_ALLOW_STALE=1`
-   (a stale inventory deploys wrong VMIDs/IPs; the opt-in is deliberate)
+
+There is no third source. The published object is the only source of live
+infrastructure data; a local on-disk copy cannot know whether it is current,
+and one that has fallen behind deploys wrong VMIDs and IPs while every task
+reports success. An inventory that does not resolve is a hard failure.
+
+This list is the canonical statement of the resolution order. Consumer repos
+link here rather than restating it.
 
 On success the role leaves two facts for the consumer:
 
@@ -27,14 +33,7 @@ contain `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and optionall
 `S3_REGION`. Object-store credentials remain in Ansible memory and are never
 exported into the shell.
 
-```yaml
-# consumer playbook (localhost play)
-- name: Resolve the published inventory
-  ansible.builtin.include_role:
-    name: inventory_resolve
-  vars:
-    inventory_resolve_required_keys: [containers, nodes, domain]
-```
+## Installation
 
 Pin via `requirements.yml`:
 
@@ -44,4 +43,15 @@ roles:
     src: https://github.com/dryvist/homelab-contracts.git
     scm: git
     version: v1.10.0   # release tag
+```
+
+## Usage
+
+```yaml
+# consumer playbook (localhost play)
+- name: Resolve the published inventory
+  ansible.builtin.include_role:
+    name: inventory_resolve
+  vars:
+    inventory_resolve_required_keys: [containers, nodes, domain]
 ```

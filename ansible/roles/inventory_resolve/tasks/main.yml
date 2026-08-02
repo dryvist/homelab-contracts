@@ -146,11 +146,8 @@
         tofu_inventory_resolved: "{{ inventory_resolve_tmp.path }}"
       when: (inventory_resolve_s3_stat.stat.size | default(0)) > 0
 
-# Both failure paths below need this, so compose it once. It used to live
-# inline in the stale-cache message only, which meant a controller with no
-# local cache — a fresh clone, a git worktree, CI — fell through to the other
-# message and got none of it: the one case with the least context to work from
-# was the one told the least.
+# Composed separately from the failure message so the reason survives whether
+# the credential read, the download, or both are what went wrong.
 - name: Compose what actually went wrong
   ansible.builtin.set_fact:
     inventory_resolve_why: |
@@ -166,62 +163,12 @@
       {% endif %}
   when: tofu_inventory_resolved is not defined
 
-# --- stale-cache gate: local cache is ALWAYS explicit opt-in ----------------
-- name: Stat the local inventory cache
-  ansible.builtin.stat:
-    path: "{{ inventory_resolve_local_cache }}"
-  register: inventory_resolve_local_stat
-  when: tofu_inventory_resolved is not defined
-
-- name: Refuse the (possibly STALE) local cache without explicit opt-in
-  ansible.builtin.fail:
-    msg: |
-      The published inventory could not be resolved and only the local cache
-      remains — refusing to use it without explicit opt-in. A stale inventory
-      deploys wrong VMIDs/IPs with confusing downstream failures.
-
-      Sources tried:
-        1. TOFU_INVENTORY_PATH : {{ inventory_resolve_path | default('(unset)', true) }}
-        2. published artifact  : {{ inventory_resolve_s3_effective | default('(no store creds / URI)', true) }}
-        3. local cache         : {{ inventory_resolve_local_cache }}
-
-      What actually went wrong:
-      {{ inventory_resolve_why | default('  (not determined)') }}
-      Read that reason before changing anything. It is frequently a missing
-      Python library on the controller (community.hashi_vault needs hvac,
-      amazon.aws needs boto3) rather than a permission at all — those fail on
-      import and look nothing like the access error they used to be reported as.
-
-      Otherwise: fix access to the credential path, pin TOFU_INVENTORY_PATH to
-      a known-good copy, or — accepting staleness — set
-      TOFU_INVENTORY_ALLOW_STALE=1.
-  when:
-    - tofu_inventory_resolved is not defined
-    - inventory_resolve_local_stat.stat.exists | default(false)
-    - inventory_resolve_allow_stale | length == 0
-
-- name: Resolve inventory from the local cache (explicitly allowed)
-  ansible.builtin.set_fact: # noqa: var-naming[no-role-prefix] — contract fact
-    tofu_inventory_resolved: "{{ inventory_resolve_local_cache }}"
-  when:
-    - tofu_inventory_resolved is not defined
-    - inventory_resolve_local_stat.stat.exists | default(false)
-
-- name: Warn that the STALE-capable local cache is in use
-  ansible.builtin.debug:
-    msg: >-
-      WARNING: using the local inventory cache
-      {{ inventory_resolve_local_cache }} (TOFU_INVENTORY_ALLOW_STALE set).
-      Ensure it is current or re-run the producer Terrakube workspace.
-  when: tofu_inventory_resolved | default('') == inventory_resolve_local_cache
-
 - name: Fail when no inventory source resolves
   ansible.builtin.fail:
     msg: |
       OpenTofu inventory could not be resolved from any source:
         1. TOFU_INVENTORY_PATH : {{ inventory_resolve_path | default('(unset)', true) }}
         2. published artifact  : {{ inventory_resolve_s3_effective | default('(no store creds / URI)', true) }}
-        3. local cache         : {{ inventory_resolve_local_cache }} (missing)
 
       What actually went wrong:
       {{ inventory_resolve_why | default('  (not determined)') }}
