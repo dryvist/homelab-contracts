@@ -55,3 +55,42 @@ roles:
   vars:
     inventory_resolve_required_keys: [containers, nodes, domain]
 ```
+
+## Is an apply owed?
+
+After loading the artifact, the role answers one more question: was this
+artifact built from the desired state that exists *right now*?
+
+That link has no other signal. An apply only re-renders the artifact, and a
+converge only consumes whatever the artifact currently says, so a desired-state
+edit that was never applied leaves every converge acting on an artifact that
+contradicts it — producing a confidently wrong result rather than an error. The
+ordering that avoids it is **apply, then converge**; doing them the other way
+round is silently wrong.
+
+The producer stamps the desired-state object's ETag into the artifact
+(`desired_state.etag`, schema 2.1.0+). The role re-reads the live object with
+the credentials it already holds and compares. Only the ETag is published: the
+timestamp worth reporting is when desired state last *changed*, which the same
+live read returns, whereas a copy inside the artifact could only describe the
+state it was already built from. Exports:
+
+| Fact | Meaning |
+| --- | --- |
+| `tofu_desired_state_published` | fingerprint the artifact was rendered from |
+| `tofu_desired_state_live` | fingerprint of desired state right now |
+| `tofu_desired_state_changed_at` | when desired state last changed (live read) |
+| `tofu_desired_state_current` | `false` when an apply is owed |
+
+It **warns, never fails** — a detector that can block every converge is a worse
+outage than the drift it watches for — and it **fails open** at every step (no
+credentials, no fingerprint in the artifact, an unreadable object): the facts
+are left unset rather than reporting "current", because a check that could not
+run must never be reported as a check that passed.
+`tests/inventory_resolve/apply_owed_fail_open.yml` pins that.
+
+An ETag rather than a timestamp, deliberately: the publish rewrites the artifact
+only when its content changes, so a desired-state edit that altered nothing else
+would never move a timestamp and the artifact would read as permanently stale.
+The fingerprint is part of the published content, so every desired-state change
+changes it.

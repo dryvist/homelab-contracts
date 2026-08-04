@@ -204,3 +204,96 @@
       re-run the producer Terrakube workspace so the inventory is republished.
   loop: "{{ inventory_resolve_required_keys }}"
   when: tofu_data is defined
+
+# --- is an apply owed? ------------------------------------------------------
+#
+# The artifact just loaded is only as current as the last apply. A desired-state
+# edit that was merged but never applied leaves this artifact silently
+# contradicting desired state, and nothing downstream can tell: applying only
+# re-renders the artifact, converging only consumes whatever the artifact
+# currently says, so a converge in that state produces a confidently wrong
+# result rather than an error.
+#
+# The producer stamps the desired-state object's ETag into the artifact it
+# renders (tofu-proxmox inventory_publish.tf). Comparing that against the LIVE
+# desired-state object answers the question exactly: equal means this artifact
+# was built from the desired state that exists right now.
+#
+# WARN, never fail. This is a detector, and a detector that can block every
+# converge in the estate is a worse outage than the drift it watches for. It
+# also fails OPEN at every step — no store credentials, no fingerprint in the
+# artifact, an unreadable desired-state object — because a check that cannot run
+# must not be reported as a check that passed.
+- name: Determine whether the artifact is current with desired state
+  when:
+    - tofu_data is defined
+    - (tofu_data.desired_state | default({})).etag | default('') | length > 0
+    # Undefined whenever the artifact came from TOFU_INVENTORY_PATH instead of
+    # the store, which is exactly when there are no credentials to re-read with.
+    - inventory_resolve_object_storage is defined
+    - inventory_resolve_object_storage.secret.S3_ENDPOINT | default('') | length > 0
+  block:
+    - name: Read the live desired-state object's fingerprint
+      amazon.aws.s3_object_info:
+        bucket_name: "{{ inventory_resolve_desired_state_bucket }}"
+        object_name: "{{ inventory_resolve_desired_state_key }}"
+        endpoint_url: "{{ inventory_resolve_object_storage.secret.S3_ENDPOINT }}"
+        access_key: "{{ inventory_resolve_object_storage.secret.S3_ACCESS_KEY_ID }}"
+        secret_key: "{{ inventory_resolve_object_storage.secret.S3_SECRET_ACCESS_KEY }}"
+        region: "{{ inventory_resolve_object_storage.secret.S3_REGION | default('us-east-1', true) }}"
+      register: inventory_resolve_desired_state_info
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      no_log: true
+
+    # The two sides quote the ETag differently — the object store returns it
+    # wrapped in double quotes, the producer's data source strips them — so a
+    # raw comparison reports every artifact as stale. Normalise both.
+    #
+    # A failed or empty read (missing key, denied access, unreachable store)
+    # cannot answer "is this current" either way — the object_check() in
+    # amazon.aws.s3_object_info fails the module on a missing/forbidden
+    # object, which failed_when: false above turns into `failed: true` on
+    # this registered result rather than an aborted play. Asserting "current"
+    # from that incomplete read is the same silent hold this detector exists
+    # to catch, so when the read didn't produce a real ETag, all four facts
+    # are omitted — same fail-open contract as the outer gate above — rather
+    # than guessed either way.
+    - name: Compare the published fingerprint against the live one
+      vars:
+        inventory_resolve_live: >-
+          {{ (inventory_resolve_desired_state_info.object_info | default([])
+              | first | default({})).object_data | default({}) }}
+        inventory_resolve_live_etag: >-
+          {{ inventory_resolve_live.e_tag | default('') | regex_replace('\"', '') }}
+      ansible.builtin.set_fact: # noqa: var-naming[no-role-prefix] — contract fact
+        tofu_desired_state_published: >-
+          {{ (tofu_data.desired_state | default({})).etag
+             | default('') | regex_replace('\"', '') }}
+        tofu_desired_state_live: "{{ inventory_resolve_live_etag }}"
+        tofu_desired_state_changed_at: >-
+          {{ inventory_resolve_live.last_modified | default('unknown', true) }}
+      when:
+        - not (inventory_resolve_desired_state_info.failed | default(false))
+        - inventory_resolve_live_etag | length > 0
+
+    - name: Record whether an apply is owed
+      ansible.builtin.set_fact: # noqa: var-naming[no-role-prefix] — contract fact
+        tofu_desired_state_current: >-
+          {{ tofu_desired_state_live == tofu_desired_state_published }}
+      when: tofu_desired_state_live is defined
+
+    - name: Warn that an apply is owed before this converge
+      ansible.builtin.debug:
+        msg: >-
+          APPLY OWED: the published inventory was rendered from desired state
+          {{ tofu_desired_state_published }}, but desired state is now
+          {{ tofu_desired_state_live }} (changed
+          {{ tofu_desired_state_changed_at }}).
+          This converge will apply whatever the STALE artifact says. Run the
+          producer workspace apply FIRST, then converge — the other order
+          produces a confidently wrong result rather than an error.
+      when:
+        - tofu_desired_state_current is defined
+        - not (tofu_desired_state_current | bool)

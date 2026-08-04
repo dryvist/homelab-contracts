@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "domain": "example.com",
   "containers": {
     "example-static": {
@@ -11,7 +11,9 @@
       "node": "node-1",
       "ansible_connection": "community.proxmox.proxmox_pct_remote",
       "ansible_pct_vmid": 200,
-      "tags": ["example"],
+      "tags": [
+        "example"
+      ],
       "pool_id": "example"
     },
     "example-dhcp": {
@@ -23,7 +25,10 @@
       "node": "node-2",
       "ansible_connection": "community.proxmox.proxmox_pct_remote",
       "ansible_pct_vmid": 201,
-      "tags": ["example", "ingress"],
+      "tags": [
+        "example",
+        "ingress"
+      ],
       "pool_id": "example"
     }
   },
@@ -34,7 +39,9 @@
       "ip": "192.0.2.12",
       "node": "node-1",
       "ansible_connection": "ssh",
-      "tags": ["example"],
+      "tags": [
+        "example"
+      ],
       "pool_id": "example"
     },
     "example-dhcp-vm": {
@@ -45,7 +52,9 @@
       "reserved_ip": "192.0.2.15",
       "node": "node-2",
       "ansible_connection": "ssh",
-      "tags": ["example"],
+      "tags": [
+        "example"
+      ],
       "pool_id": "example"
     }
   },
@@ -56,7 +65,10 @@
       "ip": "192.0.2.13",
       "node": "node-2",
       "ansible_connection": "ssh",
-      "tags": ["docker", "example"],
+      "tags": [
+        "docker",
+        "example"
+      ],
       "pool_id": "example"
     }
   },
@@ -125,7 +137,10 @@
     },
     {
       "name": "example-pool",
-      "backends": ["192.0.2.40", "192.0.2.41"],
+      "backends": [
+        "192.0.2.40",
+        "192.0.2.41"
+      ],
       "port": 10003,
       "sticky": true,
       "health_check": true,
@@ -134,7 +149,10 @@
     {
       "name": "example-apex",
       "apex": true,
-      "backends": ["node-1.example.com", "node-2.example.com"],
+      "backends": [
+        "node-1.example.com",
+        "node-2.example.com"
+      ],
       "port": 10004,
       "scheme": "https",
       "insecure_tls": true,
@@ -143,7 +161,10 @@
     }
   ],
   "ingress_vip": "192.0.2.2",
-  "ingress_hosts": ["192.0.2.40", "192.0.2.41"],
+  "ingress_hosts": [
+    "192.0.2.40",
+    "192.0.2.41"
+  ],
   "host_services": {},
   "nodes": {
     "node-1": {
@@ -165,7 +186,10 @@
           "raid": "mirror",
           "protected": true,
           "register": true,
-          "content": ["images", "rootdir"],
+          "content": [
+            "images",
+            "rootdir"
+          ],
           "datasets": {
             "data": {
               "quota": "100G",
@@ -179,5 +203,8 @@
         }
       }
     }
+  },
+  "desired_state": {
+    "etag": "d41d8cd98f00b204e9800998ecf8427e"
   }
 }

@@ -21,6 +21,18 @@ inventory_resolve_openbao_path: platform/object-storage
 inventory_resolve_openbao_validate_certs: true
 inventory_resolve_onprem_default_uri: "s3://iac-inventory/ansible_inventory.json"
 
+# Desired-state object the loaded artifact is checked against, to answer "is an
+# apply owed before this converge?" (see tasks/main.yml). Desired state and the
+# published artifact are two objects in ONE store, so the bucket is derived from
+# the inventory URI already configured above and the common case needs no extra
+# setting. Point these elsewhere only if the two ever stop sharing a bucket.
+inventory_resolve_desired_state_bucket: >-
+  {{ (inventory_resolve_s3_uri
+      if inventory_resolve_s3_uri | length > 0
+      else inventory_resolve_onprem_default_uri)
+     | regex_replace('^s3://([^/]+)/.*$', '\1') }}
+inventory_resolve_desired_state_key: deployment.json
+
 # Consumers with a DNS/static host fallback can opt out of the terminal error.
 inventory_resolve_fail_when_unresolved: true
 

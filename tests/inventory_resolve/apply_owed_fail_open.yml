@@ -1,0 +1,53 @@
+---
+# Fail-open contract for the apply-owed check in the inventory_resolve role.
+#
+# The check compares the desired-state fingerprint stamped into the artifact
+# against the live desired-state object. Reaching the live object needs
+# object-store credentials, and those are frequently absent — a pinned local
+# artifact, a test, a controller without the credential store.
+#
+# What must never happen is the check turning a missing prerequisite into a
+# verdict. "Current" is a claim that the artifact was checked; publishing it
+# when nothing was read produces a detector that reports success precisely when
+# it did not run, which is the exact failure class it exists to catch.
+#
+# So: with no credentials the check SKIPS and leaves the verdict fact unset.
+# This runs the real role, not a copy of its expressions, so it also pins the
+# guard that evaluates desired_state on an artifact where the credential fact
+# does not exist at all.
+#
+# Run: ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
+#        tests/inventory_resolve/apply_owed_fail_open.yml
+
+- name: Apply-owed check fails open without store credentials
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Resolve the pinned fixture with no credential store configured
+      ansible.builtin.include_role:
+        name: inventory_resolve
+      vars:
+        inventory_resolve_path: "{{ playbook_dir }}/fixtures/ansible_inventory.json"
+        inventory_resolve_openbao_addr: ""
+        inventory_resolve_openbao_token: ""
+
+    - name: The fixture really does carry a fingerprint to check
+      ansible.builtin.assert:
+        that:
+          - tofu_data is defined
+          - tofu_data.desired_state.etag | default('') | length > 0
+        fail_msg: >-
+          The fixture has no desired_state.etag, so a skipped check proves
+          nothing — the check would have skipped on the missing key alone.
+        success_msg: fixture carries a desired-state fingerprint
+
+    - name: No verdict was reached, because live desired state was never read
+      ansible.builtin.assert:
+        that:
+          - tofu_desired_state_current is not defined
+        fail_msg: >-
+          The apply-owed check produced a verdict without reading live desired
+          state. It must skip when it cannot run, never default to "current" —
+          a detector that passes when it did not execute is worse than none.
+        success_msg: check skipped and left the verdict unset (fail-open)
