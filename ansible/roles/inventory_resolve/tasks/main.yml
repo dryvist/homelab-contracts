@@ -251,31 +251,38 @@
     # wrapped in double quotes, the producer's data source strips them — so a
     # raw comparison reports every artifact as stale. Normalise both.
     #
-    # The timestamp comes from this LIVE read, not from the artifact. "Desired
-    # state last changed at T" is what a reader needs; a copy carried in the
-    # artifact could only ever describe the state it was already built from.
+    # A failed or empty read (missing key, denied access, unreachable store)
+    # cannot answer "is this current" either way — the object_check() in
+    # amazon.aws.s3_object_info fails the module on a missing/forbidden
+    # object, which failed_when: false above turns into `failed: true` on
+    # this registered result rather than an aborted play. Asserting "current"
+    # from that incomplete read is the same silent hold this detector exists
+    # to catch, so when the read didn't produce a real ETag, all four facts
+    # are omitted — same fail-open contract as the outer gate above — rather
+    # than guessed either way.
     - name: Compare the published fingerprint against the live one
       vars:
         inventory_resolve_live: >-
           {{ (inventory_resolve_desired_state_info.object_info | default([])
               | first | default({})).object_data | default({}) }}
+        inventory_resolve_live_etag: >-
+          {{ inventory_resolve_live.e_tag | default('') | regex_replace('\"', '') }}
       ansible.builtin.set_fact: # noqa: var-naming[no-role-prefix] — contract fact
         tofu_desired_state_published: >-
           {{ (tofu_data.desired_state | default({})).etag
              | default('') | regex_replace('\"', '') }}
-        tofu_desired_state_live: >-
-          {{ inventory_resolve_live.e_tag | default('') | regex_replace('\"', '') }}
+        tofu_desired_state_live: "{{ inventory_resolve_live_etag }}"
         tofu_desired_state_changed_at: >-
           {{ inventory_resolve_live.last_modified | default('unknown', true) }}
+      when:
+        - not (inventory_resolve_desired_state_info.failed | default(false))
+        - inventory_resolve_live_etag | length > 0
 
-    # Unknown (the live read returned nothing) is NOT stale. Reporting "apply
-    # owed" because the detector could not read the object would train everyone
-    # to ignore it.
     - name: Record whether an apply is owed
       ansible.builtin.set_fact: # noqa: var-naming[no-role-prefix] — contract fact
         tofu_desired_state_current: >-
-          {{ tofu_desired_state_live | length == 0
-             or tofu_desired_state_live == tofu_desired_state_published }}
+          {{ tofu_desired_state_live == tofu_desired_state_published }}
+      when: tofu_desired_state_live is defined
 
     - name: Warn that an apply is owed before this converge
       ansible.builtin.debug:
@@ -287,4 +294,6 @@
           This converge will apply whatever the STALE artifact says. Run the
           producer workspace apply FIRST, then converge — the other order
           produces a confidently wrong result rather than an error.
-      when: not (tofu_desired_state_current | bool)
+      when:
+        - tofu_desired_state_current is defined
+        - not (tofu_desired_state_current | bool)

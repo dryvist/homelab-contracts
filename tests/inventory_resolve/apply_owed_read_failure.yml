@@ -1,0 +1,65 @@
+---
+# Fail-open contract for the apply-owed check, inner-path variant.
+#
+# apply_owed_fail_open.yml pins the OUTER gate: no store credentials at all,
+# so the check never attempts the live read. This pins the INNER path: the
+# outer gate passes (credentials look present, the artifact carries a
+# fingerprint), but the live desired-state read itself fails — bad endpoint,
+# denied access, object gone. That failure must produce the same fail-open
+# result as the outer gate: all four verdict facts left unset, never a
+# verdict computed from a read that didn't complete.
+#
+# The live read targets an unreachable loopback address (port 1, nothing
+# listens) so the failure is immediate and needs no network or real
+# credentials — only that connecting fails.
+#
+# Run: ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
+#        tests/inventory_resolve/apply_owed_read_failure.yml
+
+- name: Apply-owed check fails open when the live read fails
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Resolve the pinned fixture with a store credential fact already set
+      ansible.builtin.include_role:
+        name: inventory_resolve
+      vars:
+        inventory_resolve_path: "{{ playbook_dir }}/fixtures/ansible_inventory.json"
+        inventory_resolve_openbao_addr: ""
+        inventory_resolve_openbao_token: ""
+        # The role only registers this from a real OpenBao read, which the
+        # explicit-path resolution above skips entirely — so setting it here
+        # is what makes the outer gate (inventory_resolve_object_storage is
+        # defined, .secret.S3_ENDPOINT set) pass, exactly as a real credential
+        # read would, without needing OpenBao reachable in CI.
+        inventory_resolve_object_storage:
+          secret:
+            S3_ENDPOINT: "http://127.0.0.1:1"
+            S3_ACCESS_KEY_ID: unreachable
+            S3_SECRET_ACCESS_KEY: unreachable
+            S3_REGION: us-east-1
+
+    - name: The fixture really does carry a fingerprint to check
+      ansible.builtin.assert:
+        that:
+          - tofu_data is defined
+          - tofu_data.desired_state.etag | default('') | length > 0
+        fail_msg: >-
+          The fixture has no desired_state.etag, so a skipped check proves
+          nothing — the check would have skipped on the missing key alone.
+        success_msg: fixture carries a desired-state fingerprint
+
+    - name: No verdict was reached, because the live read failed
+      ansible.builtin.assert:
+        that:
+          - tofu_desired_state_published is not defined
+          - tofu_desired_state_live is not defined
+          - tofu_desired_state_changed_at is not defined
+          - tofu_desired_state_current is not defined
+        fail_msg: >-
+          The apply-owed check produced a verdict (or a partial fact) from a
+          live read that failed. A failed read must leave every verdict fact
+          unset, never default to "current" — reporting current from a read
+          that never completed is worse than reporting nothing.
+        success_msg: check skipped and left the verdict unset (fail-open)

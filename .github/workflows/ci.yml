@@ -64,7 +64,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install ansible-lint
-        run: pip install 'ansible-lint==25.*' 'ansible-core==2.18.*'
+        run: pip install 'ansible-lint==25.*' 'ansible-core==2.18.*' boto3 botocore
       - name: Install required collections
         run: ansible-galaxy collection install amazon.aws community.hashi_vault
       - name: Lint the shared role
@@ -75,7 +75,15 @@ jobs:
       # contract: without object-store credentials it must skip rather than
       # report the artifact current, since a detector that passes when it never
       # ran hides exactly the drift it exists to surface.
-      - name: Verify the apply-owed check fails open
+      - name: Verify the apply-owed check fails open (no credentials)
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/inventory_resolve/apply_owed_fail_open.yml
+
+      # Same contract, inner path: credentials present but the live read
+      # itself fails. Needs boto3/botocore (installed above) since this one
+      # actually invokes amazon.aws.s3_object_info rather than skipping before it.
+      - name: Verify the apply-owed check fails open (live read fails)
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/inventory_resolve/apply_owed_read_failure.yml
