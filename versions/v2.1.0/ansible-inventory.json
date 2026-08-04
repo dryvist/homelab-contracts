@@ -116,15 +116,11 @@
     "desired_state": {
       "description": "Fingerprint of the desired-state object this artifact was rendered from. An apply is the only thing that refreshes it, so a consumer comparing it against the live desired-state object learns whether an apply is owed before it converges — the one link in the pipeline with no other signal. Optional: absent on artifacts published before schema_version 2.1.0, and consumers treat absence as 'cannot check', never as 'current'.",
       "type": "object",
-      "required": ["etag", "last_modified"],
+      "required": ["etag"],
       "additionalProperties": false,
       "properties": {
         "etag": {
-          "description": "ETag of the desired-state object, unquoted. MAY be empty when the object store returned none, which disables the downstream check rather than failing it.",
-          "type": "string"
-        },
-        "last_modified": {
-          "description": "Last-modified timestamp of the desired-state object. Diagnostic only — never the comparison, because the artifact is rewritten only when its content changes.",
+          "description": "ETag of the desired-state object, unquoted. MAY be empty when the object store returned none, which disables the downstream check rather than failing it. No timestamp is published beside it: a consumer that can read the live object for comparison reads its last-modified from the same call, and that live value is the useful one — the artifact's own copy only ever describes the past.",
           "type": "string"
         }
       }

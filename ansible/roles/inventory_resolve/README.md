@@ -70,12 +70,16 @@ round is silently wrong.
 
 The producer stamps the desired-state object's ETag into the artifact
 (`desired_state.etag`, schema 2.1.0+). The role re-reads the live object with
-the credentials it already holds and compares. Exports:
+the credentials it already holds and compares. Only the ETag is published: the
+timestamp worth reporting is when desired state last *changed*, which the same
+live read returns, whereas a copy inside the artifact could only describe the
+state it was already built from. Exports:
 
 | Fact | Meaning |
 | --- | --- |
 | `tofu_desired_state_published` | fingerprint the artifact was rendered from |
 | `tofu_desired_state_live` | fingerprint of desired state right now |
+| `tofu_desired_state_changed_at` | when desired state last changed (live read) |
 | `tofu_desired_state_current` | `false` when an apply is owed |
 
 It **warns, never fails** — a detector that can block every converge is a worse

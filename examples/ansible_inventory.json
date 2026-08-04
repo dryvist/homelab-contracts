@@ -205,7 +205,6 @@
     }
   },
   "desired_state": {
-    "etag": "d41d8cd98f00b204e9800998ecf8427e",
-    "last_modified": "2026-01-01T00:00:00Z"
+    "etag": "d41d8cd98f00b204e9800998ecf8427e"
   }
 }

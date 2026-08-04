@@ -250,14 +250,23 @@
     # The two sides quote the ETag differently — the object store returns it
     # wrapped in double quotes, the producer's data source strips them — so a
     # raw comparison reports every artifact as stale. Normalise both.
+    #
+    # The timestamp comes from this LIVE read, not from the artifact. "Desired
+    # state last changed at T" is what a reader needs; a copy carried in the
+    # artifact could only ever describe the state it was already built from.
     - name: Compare the published fingerprint against the live one
+      vars:
+        inventory_resolve_live: >-
+          {{ (inventory_resolve_desired_state_info.object_info | default([])
+              | first | default({})).object_data | default({}) }}
       ansible.builtin.set_fact: # noqa: var-naming[no-role-prefix] — contract fact
         tofu_desired_state_published: >-
           {{ (tofu_data.desired_state | default({})).etag
              | default('') | regex_replace('\"', '') }}
         tofu_desired_state_live: >-
-          {{ (inventory_resolve_desired_state_info.object_info | default([]) | first
-              | default({})).object_data.e_tag | default('') | regex_replace('\"', '') }}
+          {{ inventory_resolve_live.e_tag | default('') | regex_replace('\"', '') }}
+        tofu_desired_state_changed_at: >-
+          {{ inventory_resolve_live.last_modified | default('unknown', true) }}
 
     # Unknown (the live read returned nothing) is NOT stale. Reporting "apply
     # owed" because the detector could not read the object would train everyone
@@ -273,9 +282,8 @@
         msg: >-
           APPLY OWED: the published inventory was rendered from desired state
           {{ tofu_desired_state_published }}, but desired state is now
-          {{ tofu_desired_state_live }} (last modified
-          {{ (tofu_data.desired_state | default({})).last_modified
-             | default('unknown', true) }}).
+          {{ tofu_desired_state_live }} (changed
+          {{ tofu_desired_state_changed_at }}).
           This converge will apply whatever the STALE artifact says. Run the
           producer workspace apply FIRST, then converge — the other order
           produces a confidently wrong result rather than an error.
