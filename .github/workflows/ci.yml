@@ -69,3 +69,13 @@ jobs:
         run: ansible-galaxy collection install amazon.aws community.hashi_vault
       - name: Lint the shared role
         run: ansible-lint ansible/roles/inventory_resolve
+
+      # Runs here because this job already has ansible-core and the collections
+      # the role needs. The check it pins is the apply-owed detector's fail-open
+      # contract: without object-store credentials it must skip rather than
+      # report the artifact current, since a detector that passes when it never
+      # ran hides exactly the drift it exists to surface.
+      - name: Verify the apply-owed check fails open
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/inventory_resolve/apply_owed_fail_open.yml
