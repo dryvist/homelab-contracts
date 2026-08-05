@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.6.0](https://github.com/dryvist/homelab-contracts/compare/v2.5.0...v2.6.0) (2026-08-04)
+
+
+### Features
+
+* **inventory_resolve:** detect when an apply is owed before a converge ([#62](https://github.com/dryvist/homelab-contracts/issues/62)) ([eb4d69b](https://github.com/dryvist/homelab-contracts/commit/eb4d69b489e8ad1e49f65d2dfc91d170ca7a77cb))
+
 ## [2.5.0](https://github.com/dryvist/homelab-contracts/compare/v2.4.1...v2.5.0) (2026-07-31)
 
 
