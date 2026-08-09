@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  author: JacobPEvans
+  description: >-
+    Guest-side SSH CA trust — pinned-fingerprint CA fetch, trust file,
+    principals map, sshd drop-in with effective-config assertion, and a
+    static break-glass lockout guard.
+  license: Apache-2.0
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+
+  galaxy_tags:
+    - ssh
+    - security
+    - certificateauthority
+
+dependencies: []

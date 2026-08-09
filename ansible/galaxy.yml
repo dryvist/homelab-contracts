@@ -16,7 +16,7 @@ version: 0.1.0
 readme: README.md
 authors:
   - JacobPEvans <20714140+JacobPEvans-personal@users.noreply.github.com>
-description: Shared Ansible roles for the homelab estate (Cribl Edge, Cribl packs, inventory resolution).
+description: Shared Ansible roles for the homelab estate (Cribl Edge, Cribl packs, inventory resolution, Docker/NTP/SSH-CA/syslog/systemd/deadman/OpenBao-secrets bootstrap).
 license:
   - MIT
 tags:

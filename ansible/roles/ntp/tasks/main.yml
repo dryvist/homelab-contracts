@@ -1,0 +1,106 @@
+---
+# NTP time synchronization role using chrony
+
+- name: Install chrony and tzdata
+  ansible.builtin.apt:
+    name:
+      - chrony
+      - tzdata
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  tags:
+    - ntp
+
+
+# Stage the rendered config, validate it, then promote — so the live file is
+# replaced only after validation passes (transactional). An inline template
+# `validate:` cannot be used: chronyd validates with dropped privileges (the
+# _chrony user) and cannot read the template module's temp file under a
+# non-root become-user's 0700 home (e.g. /home/debian/.ansible/tmp). The
+# staged file lives in chronyd's own config dir and is world-readable (0644),
+# so the privilege-dropped validator can read it.
+- name: Render the chrony configuration to a staging file
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: "{{ ntp_config_file }}.staged"
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - ntp
+
+- name: Validate the staged chrony configuration
+  ansible.builtin.command: "chronyd -p -f {{ ntp_config_file }}.staged"
+  changed_when: false
+  check_mode: false
+  tags:
+    - ntp
+
+- name: Promote the validated chrony configuration
+  ansible.builtin.copy:
+    src: "{{ ntp_config_file }}.staged"
+    dest: "{{ ntp_config_file }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart chrony
+  tags:
+    - ntp
+
+- name: Detect if running inside a system container
+  # systemd-detect-virt --container: exit 0 = inside a container, exit 1 = not.
+  # More reliable than ansible_virtualization_type, which LXC containers with
+  # extra capabilities (e.g. nftables/WireGuard) often mis-report.
+  # Proxmox host syncs the clock for LXC guests, so chrony needn't start there.
+  ansible.builtin.command: systemd-detect-virt --container
+  register: _ntp_virt_container
+  changed_when: false
+  failed_when: false
+  tags:
+    - ntp
+
+- name: Set the chrony service state for this host type
+  # On a host: run it. Inside a system container: stop, disable AND mask it.
+  #
+  # Masking is not belt-and-braces here, it is the fix. chronyd cannot work in a
+  # container at all — the container shares the host kernel clock, so adjtimex()
+  # returns EPERM and the unit dies on every single start. Debian's chrony
+  # postinst enables and starts the unit at install time, which means merely
+  # *skipping* the enable task (what this did before) leaves the unit enabled and
+  # sitting in `failed` forever. Measured 2026-07-29: 35 of ~48 running
+  # containers estate-wide were in exactly that state.
+  #
+  # Mask rather than just disable, because an apt upgrade of the chrony package
+  # re-runs the postinst and would re-enable it.
+  ansible.builtin.systemd:
+    name: chrony
+    state: "{{ ntp_service_state if _ntp_virt_container.rc != 0 else 'stopped' }}"
+    enabled: "{{ ntp_service_enabled if _ntp_virt_container.rc != 0 else false }}"
+    masked: "{{ _ntp_virt_container.rc == 0 }}"
+  register: _ntp_chrony
+  tags:
+    - ntp
+
+# Stopping and masking does NOT clear a unit already in `failed`. Verified on a
+# live container: after stop + disable + mask, ActiveState was still `failed`.
+# Only reset-failed clears it, and ansible.builtin.systemd has no equivalent
+# option.
+#
+# Without this, every container chrony ever failed on keeps a permanent entry in
+# `systemctl --failed` — precisely the signal used to answer "is anything broken
+# on this guest?". A standing false positive there hides the real ones.
+#
+# The guard reads the state task's own result rather than shelling out to
+# `systemctl is-failed`, so this stays a one-time cleanup per guest instead of
+# reporting changed on every converge. Verified property values: a failed guest
+# reports ActiveState=failed, a converged one ActiveState=inactive.
+- name: Clear the residual chrony failure inside the container
+  ansible.builtin.command: systemctl reset-failed chrony
+  when:
+    - _ntp_virt_container.rc == 0
+    - _ntp_chrony.status.ActiveState | default('') == 'failed'
+  changed_when: true
+  tags:
+    - ntp
