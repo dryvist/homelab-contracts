@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.7.0](https://github.com/dryvist/homelab-contracts/compare/v2.6.0...v2.7.0) (2026-08-09)
+
+
+### Features
+
+* **ansible:** promote seven shared roles into the collection ([#66](https://github.com/dryvist/homelab-contracts/issues/66)) ([2d03604](https://github.com/dryvist/homelab-contracts/commit/2d036041a2c4d871a57a3babfceb604803749226))
+
+
+### Bug Fixes
+
+* **openbao_secrets:** stop the delegated publish escalating on the control node ([#68](https://github.com/dryvist/homelab-contracts/issues/68)) ([ab9c784](https://github.com/dryvist/homelab-contracts/commit/ab9c78429195c98da52cb45c964e41ca825e9986))
+
 ## [2.6.0](https://github.com/dryvist/homelab-contracts/compare/v2.5.0...v2.6.0) (2026-08-04)
 
 
