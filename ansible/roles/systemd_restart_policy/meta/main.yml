@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  author: JacobPEvans
+  description: Deploy a systemd unit override enforcing a restart policy for named services
+  license: Apache-2.0
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+
+  galaxy_tags:
+    - systemd
+    - resiliency
+
+dependencies: []

@@ -1,0 +1,62 @@
+---
+# Install rsyslog and add a single forward rule so this host's logs (systemd
+# journal + everything rsyslog sees) flow to the central syslog VIP -> Cribl
+# Edge -> Splunk. The pipeline + load-balancer LXCs are excluded by the site.yml
+# play's host pattern, so this never forwards into the receiver it feeds.
+
+- name: Assert the syslog VIP target + port resolved from inventory
+  ansible.builtin.assert:
+    that:
+      - syslog_forwarder_target_host | length > 0
+      - syslog_forwarder_target_port | string | length > 0
+    fail_msg: >-
+      syslog_forwarder needs PROXMOX_SUBDOMAIN (for the syslog CNAME target) and
+      tofu_data.constants.syslog_ports.linux. Ensure the inventory is synced and
+      PROXMOX_SUBDOMAIN is set.
+    quiet: true
+
+- name: Install rsyslog
+  ansible.builtin.apt:
+    name: rsyslog
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# rsyslog's Debian unit enables systemd sandboxing (PrivateDevices,
+# ProtectKernelTunables, ProtectControlGroups, ...) that an unprivileged LXC
+# cannot satisfy, so systemd fails the unit with status=226/NAMESPACE before
+# rsyslogd starts. Drop in an override that neutralizes those directives so the
+# forwarder runs in a container. Harmless on hosts that could honor them.
+- name: Ensure rsyslog systemd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/rsyslog.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy rsyslog unprivileged-LXC systemd override
+  ansible.builtin.template:
+    src: rsyslog-lxc-override.conf.j2
+    dest: /etc/systemd/system/rsyslog.service.d/zz-lxc-unpriv.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart rsyslog
+
+- name: Deploy the Cribl syslog-forward rule
+  ansible.builtin.template:
+    src: 10-forward-cribl.conf.j2
+    dest: "{{ syslog_forwarder_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: rsyslogd -N1 -f %s
+  notify: Restart rsyslog
+
+- name: Enable and start rsyslog
+  ansible.builtin.systemd:
+    name: rsyslog
+    state: started
+    enabled: true
+    daemon_reload: true

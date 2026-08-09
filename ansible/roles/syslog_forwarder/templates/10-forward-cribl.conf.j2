@@ -1,0 +1,49 @@
+# {{ ansible_managed }}
+# Forward all logs to the central syslog pipeline:
+#   this host -> {{ syslog_forwarder_target_host }}:{{ syslog_forwarder_target_port }} ({{ syslog_forwarder_protocol }})
+#   -> HAProxy syslog VIP -> Cribl Edge -> Splunk (os index).
+# rsyslog ingests the systemd journal by default on Debian, so this captures
+# host logs + every systemd service (and Docker containers whose compose
+# log-driver is journald). The disk-assisted queue survives a receiver outage
+# instead of dropping logs.
+{% if syslog_forwarder_imfile_inputs %}
+# imfile inputs: tail file-only loggers into rsyslog. Each input's tag becomes
+# the $programname, so these lines flow through the catch-all (or a matching
+# program route) to the syslog target.
+# global() restates the base config's $WorkDirectory: the deploy-time config
+# validation checks this drop-in standalone, so imfile can't see the base
+# file's directive and fails validation without its own.
+global(workDirectory="{{ syslog_forwarder_imfile_work_directory }}")
+module(load="imfile")
+{% for _in in syslog_forwarder_imfile_inputs %}
+input(type="imfile"
+      File="{{ _in.file }}"
+      Tag="{{ _in.tag }}:"
+      ruleset="RSYSLOG_DefaultRuleset")
+{% endfor %}
+{% endif %}
+{% for route in syslog_forwarder_program_routes %}
+# Program route: {{ route.program }} -> {{ syslog_forwarder_target_host }}:{{ route.port }}
+# Rendered ABOVE the catch-all; `stop` keeps these lines off the catch-all port.
+if $programname == '{{ route.program }}' then {
+  action(type="omfwd"
+         target="{{ syslog_forwarder_target_host }}"
+         port="{{ route.port }}"
+         protocol="{{ syslog_forwarder_protocol }}"
+         queue.type="LinkedList"
+         queue.filename="cribl_fwd_{{ route.program }}"
+         queue.maxDiskSpace="{{ syslog_forwarder_queue_max_disk_space }}"
+         queue.saveOnShutdown="on"
+         action.resumeRetryCount="-1")
+  stop
+}
+{% endfor %}
+*.* action(type="omfwd"
+           target="{{ syslog_forwarder_target_host }}"
+           port="{{ syslog_forwarder_target_port }}"
+           protocol="{{ syslog_forwarder_protocol }}"
+           queue.type="LinkedList"
+           queue.filename="cribl_fwd"
+           queue.maxDiskSpace="{{ syslog_forwarder_queue_max_disk_space }}"
+           queue.saveOnShutdown="on"
+           action.resumeRetryCount="-1")

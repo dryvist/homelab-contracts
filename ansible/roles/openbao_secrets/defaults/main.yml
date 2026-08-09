@@ -1,0 +1,147 @@
+---
+# openbao_secrets role defaults — a controller-side pre-play that logs in to
+# OpenBao, once per resource-domain identity, and reads that domain's KV
+# subtree into a per-domain fact (`bao_<domain>_secrets`, hyphens become
+# underscores — e.g. `local-cloud` -> `bao_local_cloud_secrets`). Consumer
+# roles then read bao-first with an env fallback:
+#   X: "{{ bao_<domain>_secrets.X | default(lookup('env','X'), true) }}"
+#
+# Each domain authenticates with its OWN least-privilege AppRole (see
+# terraform-proxmox docs/SECRETS_HIERARCHY.md) rather than one broad shared
+# identity — a domain's credentials only ever unlock that domain's KV subtree.
+#
+# SKIPS CLEANLY at two levels: the whole role no-ops when BAO_ADDR is unset
+# (no OpenBao configured at all), and each domain independently no-ops when
+# its own role_id/secret_id envs are unset (lets an operator migrate one
+# domain at a time onto OpenBao while the rest still fall back to env/SOPS).
+
+# Shared connection inputs.
+openbao_secrets_bao_addr: "{{ lookup('env', 'BAO_ADDR') | default('', true) }}"
+# TLS terminates at the OpenBao Traefik ingress (a real cert), so verify by
+# default; override only for a direct-to-node http bootstrap endpoint.
+openbao_secrets_validate_certs: true
+openbao_secrets_kv_mount: secret
+# Client failover across the OpenBao nodes: probe an ordered candidate list and
+# use the first reachable endpoint. See README for the full ordering + rationale.
+openbao_secrets_openbao_api_port: "{{ tofu_data['constants']['service_ports']['openbao_api'] | default(8200) }}"
+openbao_secrets_node_addrs: >-
+  {{ tofu_data['containers'] | default({}) | dict2items
+     | selectattr('value.tags', 'defined')
+     | selectattr('value.tags', 'contains', 'openbao')
+     | map(attribute='value.ip', default='') | reject('equalto', '')
+     | map('regex_replace', '^(.+)$', 'http://\1:' ~ (openbao_secrets_openbao_api_port | string))
+     | list }}
+openbao_secrets_bao_addr_candidates: >-
+  {{ (([openbao_secrets_bao_addr] if openbao_secrets_bao_addr | length > 0 else [])
+      + openbao_secrets_node_addrs) | unique }}
+
+# --- Credential PUBLISHING (tasks/publish.yml) ---------------------------------
+# Identity used to write guest-generated credentials back into OpenBao under
+# secret/apps/<app>. This is the ansible-converge AppRole, whose policy is
+# extended with create/update (NOT delete, NOT read of unrelated paths) on
+# secret/data/apps/* — see roles/openbao `openbao_policies`.
+#
+# Everything else in this role READS. This is the one write path, and it is
+# deliberately confined to a single path prefix so a converge can never rewrite
+# platform or external credentials.
+openbao_secrets_publish_role_id: "{{ lookup('env', 'OPENBAO_APPROLE_ANSIBLE_ROLE_ID') | default('', true) }}"
+openbao_secrets_publish_secret_id: "{{ lookup('env', 'OPENBAO_APPROLE_ANSIBLE_SECRET_ID') | default('', true) }}"
+
+# One entry per resource-domain identity this Ansible converge fetches for.
+# Each domain's role_id/secret_id come from its own env vars — sourced from
+# the operator's keychain-backed resolver on macOS, or a root-only systemd
+# credential on Linux (never a shared/broad credential). Add a domain here as
+# new consumer roles are wired to read bao-first; each needs a matching
+# AppRole + policy in roles/openbao's `openbao_approles`/`openbao_policies`.
+openbao_secrets_domains:
+  - name: observability
+    role_id_env: OBSERVABILITY_VAULT_ROLE_ID
+    secret_id_env: OBSERVABILITY_VAULT_SECRET_ID
+    paths:
+      - platform/splunk
+      - platform/cribl
+  - name: local-cloud
+    role_id_env: LOCAL_CLOUD_VAULT_ROLE_ID
+    secret_id_env: LOCAL_CLOUD_VAULT_SECRET_ID
+    paths:
+      - platform/object-storage
+      - platform/compute
+  - name: monitoring
+    role_id_env: MONITORING_VAULT_ROLE_ID
+    secret_id_env: MONITORING_VAULT_SECRET_ID
+    paths:
+      - apps/monitoring
+  - name: media
+    role_id_env: MEDIA_VAULT_ROLE_ID
+    secret_id_env: MEDIA_VAULT_SECRET_ID
+    paths:
+      - apps/media
+  - name: apps
+    role_id_env: APPS_VAULT_ROLE_ID
+    secret_id_env: APPS_VAULT_SECRET_ID
+    paths:
+      # Nautobot IPAM/DCIM (issue #138). The apps/nautobot KV path carries the
+      # fields db_password, secret_key, superuser_password (the #138 secret
+      # contract WS-C seeds), merged flat into bao_apps_secrets. Future apps
+      # sharing the Postgres instance (Vikunja P3, EspoCRM P4) add their own
+      # `apps/<app>` path here; because the merge is flat, their fields MUST be
+      # app-namespaced (e.g. vikunja_db_password) or given a separate domain,
+      # so they never collide with Nautobot's bare field names.
+      - apps/nautobot
+      # Zammad ITSM/ticketing (incident-management system of record). Fields are
+      # app-namespaced (zammad_db_password, zammad_admin_password) so the flat
+      # merge into bao_apps_secrets never collides with Nautobot's bare names.
+      # The Hermes API token is NOT here — it lives in ai/hermes (local-llm
+      # domain) so the one token has a single home shared by both sides.
+      - apps/zammad
+      # Vikunja task-management (issue #141). Fields come from the SOPS->bao
+      # promotion map (roles/openbao openbao_promoted_app_secrets.vikunja): vikunja_db_password
+      # (app-namespaced, matches the postgres + vikunja_group consumers) plus the
+      # MCP svc-account passwords + API tokens. Merged flat into bao_apps_secrets.
+      - apps/vikunja
+      # Shared-apps Postgres replication credential (generated at source by
+      # roles/openbao openbao_generated_app_secrets.postgres); consumed by the
+      # postgres role on both the primary and the standby.
+      - apps/postgres
+      # Hindsight agent-memory (ai VLAN): DB + replication credentials for its
+      # dedicated Postgres cluster and the Control Plane access key (generated
+      # at source by openbao_generated_app_secrets.hindsight; app-namespaced).
+      - apps/hindsight
+      # Workflow engine: n8n_db_password (generated at source for its role on
+      # the shared cluster) + n8n_encryption_key (PROMOTED — the key that
+      # decrypts the credentials already stored in its database, so it must
+      # never be regenerated). App-namespaced for the flat bao_apps_secrets
+      # merge. Consumed by inventory/group_vars/{n8n_group,postgres_group}.yml.
+      - apps/n8n
+  - name: local-llm
+    role_id_env: LOCAL_LLM_VAULT_ROLE_ID
+    secret_id_env: LOCAL_LLM_VAULT_SECRET_ID
+    paths:
+      - ai/llm         # LLM_ROUTER_MASTER_KEY, LLM_LARGE_BEARER_TOKEN (single seeded KV path)
+      - ai/qdrant      # QDRANT_API_KEY
+      - ai/open-webui  # OPEN_WEBUI_SECRET_KEY, OPEN_WEBUI_OPENAI_API_KEY
+      - ai/hermes      # GH_PAT_WRITE_PROJECT_ISSUES, HERMES_GITHUB_APP_{ID,INSTALLATION_ID,
+                       #   PRIVATE_KEY}. The old account-wide OPENROUTER_API_KEY
+                       #   was transferred to the deepseek-deepseek-v4-flash
+                       #   per-model field in ai/saas/openrouter and removed
+                       #   from this path (2026-07-16).
+      - ai/saas/openrouter  # Paid-SaaS provider key area (ai/saas/<provider>).
+                       #   One field per OpenRouter MODEL (field name = model
+                       #   slug, e.g. nvidia-nemotron-3-ultra-550b-a55b-free),
+                       #   consumed by llm_router's OpenRouter egress tier.
+                       #   Readable via the ai-saas-openrouter policy leaf only —
+                       #   local-llm's broad ai/* read explicitly denies the rest
+                       #   of ai/saas/* (sibling providers: anthropic/google/
+                       #   openai seeded later for workstation consumers).
+                       #   Canonical home is the secrets-external mount (an
+                       #   internet-reachable SaaS credential); this path is
+                       #   still read against the internal mount
+                       #   (openbao_secrets_kv_mount) during the dual-mount
+                       #   transition and will move once the internal
+                       #   ai/saas/openrouter entry is deleted.
+      - ai/mcp/splunk  # SPLUNK_MCP_URL, SPLUNK_MCP_TOKEN; merged into the same
+                       #   bao_local_llm_secrets fact consumed by Hermes
+      - ai/langfuse    # LANGFUSE_{POSTGRES_PASSWORD,CLICKHOUSE_PASSWORD,REDIS_AUTH,
+                       #   S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY,PUBLIC_KEY,SECRET_KEY,
+                       #   INIT_USER_EMAIL,INIT_USER_PASSWORD} — fully seeded 2026-07-05
+      - ai/langflow    # LANGFLOW_{SUPERUSER,SUPERUSER_PASSWORD,DB_PASSWORD}

@@ -1,0 +1,27 @@
+---
+galaxy_info:
+  author: JacobPEvans
+  description: >-
+    Controller-side pre-play fetching per-resource-domain OpenBao KV
+    secrets via least-privilege AppRoles, with client failover and a clean
+    env/SOPS fallback. See README.md for the calling-play contract a
+    consumer playbook must reproduce.
+  license: Apache-2.0
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+
+  galaxy_tags:
+    - openbao
+    - secrets
+    - vault
+
+dependencies: []
