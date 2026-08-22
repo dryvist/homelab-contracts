@@ -91,7 +91,7 @@ cribl_edge_hardware_match: >-
 # The split axis is HOST, not sourcetype, because sourcetype does not
 # distinguish these sources — they are all syslog. Measured 24h shares of the
 # os syslog volume:
-#   proxmox hypervisors  68.7 MB/day  38.3%   (pve2 alone is 33.9% of all os)
+#   proxmox hypervisors  68.7 MB/day  38.3%   (one node alone is 33.9% of all os)
 #   AI/agent stack       63.1 MB/day  35.2%
 # Together 73.5%. The remaining hosts are each under 2% and stay in os; the
 # next candidates if this is taken further are zammad (11.2%) and
