@@ -34,6 +34,9 @@ EX_SOFTWARE=70
 # call site. Override the env var to point at a copy. Mirrors the existing
 # `inventory_resolve_onprem_default_uri` default for the sibling object.
 URI="${DEPLOYMENT_JSON_S3_URI:-s3://iac-inventory/deployment.json}"
+# `cmd_edit`'s EXIT trap runs after the function returns, so its path cannot be
+# function-local under `set -u`.
+edit_tmp=""
 
 usage() {
   cat <<'EOF'
@@ -176,18 +179,17 @@ cmd_edit() {
   done
   require_lease
   require_store
-  local tmp
-  tmp="$(mktemp -t deployment.json.XXXXXX)"
-  trap 'rm -f "$tmp" "$tmp.new"' EXIT
-  fetch_to "$tmp"
+  edit_tmp="$(mktemp -t deployment.json.XXXXXX)"
+  trap 'rm -f "$edit_tmp" "$edit_tmp.new"' EXIT
+  fetch_to "$edit_tmp"
   if [ -n "$patch" ]; then
-    jq "$patch" "$tmp" > "$tmp.new" || die "jq patch failed" "$EX_DATAERR"
-    mv "$tmp.new" "$tmp"
+    jq "$patch" "$edit_tmp" > "$edit_tmp.new" || die "jq patch failed" "$EX_DATAERR"
+    mv "$edit_tmp.new" "$edit_tmp"
   else
-    "${EDITOR:-vi}" "$tmp"
+    "${EDITOR:-vi}" "$edit_tmp"
   fi
-  validate "$tmp" "$schema"
-  upload "$tmp"
+  validate "$edit_tmp" "$schema"
+  upload "$edit_tmp"
 }
 
 cmd_put() {
