@@ -149,6 +149,16 @@ fake_store() {
   [[ "$output" != *"missing DEPLOYMENT_JSON_S3_URI"* ]]
 }
 
+@test "deployment-json edit succeeds after an upload and cleans up safely" {
+  pub="$BATS_TEST_TMPDIR/pub.json"
+  echo '{"containers":{"keep":{}}}' > "$pub"
+  fake_store "$pub"
+  run "$DEPLOYMENT_JSON" edit --schema "$SCHEMA" --patch '.'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"uploaded"* ]]
+  [[ "$output" != *"unbound variable"* ]]
+}
+
 @test "put REFUSES when a containers key would vanish" {
   pub="$BATS_TEST_TMPDIR/pub.json"
   new="$BATS_TEST_TMPDIR/new.json"
