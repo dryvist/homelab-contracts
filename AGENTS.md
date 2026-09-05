@@ -1,3 +1,6 @@
+---
+skill-groups: [core, git, homelab]
+---
 # AI Agents Configuration — dryvist/homelab-contracts
 
 This repo is the **single source of truth** for the dryvist homelab cross-repo
