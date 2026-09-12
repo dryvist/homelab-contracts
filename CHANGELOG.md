@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.7.2](https://github.com/dryvist/homelab-contracts/compare/v2.7.1...v2.7.2) (2026-09-12)
+
+
+### Bug Fixes
+
+* **service_deadman:** build the ntfy URL from the ingress subdomain ([5830aa4](https://github.com/dryvist/homelab-contracts/commit/5830aa4121857d748b3903e628e26b91d2d90a81))
+* **service_deadman:** build the ntfy URL from the ingress subdomain ([c803a0c](https://github.com/dryvist/homelab-contracts/commit/c803a0ca88c898b83a11d65b63eb886ac32ee2bc))
+
 ## [2.7.1](https://github.com/dryvist/homelab-contracts/compare/v2.7.0...v2.7.1) (2026-08-31)
 
 
