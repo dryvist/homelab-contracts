@@ -16,9 +16,12 @@ service_deadman_interval: "60s"
 
 # ntfy alert target — FQDN-first: the Traefik-fronted service name
 # (https://ntfy.<domain>), never an IP-valued hostvar. DHCP/DNS own the
-# address; this config only ever knows the name.
+# address; this config only ever knows the name. ntfy is a Traefik ingress
+# route, so its name is built from the ingress subdomain (PROXMOX_SUBDOMAIN),
+# not tofu_data.domain. Empty when PROXMOX_SUBDOMAIN is unset.
 service_deadman_ntfy_url: >-
-  https://ntfy.{{ tofu_data.domain }}/{{ service_deadman_ntfy_topic }}
+  {{ ('https://ntfy.' ~ lookup('env', 'PROXMOX_SUBDOMAIN') ~ '/' ~ service_deadman_ntfy_topic)
+     if lookup('env', 'PROXMOX_SUBDOMAIN') else '' }}
 service_deadman_ntfy_topic: "keystone"
 
 # Per-group keystone checks. The role selects every check whose group this host
