@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.7.3](https://github.com/dryvist/homelab-contracts/compare/v2.7.2...v2.7.3) (2026-09-19)
+
+
+### Bug Fixes
+
+* **docker_engine:** re-align the shared role with its ansible-proxmox-apps copy ([8c5a044](https://github.com/dryvist/homelab-contracts/commit/8c5a044c8f6d1e357354fc250542fa2274eeeaf2))
+* **docker_engine:** re-align the shared role with its ansible-proxmox-apps copy ([3bcf3b6](https://github.com/dryvist/homelab-contracts/commit/3bcf3b66ac47c0f5db090cc57dff3eb8cbc63b0d))
+
 ## [2.7.2](https://github.com/dryvist/homelab-contracts/compare/v2.7.1...v2.7.2) (2026-09-12)
 
 
