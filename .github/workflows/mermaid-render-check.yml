@@ -8,6 +8,10 @@ on:
       - ".github/scripts/render-mermaid.sh"
       - ".github/workflows/mermaid-render-check.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
