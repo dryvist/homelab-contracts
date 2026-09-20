@@ -144,7 +144,8 @@
       "port": 10003,
       "sticky": true,
       "health_check": true,
-      "health_check_path": "/health"
+      "health_check_path": "/health",
+      "response_header_timeout": "0s"
     },
     {
       "name": "example-apex",
