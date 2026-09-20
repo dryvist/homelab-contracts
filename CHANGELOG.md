@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.7.4](https://github.com/dryvist/homelab-contracts/compare/v2.7.3...v2.7.4) (2026-09-20)
+
+
+### Bug Fixes
+
+* **inventory:** ingress rows may carry response_header_timeout ([#78](https://github.com/dryvist/homelab-contracts/issues/78)) ([9ad5ba2](https://github.com/dryvist/homelab-contracts/commit/9ad5ba235509d5c123cfc7a453b40afd9fed6014))
+
 ## [2.7.3](https://github.com/dryvist/homelab-contracts/compare/v2.7.2...v2.7.3) (2026-09-19)
 
 
