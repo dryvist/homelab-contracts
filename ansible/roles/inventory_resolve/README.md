@@ -1,8 +1,7 @@
 # inventory_resolve
 
-Shared resolution of the published OpenTofu inventory. Replaces the
-copy-pasted resolution block that previously lived in each ansible repo's
-`load_tofu.yml`.
+Shared resolution of the published OpenTofu inventory, replacing a
+copy-pasted resolution block in each ansible repo's `load_tofu.yml`.
 
 Source priority (first match wins):
 
