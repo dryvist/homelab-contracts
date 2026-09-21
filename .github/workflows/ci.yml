@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install check-jsonschema
-        run: pip install 'check-jsonschema==0.37.2'
+        run: pip install 'check-jsonschema==0.38.0'
       - name: Validate ansible_inventory example against schema
         run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
       - name: Validate nautobot_export example against schema
