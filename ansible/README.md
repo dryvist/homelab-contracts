@@ -21,6 +21,12 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `service_deadman` | Timer-driven deadman watchdog alerting on keystone service failure | `ansible-proxmox-apps`, `ansible-servarr` |
 | `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
 
+## Plugins
+
+| Plugin | Type | Purpose | Consumers |
+| --- | --- | --- | --- |
+| `converge_telemetry` | callback | Ship per-host converge-freshness and per-task timing events to Splunk HEC | `ansible-proxmox-ai` |
+
 ## Installation
 
 `ansible-galaxy role install` cannot address a role that lives in a repo
@@ -56,6 +62,17 @@ roles:
 
 Role variable names are unaffected by the collection move — `cribl_edge_*`,
 `cribl_packs_*`, and `inventory_resolve_*` keep their existing names.
+
+Reference the callback plugin the same way, in `ansible.cfg`:
+
+```ini
+[defaults]
+callbacks_enabled = dryvist.homelab.converge_telemetry
+```
+
+It stays inert until a playbook publishes its configuration under the
+`converge_telemetry` key via `ansible.builtin.set_stats` — see the plugin's
+own `DOCUMENTATION` block for every option and published field.
 
 ## License
 

@@ -91,3 +91,20 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/inventory_resolve/apply_owed_read_failure.yml
+
+  test-converge-telemetry:
+    name: pytest converge_telemetry callback
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+      - name: Install ansible-core and pytest
+        run: pip install 'ansible-core==2.18.*' pytest
+      - name: Run the callback's test suite
+        working-directory: tests
+        run: >-
+          python -m pytest test_converge_telemetry.py
+          test_converge_telemetry_events.py
+          test_converge_telemetry_interrupt.py -q
