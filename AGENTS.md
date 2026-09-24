@@ -18,6 +18,8 @@ This repo owns:
 - `bin/flow-lock` — the non-IaC mutation lease + gated credential injection (OpenBao KV v2 CAS)
 - `bin/deployment-json` — locked, schema-gated deployment.json fetch/edit/put
 - `ansible/roles/inventory_resolve` — shared inventory-resolution role for the ansible repos
+- `ansible/plugins/callback/converge_telemetry.py` — shared converge-freshness
+  callback plugin, consumed by FQCN (`dryvist.homelab.converge_telemetry`)
 - `examples/ansible_inventory.json` — reference fixture used by CI
 - `versions/<vX.Y.Z>/` — frozen historical schemas for breaking-change detection
 - `tests/validate.sh` — one-line `check-jsonschema` invocation
