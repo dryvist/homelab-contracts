@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.8.0](https://github.com/dryvist/homelab-contracts/compare/v2.7.4...v2.8.0) (2026-09-24)
+
+
+### Features
+
+* **converge_telemetry:** add a shared converge-freshness callback plugin ([#86](https://github.com/dryvist/homelab-contracts/issues/86)) ([ee8d1dd](https://github.com/dryvist/homelab-contracts/commit/ee8d1ddc387bf4877a2b4ef7ea25cb26dd1cf181))
+* **openbao_secrets:** accept an operator AppRole pair as the last fallback ([#84](https://github.com/dryvist/homelab-contracts/issues/84)) ([1722a3b](https://github.com/dryvist/homelab-contracts/commit/1722a3b28192b04449be19c376704f2db6ac95bb))
+
 ## [2.7.4](https://github.com/dryvist/homelab-contracts/compare/v2.7.3...v2.7.4) (2026-09-20)
 
 
