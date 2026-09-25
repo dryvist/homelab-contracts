@@ -189,16 +189,21 @@ cribl_edge_langfuse_public_key: "{{ lookup('env', 'LANGFUSE_PUBLIC_KEY') | defau
 cribl_edge_langfuse_secret_key: "{{ lookup('env', 'LANGFUSE_SECRET_KEY') | default('', true) }}"
 
 # =============================================================================
-# GPU metrics (System Metrics source). Fleet-wide, not host-gated: a node
-# with no NVIDIA card and no nvidia-smi on PATH simply emits nothing from
-# this group, so enabling it everywhere is inert on every GPU-less node.
+# GPU metrics (System Metrics source). Default is `disabled` — Cribl's own
+# shipped default for this group — so this role change is a no-op on every
+# host that does not explicitly override it. Enable per-host (e.g.
+# nvidia_driver_enabled hosts) by setting cribl_edge_gpu_mode: custom in
+# that host's host_vars; no confirmed behavior exists for `custom`/`all`
+# mode on a host with no nvidia-smi (Cribl's docs state nvidia-smi as a
+# prerequisite for collection but do not document the failure mode when
+# it is absent, and this could not be verified against a live instance),
+# so this stays opt-in rather than fleet-wide until that is confirmed.
 # Schema verified by extracting the live Cribl 4.20.1 release and reading
 # its own UI form schema (no public docs page exposes the raw field names):
 # `gpu` is a top-level sibling of `host`, not nested under host.custom.
 # custom.perGpu / custom.detail names and default `mode: disabled` come
-# from that same schema. Requires the NVIDIA driver + nvidia-smi on PATH
-# (Cribl's own prerequisite) — already true on this estate's one GPU node.
-cribl_edge_gpu_mode: custom
+# from that same schema.
+cribl_edge_gpu_mode: disabled
 cribl_edge_gpu_per_gpu: true
 cribl_edge_gpu_detail: false
 
