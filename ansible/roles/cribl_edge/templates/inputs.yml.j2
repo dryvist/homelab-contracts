@@ -58,12 +58,24 @@ inputs:
     persistence:
       enable: true
       maxDataSize: 100MB
+    # GPU group: a top-level sibling of the (unconfigured, default-Basic)
+    # host group, not nested under it. See cribl_edge_gpu_* in defaults for
+    # the schema source. Inert on a node with no NVIDIA card / nvidia-smi.
+    gpu:
+      mode: "{{ cribl_edge_gpu_mode }}"
+      custom:
+        perGpu: "{{ cribl_edge_gpu_per_gpu }}"
+        detail: "{{ cribl_edge_gpu_detail }}"
     connections:
 {% if (cribl_edge_hec_namespace | default('')) | length > 0 %}
       - output: splunk_hec_os_metrics
 {% else %}
       - output: splunk_hec
 {% endif %}
+      # Second leg, independent of the Splunk leg above: reaches Cribl
+      # Stream's dedicated metrics S2S receiver, which forwards to
+      # victoriametrics_rw. See cribl_edge_stream_s2s_metrics_host/port.
+      - output: cribl_stream_s2s_metrics
 
   # Splunk-HEC source for the per-WAN netmon probers (roles/netmon Telegraf
   # outputs.http). Routed to the netmon pipeline -> Splunk netmon index.

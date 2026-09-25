@@ -187,3 +187,32 @@ cribl_edge_langfuse_url: >-
   | mandatory('PROXMOX_SUBDOMAIN required') }}/api/public/otel
 cribl_edge_langfuse_public_key: "{{ lookup('env', 'LANGFUSE_PUBLIC_KEY') | default('', true) }}"
 cribl_edge_langfuse_secret_key: "{{ lookup('env', 'LANGFUSE_SECRET_KEY') | default('', true) }}"
+
+# =============================================================================
+# GPU metrics (System Metrics source). Fleet-wide, not host-gated: a node
+# with no NVIDIA card and no nvidia-smi on PATH simply emits nothing from
+# this group, so enabling it everywhere is inert on every GPU-less node.
+# Schema verified by extracting the live Cribl 4.20.1 release and reading
+# its own UI form schema (no public docs page exposes the raw field names):
+# `gpu` is a top-level sibling of `host`, not nested under host.custom.
+# custom.perGpu / custom.detail names and default `mode: disabled` come
+# from that same schema. Requires the NVIDIA driver + nvidia-smi on PATH
+# (Cribl's own prerequisite) — already true on this estate's one GPU node.
+cribl_edge_gpu_mode: custom
+cribl_edge_gpu_per_gpu: true
+cribl_edge_gpu_detail: false
+
+# S2S (tcpjson) output carrying host + GPU metric events from this Edge to
+# Cribl Stream's dedicated metrics receiver, which forwards to
+# victoriametrics_rw. A separate port from the general-purpose S2S channel
+# (in_cribl_s2s, 10300) — Cribl's own guidance is one dedicated port per
+# source so Stream routes by listener, not by inspecting payload. Splunk
+# already receives these events directly via the splunk_hec_os_metrics
+# output above; this leg exists only to also reach VictoriaMetrics.
+# FQDN only, resolves to the same HAProxy instance splunk_hec/syslog
+# forwarding already use, on a different frontend port.
+cribl_edge_stream_s2s_metrics_host: >-
+  syslog.{{ lookup('env', 'PROXMOX_SUBDOMAIN')
+  | mandatory('PROXMOX_SUBDOMAIN environment variable is required (Doppler)') }}
+cribl_edge_stream_s2s_metrics_port: >-
+  {{ hostvars['localhost']['tofu_data']['constants']['service_ports']['cribl_s2s_metrics'] }}
