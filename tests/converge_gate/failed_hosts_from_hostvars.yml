@@ -1,0 +1,52 @@
+---
+# Failed-host detection reads hostvars, not a loop -- see the "Collect hosts
+# a per-host failure fact was set for" task in roles/converge_gate/tasks/main.yml.
+# This proves the single dict2items/selectattr expression matches the old
+# per-item loop's semantics exactly: a host only counts if its failure fact
+# is BOTH defined and non-empty. A host whose fact is defined but an empty
+# list (an app that ran clean) must not show up, or the rerun hint would
+# tell an operator to retry a host that already converged.
+#
+# Run: ANSIBLE_ROLES_PATH=ansible/roles \
+#        ansible-playbook -i localhost, tests/converge_gate/failed_hosts_from_hostvars.yml
+- name: Failed-hosts detection matches the old loop's non-empty-list-only semantics
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    converge_branch: develop
+  tasks:
+    - name: Add synthetic hosts to exercise hostvars scanning
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        groups: synthetic
+      loop:
+        - host-with-failures
+        - host-with-empty-failure-list
+        - host-with-no-failure-fact
+
+    - name: Give one host a non-empty failure fact
+      ansible.builtin.set_fact:
+        site_isolated_failures: [n8n_docker, openproject_docker]
+      delegate_to: host-with-failures
+      delegate_facts: true
+
+    - name: Give another host the fact defined but empty
+      ansible.builtin.set_fact:
+        site_isolated_failures: []
+      delegate_to: host-with-empty-failure-list
+      delegate_facts: true
+
+    - name: Run the shared gate role
+      ansible.builtin.include_role:
+        name: converge_gate
+
+    - name: Only the host with a non-empty failure fact is reported
+      ansible.builtin.assert:
+        that:
+          - converge_gate_failed_hosts == ['host-with-failures']
+        fail_msg: >-
+          Expected only host-with-failures (defined and non-empty); a host
+          with the fact defined-but-empty, or not defined at all, must be
+          excluded. Got {{ converge_gate_failed_hosts }}.
+        success_msg: failed-hosts detection matches the old loop's semantics

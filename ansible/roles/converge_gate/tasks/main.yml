@@ -75,17 +75,19 @@
 # playbooks/tasks/record_isolated_failure.yml) records the hostname onto
 # itself instead, and hostvars persists that for the rest of the run --
 # read it back here rather than inventing a second convention.
-- name: Reset the failed-host accumulator
+#
+# One set_fact, not a per-host loop: the program is removing per-item loops
+# from every stage, and this gate runs between EVERY stage, so a loop here
+# would be exactly the pattern it exists to eliminate. selectattr's second
+# call omits the test name deliberately -- Jinja defaults to a truthy check,
+# which is what excludes a host whose fact is present but an empty list.
+- name: Collect hosts a per-host failure fact was set for
   ansible.builtin.set_fact:
-    converge_gate_failed_hosts: []
-
-- name: Record hosts a per-host failure fact was set for
-  ansible.builtin.set_fact:
-    converge_gate_failed_hosts: "{{ converge_gate_failed_hosts + [item] }}"
-  loop: "{{ hostvars.keys() | list }}"
-  loop_control:
-    label: "{{ item }}"
-  when: (hostvars[item][converge_gate_failure_fact] | default([]) | length) > 0
+    converge_gate_failed_hosts: >-
+      {{ hostvars | dict2items
+         | selectattr('value.' ~ converge_gate_failure_fact, 'defined')
+         | selectattr('value.' ~ converge_gate_failure_fact)
+         | map(attribute='key') | list }}
 
 - name: Refuse to continue past the wall-clock cap
   ansible.builtin.assert:

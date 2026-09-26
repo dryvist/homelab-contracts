@@ -112,6 +112,14 @@ jobs:
           SEMAPHORE_MAX_TASK_DURATION_SEC: "900"
           CONVERGE_WALL_CLOCK_CAP: "5000"
         run: ansible-playbook -i localhost, tests/converge_gate/cap_clamped_on_main.yml
+      # Same contract for the other half of the gate: failed-host detection
+      # reads hostvars via one dict2items/selectattr expression instead of a
+      # per-item loop, and must match the old loop's semantics exactly -- a
+      # host only counts if its failure fact is both defined and non-empty.
+      - name: Verify failed-host detection matches the old loop's non-empty-list-only semantics
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/converge_gate/failed_hosts_from_hostvars.yml
 
   test-converge-telemetry:
     name: pytest converge_telemetry callback
