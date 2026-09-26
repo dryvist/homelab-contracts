@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.9.0](https://github.com/dryvist/homelab-contracts/compare/v2.8.0...v2.9.0) (2026-09-26)
+
+
+### Features
+
+* **ansible:** add shared converge wall-clock budget gate ([#89](https://github.com/dryvist/homelab-contracts/issues/89)) ([5325b85](https://github.com/dryvist/homelab-contracts/commit/5325b85229e7d310fc996793559a3e0997f46b89))
+* **cribl_edge:** enable GPU metrics and add a Stream S2S metrics output ([#87](https://github.com/dryvist/homelab-contracts/issues/87)) ([2895b6c](https://github.com/dryvist/homelab-contracts/commit/2895b6c41b89e0a4d02bc3c4d91cddecb7023346))
+* **llm_model_catalog:** add shared GGUF catalog role ([#90](https://github.com/dryvist/homelab-contracts/issues/90)) ([767b8ff](https://github.com/dryvist/homelab-contracts/commit/767b8ff7c77ab188ca5dbb92289683b902c39bec))
+
 ## [2.8.0](https://github.com/dryvist/homelab-contracts/compare/v2.7.4...v2.8.0) (2026-09-24)
 
 
