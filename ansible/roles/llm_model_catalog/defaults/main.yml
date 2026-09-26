@@ -1,0 +1,79 @@
+---
+# llm_model_catalog role defaults — the ONE list of GGUF models served
+# anywhere on the llm fabric. No tasks: including this role in a play makes
+# `llm_model_catalog_models` available to every role that runs after it in
+# the same play (Ansible role defaults persist for the rest of the play).
+#
+# Consumers: dryvist/ansible-proxmox (llm_model_store_seed, seeds the shared
+# model-store mount from the PVE host that owns it) and
+# dryvist/ansible-proxmox-ai (llama_cpp role, serves these GGUFs from the
+# mount). Both read this one list instead of each keeping their own.
+#
+# Each entry:
+#   name:        the served model id (llama_cpp's --models-preset section
+#                name / llm_model_store_seed's per-model download identity)
+#   hf_repo:     HuggingFace repo holding the GGUF, "<owner>/<repo>"
+#   gguf:        filename of the GGUF asset within that repo
+#   hf_revision: the exact commit the sha256 and download are read against.
+#                A HuggingFace model repo is a plain git repository, so this
+#                is tracked by Renovate's native git-refs datasource against
+#                https://huggingface.co/<hf_repo> — no custom datasource
+#                needed. The `# renovate-digest:` annotation immediately
+#                above each hf_revision drives that; it uses its own prefix,
+#                not this estate's shared `# renovate: datasource=...
+#                depName=...` convention (dryvist/.github's
+#                renovate-presets.json), because that shared manager's regex
+#                has no packageName capture group and would otherwise also
+#                match these lines, trying to resolve git-refs against a
+#                packageName of just the short model name.
+#
+# No sha256/checksum field here on purpose: the sha256 is derived from
+# HuggingFace's own LFS blob metadata at run time (the consuming role's job),
+# never stored as a second, driftable copy of a value HuggingFace already
+# publishes.
+llm_model_catalog_models:
+  - name: qwen3-4b
+    hf_repo: bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF
+    gguf: Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf
+    # renovate-digest: datasource=git-refs depName=qwen3-4b packageName=https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF
+    hf_revision: ae44f08e1392f39c0e474af10c3ff8355c8b6688
+
+  - name: nomic-embed-text-v1.5
+    hf_repo: nomic-ai/nomic-embed-text-v1.5-GGUF
+    gguf: nomic-embed-text-v1.5.Q4_K_M.gguf
+    # renovate-digest: datasource=git-refs depName=nomic-embed-text-v1.5 packageName=https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF
+    hf_revision: 0188c9bf409793f810680a5a431e7b899c46104c
+
+  - name: qwen3.5-9b
+    hf_repo: unsloth/Qwen3.5-9B-GGUF
+    gguf: Qwen3.5-9B-Q4_K_M.gguf
+    # renovate-digest: datasource=git-refs depName=qwen3.5-9b packageName=https://huggingface.co/unsloth/Qwen3.5-9B-GGUF
+    hf_revision: 3885219b6810b007914f3a7950a8d1b469d598a5
+
+  - name: qwen3.6-35b-a3b
+    hf_repo: bartowski/Qwen_Qwen3.6-35B-A3B-GGUF
+    gguf: Qwen_Qwen3.6-35B-A3B-Q4_K_M.gguf
+    # renovate-digest: datasource=git-refs depName=qwen3.6-35b-a3b packageName=https://huggingface.co/bartowski/Qwen_Qwen3.6-35B-A3B-GGUF
+    hf_revision: 5c2410d71524f4f72b023ce8daf7a80528226d5f
+
+  - name: qwen3.8-27b
+    hf_repo: unsloth/Qwen3.8-27B-GGUF
+    gguf: Qwen3.8-27B-UD-IQ3_XXS.gguf
+    # renovate-digest: datasource=git-refs depName=qwen3.8-27b packageName=https://huggingface.co/unsloth/Qwen3.8-27B-GGUF
+    hf_revision: 4ca720788d1e01f1bff70c033e0d0028fd02e502
+
+  # Embedder + reranker pair (served on both the vllm-tier GPU host and the
+  # cpu-9b pool as a failover rung — both must serve the byte-identical GGUF,
+  # since a consumer's stored embedding dimension is locked to whichever one
+  # answered first). Same catalog entry backs both call sites.
+  - name: bge-m3
+    hf_repo: gpustack/bge-m3-GGUF
+    gguf: bge-m3-Q8_0.gguf
+    # renovate-digest: datasource=git-refs depName=bge-m3 packageName=https://huggingface.co/gpustack/bge-m3-GGUF
+    hf_revision: 2d48f1737679ad900d5c26c5aad5410e9c70fdca
+
+  - name: bge-reranker-v2-m3
+    hf_repo: gpustack/bge-reranker-v2-m3-GGUF
+    gguf: bge-reranker-v2-m3-Q8_0.gguf
+    # renovate-digest: datasource=git-refs depName=bge-reranker-v2-m3 packageName=https://huggingface.co/gpustack/bge-reranker-v2-m3-GGUF
+    hf_revision: 3093af03b1a635e67b084b1d8c03c5f5e020fd05

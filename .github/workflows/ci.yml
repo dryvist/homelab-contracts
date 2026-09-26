@@ -74,7 +74,7 @@ jobs:
         # under ansible/roles/ for a playbook living under ansible/playbooks/.
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
-        run: ansible-lint ansible/roles/inventory_resolve ansible/roles/docker_engine ansible/roles/ntp ansible/roles/ssh_ca_trust ansible/roles/syslog_forwarder ansible/roles/systemd_restart_policy ansible/roles/service_deadman ansible/roles/openbao_secrets ansible/roles/converge_gate ansible/playbooks/converge_gate.yml
+        run: ansible-lint ansible/roles/inventory_resolve ansible/roles/docker_engine ansible/roles/ntp ansible/roles/ssh_ca_trust ansible/roles/syslog_forwarder ansible/roles/systemd_restart_policy ansible/roles/service_deadman ansible/roles/openbao_secrets ansible/roles/converge_gate ansible/roles/llm_model_catalog ansible/playbooks/converge_gate.yml
       # Runs here because this job already has ansible-core and the collections
       # the role needs. The check it pins is the apply-owed detector's fail-open
       # contract: without object-store credentials it must skip rather than
@@ -91,6 +91,11 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/inventory_resolve/apply_owed_read_failure.yml
+
+      - name: Verify the llm_model_catalog contract
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/llm_model_catalog/test_contract.yml
       # converge_gate contract: the cap this role enforces must always sit
       # strictly below whatever ceiling fed it (the Semaphore-forwarded env
       # var, or the one fallback default), and a CONVERGE_WALL_CLOCK_CAP

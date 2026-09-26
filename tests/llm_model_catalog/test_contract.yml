@@ -1,0 +1,60 @@
+---
+# Contract for the llm_model_catalog role: every entry is a complete,
+# uniquely-identified, Renovate-pinned model with no stored checksum.
+#
+# Run: ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
+#        tests/llm_model_catalog/test_contract.yml
+
+- name: LLM model catalog contract
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Load the catalog
+      ansible.builtin.include_role:
+        name: llm_model_catalog
+
+    - name: The catalog is non-empty
+      ansible.builtin.assert:
+        that:
+          - llm_model_catalog_models | length > 0
+        fail_msg: llm_model_catalog_models must declare at least one model.
+
+    - name: Every entry has the required fields and no stored checksum
+      ansible.builtin.assert:
+        that:
+          - item.name is defined and item.name | length > 0
+          - item.hf_repo is defined and item.hf_repo | length > 0
+          - item.gguf is defined and item.gguf | length > 0
+          - item.hf_revision is defined
+          - item.hf_revision is match('^[0-9a-f]{7,40}$')
+          - item.sha256 is not defined
+          - item.checksum is not defined
+        fail_msg: >-
+          {{ item.name | default('(unnamed)') }} is missing a required field,
+          has a non-hex hf_revision, or stores a checksum this role must
+          never keep (sha256 is derived from HuggingFace's own LFS metadata
+          at run time by the consuming role).
+        quiet: true
+      loop: "{{ llm_model_catalog_models }}"
+      loop_control:
+        label: "{{ item.name | default('(unnamed)') }}"
+
+    - name: Compute (hf_repo, gguf) pair keys for the uniqueness check
+      ansible.builtin.set_fact:
+        llm_model_catalog_pair_keys: >-
+          {{ (llm_model_catalog_pair_keys | default([])) + [item.hf_repo ~ '|' ~ item.gguf] }}
+      loop: "{{ llm_model_catalog_models }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Every model id and every (hf_repo, gguf) pair is unique
+      ansible.builtin.assert:
+        that:
+          - (llm_model_catalog_models | map(attribute='name') | list
+             | unique | length) == (llm_model_catalog_models | length)
+          - (llm_model_catalog_pair_keys | unique | length)
+            == (llm_model_catalog_pair_keys | length)
+        fail_msg: >-
+          The catalog declares a duplicate model name or (hf_repo, gguf)
+          pair -- each entry must be unique.

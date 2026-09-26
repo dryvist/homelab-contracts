@@ -20,6 +20,7 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, `ansible-servarr` |
 | `service_deadman` | Timer-driven deadman watchdog alerting on keystone service failure | `ansible-proxmox-apps`, `ansible-servarr` |
 | `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
+| `llm_model_catalog` | Defaults-only catalog of llm-fabric GGUF models (id, HF repo/file, pinned revision) | `ansible-proxmox`, `ansible-proxmox-ai` |
 
 ## Plugins
 
@@ -62,6 +63,15 @@ roles:
 
 Role variable names are unaffected by the collection move — `cribl_edge_*`,
 `cribl_packs_*`, and `inventory_resolve_*` keep their existing names.
+
+`llm_model_catalog` has no tasks — including it makes `llm_model_catalog_models`
+available to every role that runs after it in the same play:
+
+```yaml
+roles:
+  - role: dryvist.homelab.llm_model_catalog
+  - role: llm_model_store_seed # reads llm_model_catalog_models
+```
 
 Reference the callback plugin the same way, in `ansible.cfg`:
 
