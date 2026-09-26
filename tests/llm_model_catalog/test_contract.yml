@@ -13,6 +13,14 @@
     - name: Load the catalog
       ansible.builtin.include_role:
         name: llm_model_catalog
+        # include_role is a DYNAMIC include: its role's vars/defaults are
+        # private to that inclusion and invisible to the rest of the play
+        # unless public is set -- unlike the static `roles:` list form this
+        # role's real consumers use (playbooks/site.yml in ansible-proxmox),
+        # where defaults from an earlier role in the list are already public
+        # to every later one. Needed here only because every later task in
+        # THIS test file reads llm_model_catalog_models directly.
+        public: true
 
     - name: The catalog is non-empty
       ansible.builtin.assert:
