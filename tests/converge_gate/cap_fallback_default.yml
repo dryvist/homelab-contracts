@@ -1,0 +1,37 @@
+---
+# Fallback cap when Semaphore has not forwarded SEMAPHORE_MAX_TASK_DURATION_SEC
+# (a local run, or a Semaphore/compose version that predates the forwarding).
+# The fallback is ONE variable, converge_task_duration_limit_default, not a
+# second hardcoded number that has to be kept in sync with the Semaphore
+# side by hand.
+#
+# Run: env -u SEMAPHORE_MAX_TASK_DURATION_SEC -u CONVERGE_WALL_CLOCK_CAP \
+#        ANSIBLE_ROLES_PATH=ansible/roles \
+#        ansible-playbook -i localhost, tests/converge_gate/cap_fallback_default.yml
+- name: Cap falls back to converge_task_duration_limit_default minus the margin
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    converge_branch: develop
+  tasks:
+    - name: Confirm the env this test depends on is actually absent
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'SEMAPHORE_MAX_TASK_DURATION_SEC') | length == 0
+        fail_msg: >-
+          SEMAPHORE_MAX_TASK_DURATION_SEC is set in this shell -- unset it to
+          exercise the fallback path this test proves.
+
+    - name: Run the shared gate role
+      ansible.builtin.include_role:
+        name: converge_gate
+
+    - name: Cap falls back to the one default var minus the margin
+      ansible.builtin.assert:
+        that:
+          - converge_gate_wall_clock_cap | int == 750
+        fail_msg: >-
+          Expected the 900-default fallback minus the 150s margin (750); got
+          {{ converge_gate_wall_clock_cap }}.
+        success_msg: fallback-default cap correctly derived

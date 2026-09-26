@@ -1,0 +1,39 @@
+---
+# Cap derivation from Semaphore's forwarded task-duration ceiling.
+#
+# The property under test: the gate's cap must always sit strictly below the
+# Semaphore-forwarded task-duration limit, by exactly converge_wall_clock_margin.
+# A cap that ever reaches or exceeds the limit lets Semaphore's own kill fire
+# first -- no PLAY RECAP, no rerun hint, the exact failure this gate exists
+# to prevent.
+#
+# Run: SEMAPHORE_MAX_TASK_DURATION_SEC=900 ANSIBLE_ROLES_PATH=ansible/roles \
+#        ansible-playbook -i localhost, tests/converge_gate/cap_from_semaphore_env.yml
+- name: Cap resolves to the Semaphore limit minus the margin
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    converge_branch: develop
+  tasks:
+    - name: Confirm the env var this test depends on is actually set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'SEMAPHORE_MAX_TASK_DURATION_SEC') | length > 0
+        fail_msg: >-
+          SEMAPHORE_MAX_TASK_DURATION_SEC is unset -- this test proves
+          nothing without it. Run with SEMAPHORE_MAX_TASK_DURATION_SEC=900.
+
+    - name: Run the shared gate role
+      ansible.builtin.include_role:
+        name: converge_gate
+
+    - name: Cap is the forwarded limit minus the margin, and strictly below the limit
+      ansible.builtin.assert:
+        that:
+          - converge_gate_wall_clock_cap | int == 750
+          - (converge_gate_wall_clock_cap | int) < (lookup('env', 'SEMAPHORE_MAX_TASK_DURATION_SEC') | int)
+        fail_msg: >-
+          Expected cap 750 (900 - 150 margin), got
+          {{ converge_gate_wall_clock_cap }}.
+        success_msg: cap correctly derived from the Semaphore-forwarded limit

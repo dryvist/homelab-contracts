@@ -1,0 +1,109 @@
+---
+# Wall-clock budget for a converge, checked between stages of a site
+# playbook. Shared via the collection so the budget, its Semaphore-derived
+# ceiling, and its rerun hint live once instead of once per consumer repo.
+#
+# A development converge that runs for an hour is reporting a defect, not a
+# configuration need. Nothing native bounds a whole ansible-playbook run, so
+# the playbook bounds itself. A failed assert ends the run the NORMAL way --
+# the PLAY RECAP prints, profile_tasks prints its slowest-task table, the
+# exit is non-zero and any telemetry callback publishes as usual -- which is
+# exactly the report a run over budget should leave behind.
+#
+# Granularity is one stage, by design: this cannot interrupt a stage in
+# progress, and the consumer's own ansible.cfg task_timeout is what bounds a
+# single task. Both are needed; neither replaces the other.
+- name: Start the converge wall clock at the first gate
+  ansible.builtin.set_fact:
+    converge_gate_started_epoch: "{{ now().timestamp() | int }}"
+  when: converge_gate_started_epoch is not defined
+
+# Cap derivation: Semaphore forwards its own per-task duration ceiling into
+# the task environment as SEMAPHORE_MAX_TASK_DURATION_SEC. This gate's cap is
+# that ceiling minus converge_gate_wall_clock_margin -- never the ceiling
+# itself, or this gate's own clean stop could lose the race to Semaphore's
+# hard kill.
+- name: Resolve the wall-clock cap default from the Semaphore-forwarded ceiling (or the one fallback var), minus the margin
+  ansible.builtin.set_fact:
+    converge_gate_wall_clock_cap_default: >-
+      {{ (lookup('env', 'SEMAPHORE_MAX_TASK_DURATION_SEC') | trim
+          | default(converge_gate_task_duration_limit_default, true) | int)
+         - (converge_gate_wall_clock_margin | int) }}
+
+# The cap is honoured from CONVERGE_WALL_CLOCK_CAP only on main, the
+# promotion boundary where a full end-to-end converge is the point -- and
+# even there it is CLAMPED to never exceed the Semaphore-derived cap. An
+# override that outlives Semaphore's own kill would just move where the run
+# dies, from a clean assert with a PLAY RECAP to a hard kill with none.
+- name: Clamp a CONVERGE_WALL_CLOCK_CAP override to the Semaphore-derived cap, honoured only on main
+  ansible.builtin.set_fact:
+    converge_gate_wall_clock_cap: >-
+      {{ ([ (lookup('env', 'CONVERGE_WALL_CLOCK_CAP') | default(converge_gate_wall_clock_cap_default, true) | int),
+            (converge_gate_wall_clock_cap_default | int) ] | min)
+         if (converge_branch | default('')) == 'main'
+         else (converge_gate_wall_clock_cap_default | int) }}
+
+# Says which branch the gate resolved, so a plane run whose checkout is
+# detached shows as refused rather than silently capped -- a control that
+# looks present and does nothing is the failure this file exists to prevent.
+- name: Report a cap override this branch does not honour
+  ansible.builtin.debug:
+    msg: >-
+      CONVERGE_WALL_CLOCK_CAP={{ lookup('env', 'CONVERGE_WALL_CLOCK_CAP') }}
+      ignored: the override is honoured only on main and this checkout
+      resolved to branch '{{ converge_branch | default('') }}' (empty means
+      detached HEAD). Capping at {{ converge_gate_wall_clock_cap_default }}s.
+  when:
+    - lookup('env', 'CONVERGE_WALL_CLOCK_CAP') | length > 0
+    - (converge_branch | default('')) != 'main'
+
+- name: Compute elapsed wall-clock time since the first gate
+  ansible.builtin.set_fact:
+    converge_gate_elapsed: "{{ (now().timestamp() | int) - (converge_gate_started_epoch | int) }}"
+
+- name: Warn once the converge is over its soft budget
+  ansible.builtin.debug:
+    msg: >-
+      Converge has run {{ converge_gate_elapsed }}s, over the
+      {{ converge_gate_wall_clock_budget }}s soft budget. The TASKS RECAP at
+      the end of the run names what was slow.
+  when: converge_gate_elapsed | int >= converge_gate_wall_clock_budget | int
+
+# Native cross-play failure signal is thin: Ansible does not expose a
+# "failed so far this run" list to a later play. A consumer that wraps its
+# per-app plays in block/rescue (ansible-proxmox-apps
+# playbooks/tasks/record_isolated_failure.yml) records the hostname onto
+# itself instead, and hostvars persists that for the rest of the run --
+# read it back here rather than inventing a second convention.
+- name: Reset the failed-host accumulator
+  ansible.builtin.set_fact:
+    converge_gate_failed_hosts: []
+
+- name: Record hosts a per-host failure fact was set for
+  ansible.builtin.set_fact:
+    converge_gate_failed_hosts: "{{ converge_gate_failed_hosts + [item] }}"
+  loop: "{{ hostvars.keys() | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when: (hostvars[item][converge_gate_failure_fact] | default([]) | length) > 0
+
+- name: Refuse to continue past the wall-clock cap
+  ansible.builtin.assert:
+    that:
+      - converge_gate_elapsed | int < converge_gate_wall_clock_cap | int
+    fail_msg: >-
+      Converge has run {{ converge_gate_elapsed }}s, past the
+      {{ converge_gate_wall_clock_cap }}s cap (the Semaphore task-duration
+      ceiling minus a {{ converge_gate_wall_clock_margin }}s margin) --
+      stopping before the next stage. Stages that already ran DID converge;
+      the rest did not, so treat this run as partial. A converge this long
+      is a defect to file, not a cap to raise: the TASKS RECAP below names
+      the slowest tasks.
+      {{ 'Rerun the same template with --limit '
+         ~ (converge_gate_failed_hosts | join(','))
+         ~ ' to retry just the hosts a failure was recorded for.'
+         if (converge_gate_failed_hosts | length > 0)
+         else 'Rerun the same template; no per-host failure was recorded and'
+              ~ ' this collection has no single tag per stage, so scope a'
+              ~ ' retry with --limit yourself or rerun the whole template.' }}
+    quiet: true

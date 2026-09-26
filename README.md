@@ -23,6 +23,12 @@ both the data shapes and the small shared tools that enforce them:
 - `ansible/roles/cribl_packs` — installs versioned Cribl packs from GitHub
   releases into the local config tree. Packs are the unit of Cribl config;
   prefer them over templating `inputs.yml` / `routes.yml` per node
+- `ansible/roles/converge_gate` (also `ansible/playbooks/converge_gate.yml`,
+  usable directly as `import_playbook: dryvist.homelab.converge_gate`) — the
+  converge wall-clock budget gate, checked between stages of a site
+  playbook. Derives its cap from Semaphore's forwarded per-task duration
+  ceiling minus a margin, so a run stops cleanly, with a PLAY RECAP and a
+  scoped rerun hint, before Semaphore's own kill fires
 
 Formerly `homelab-schemas`; renamed when the shared flow tooling moved in
 (the contract repo now ships the enforcement, not just the shape).
@@ -110,6 +116,8 @@ ansible/
   roles/inventory_resolve/     # Shared inventory-resolution role (pin via requirements.yml)
   roles/cribl_edge/            # Cribl Edge install — hosts AND containers
   roles/cribl_packs/           # Versioned Cribl packs from GitHub releases
+  roles/converge_gate/         # Converge wall-clock budget gate, checked between stages
+  playbooks/converge_gate.yml  # import_playbook: dryvist.homelab.converge_gate passthrough
 examples/
   ansible_inventory.json       # Reference example matching the v1 schema (used as CI fixture)
 versions/
