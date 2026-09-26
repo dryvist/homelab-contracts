@@ -1,0 +1,19 @@
+---
+# Thin passthrough so a consumer can do
+# `import_playbook: dryvist.homelab.converge_gate` at every stage boundary,
+# while the real logic stays in ansible/roles/converge_gate -- testable the
+# same way every other shared role in this collection is (see
+# tests/inventory_resolve/*.yml): via include_role from a test playbook.
+- name: Gate the converge on its wall-clock budget
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tags:
+    - always
+  vars:
+    ansible_become: false
+  roles:
+    # A playbook under a collection's playbooks/ directory runs in that
+    # collection's context (as if `collections: [dryvist.homelab]` were set
+    # on it), so the bare role name resolves without an FQCN.
+    - role: converge_gate

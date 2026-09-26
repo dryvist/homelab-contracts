@@ -1,0 +1,27 @@
+---
+galaxy_info:
+  author: JacobPEvans
+  description: >-
+    Wall-clock budget gate for a converge, checked between stages. Derives
+    its cap from Semaphore's forwarded per-task duration ceiling (minus a
+    margin) so the playbook stops cleanly, with a PLAY RECAP and a scoped
+    rerun hint, before Semaphore's own kill fires.
+  license: Apache-2.0
+  min_ansible_version: "2.16"
+
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+
+  galaxy_tags:
+    - budget
+    - semaphore
+    - converge
+
+dependencies: []

@@ -1,0 +1,41 @@
+---
+# A CONVERGE_WALL_CLOCK_CAP override is honoured only on main, and even
+# there is clamped to the Semaphore-derived cap -- an override that outlives
+# Semaphore's own kill would just move where the run dies, from a clean
+# assert with a PLAY RECAP to a hard kill with none.
+#
+# Run: SEMAPHORE_MAX_TASK_DURATION_SEC=900 CONVERGE_WALL_CLOCK_CAP=5000 \
+#        ANSIBLE_ROLES_PATH=ansible/roles \
+#        ansible-playbook -i localhost, tests/converge_gate/cap_clamped_on_main.yml
+- name: A CONVERGE_WALL_CLOCK_CAP override on main is clamped to the Semaphore-derived cap
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    converge_branch: main
+  tasks:
+    - name: Confirm the env vars this test depends on are actually set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'SEMAPHORE_MAX_TASK_DURATION_SEC') | length > 0
+          - (lookup('env', 'CONVERGE_WALL_CLOCK_CAP') | int) > 750
+        fail_msg: >-
+          Run with SEMAPHORE_MAX_TASK_DURATION_SEC=900
+          CONVERGE_WALL_CLOCK_CAP=5000 -- an override at or below the
+          derived cap would pass this test without proving the clamp does
+          anything.
+
+    - name: Run the shared gate role
+      ansible.builtin.include_role:
+        name: converge_gate
+
+    - name: The 5000s override never reaches the assert -- it is clamped to 750
+      ansible.builtin.assert:
+        that:
+          - converge_gate_wall_clock_cap | int == 750
+        fail_msg: >-
+          Expected the clamp to hold the cap at 750 even with
+          CONVERGE_WALL_CLOCK_CAP=5000 on main; got
+          {{ converge_gate_wall_clock_cap }}. The override must never let the
+          cap exceed the Semaphore-forwarded limit minus its margin.
+        success_msg: override correctly clamped to the Semaphore-derived cap

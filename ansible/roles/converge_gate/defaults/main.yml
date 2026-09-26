@@ -1,0 +1,27 @@
+---
+# Soft budget: past this many seconds since the first gate, warn but keep
+# going. Purely informational -- the TASKS RECAP at the end of the run names
+# what was slow.
+converge_gate_wall_clock_budget: 300
+
+# Margin subtracted from the Semaphore-forwarded (or fallback) task-duration
+# ceiling to get the cap this role enforces. Sized to the largest observed
+# single stage slice (~140s) plus time for the PLAY RECAP / profile_tasks
+# table / telemetry publish to finish AFTER the last assert passes and
+# BEFORE Semaphore's own kill fires. A margin of 0 would let this gate and
+# Semaphore's kill race.
+converge_gate_wall_clock_margin: 150
+
+# Fallback used only when Semaphore has not forwarded
+# SEMAPHORE_MAX_TASK_DURATION_SEC into the task environment (a local run, or
+# a Semaphore/compose version that predates the forwarding). ONE variable,
+# not a second hardcoded number that has to be kept in sync with the
+# Semaphore-side default by hand.
+converge_gate_task_duration_limit_default: 900
+
+# Name of the per-host fact a consumer sets when it records an isolated
+# (rescued) play failure -- see ansible-proxmox-apps
+# playbooks/tasks/record_isolated_failure.yml for the convention this reads.
+# Left at its default in a consumer that has no such convention: the scan
+# simply finds nothing and the rerun hint omits --limit.
+converge_gate_failure_fact: site_isolated_failures
