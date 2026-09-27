@@ -11,7 +11,7 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | Role | Purpose | Consumers |
 | --- | --- | --- |
 | `cribl_edge` | Install and configure Cribl Edge (native, non-Docker) | `ansible-proxmox` (hosts), `ansible-proxmox-apps` (LXC) |
-| `cribl_packs` | Install versioned `.crbl` pack assets onto Edge/Stream | `ansible-proxmox`, `ansible-proxmox-apps` |
+| `cribl_packs` | Install `.crbl` pack assets onto Edge/Stream, by name, from a RustFS manifest | `ansible-proxmox`, `ansible-proxmox-apps` |
 | `inventory_resolve` | Resolve the published OpenTofu inventory (RustFS/S3) | `ansible-proxmox`, `ansible-proxmox-apps` |
 | `docker_engine` | Bootstrap Docker CE + compose plugin in an LXC | `ansible-proxmox-apps`, `ansible-servarr` |
 | `ntp` | Time synchronization via chrony | `ansible-proxmox-apps`, `ansible-servarr` |

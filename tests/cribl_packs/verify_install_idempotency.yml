@@ -1,0 +1,142 @@
+---
+# Runs the REAL cribl_packs install.yml task file (not a copy of its
+# expressions) against a temp directory, with an injected manifest
+# (cribl_packs_manifest_override) so it needs neither RustFS nor GitHub —
+# object-storage reads use a plain file:// URL instead (get_url supports it).
+#
+# Proves two things:
+#   1. A pack already at the manifest's version (sentinel present) is
+#      skipped — no download, no re-extract.
+#   2. A pack the manifest carries but whose sentinel does NOT match (or is
+#      absent) is installed from the fixture asset, verified against the
+#      manifest's sha256, and the resulting sentinel records that version.
+#
+# Run: ansible-playbook -i localhost, tests/cribl_packs/verify_install_idempotency.yml
+- name: Verify cribl_packs install idempotency against an injected manifest
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    cribl_packs_target: stream
+  tasks:
+    - name: Resolve the local unix user/group (portable owner for the test tempdir)
+      ansible.builtin.command: id -un
+      changed_when: false
+      register: _whoami
+
+    - name: Resolve the local unix group
+      ansible.builtin.command: id -gn
+      changed_when: false
+      register: _whoamigroup
+
+    - name: Create an isolated config root for this test run
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: -cribl-packs-test-config
+      register: _config_root
+
+    - name: Create an isolated fixture-asset directory for this test run
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: -cribl-packs-test-assets
+      register: _asset_dir
+
+    - name: Write a dummy pack file to include in the fixture asset
+      ansible.builtin.copy:
+        dest: "{{ _asset_dir.path }}/package.json"
+        content: "{}\n"
+        mode: "0644"
+
+    # community.general.archive with format gz on a SINGLE file gzips it
+    # directly rather than producing a tar.gz, which unarchive then can't
+    # read as an archive — zip has no such single-file special case.
+    - name: Build a minimal real .crbl (zip) fixture asset
+      community.general.archive:
+        path: "{{ _asset_dir.path }}/package.json"
+        dest: "{{ _asset_dir.path }}/cc-stream-needs-install.crbl"
+        format: zip
+        mode: "0644"
+
+    - name: Compute the fixture asset's sha256 (the manifest carries this too)
+      ansible.builtin.stat:
+        path: "{{ _asset_dir.path }}/cc-stream-needs-install.crbl"
+        checksum_algorithm: sha256
+      register: _fixture_checksum
+
+    - name: Pre-seed pack "already-current" as already installed at v1.0.0
+      ansible.builtin.file:
+        path: "{{ _config_root.path }}/packs/cc-stream-already-current"
+        state: directory
+        mode: "0755"
+
+    - name: Write its installed-version sentinel
+      ansible.builtin.copy:
+        dest: "{{ _config_root.path }}/packs/cc-stream-already-current/.v1.0.0.installed"
+        content: "v1.0.0\n"
+        mode: "0644"
+
+    - name: Run the role's install logic with an injected manifest
+      ansible.builtin.include_role:
+        name: cribl_packs
+        tasks_from: install
+      vars:
+        cribl_packs_user: "{{ _whoami.stdout }}"
+        cribl_packs_group: "{{ _whoamigroup.stdout }}"
+        cribl_packs_object_storage_bucket_url: "file://{{ _asset_dir.path }}"
+        _cribl_packs_config_root: "{{ _config_root.path }}"
+        _cribl_packs_list:
+          - cc-stream-already-current
+          - cc-stream-needs-install
+        # cc-stream-already-current's key/sha256 are never read: its sentinel
+        # already matches, so the download step is skipped for it entirely.
+        cribl_packs_manifest_override:
+          cc-stream-already-current:
+            version: v1.0.0
+            key: cc-stream-already-current.crbl
+            sha256: unused-when-skipped
+          cc-stream-needs-install:
+            version: v2.0.0
+            key: cc-stream-needs-install.crbl
+            sha256: "{{ _fixture_checksum.stat.checksum }}"
+
+    - name: Already-current pack's sentinel is untouched
+      ansible.builtin.stat:
+        path: "{{ _config_root.path }}/packs/cc-stream-already-current/.v1.0.0.installed"
+      register: _still_current
+
+    - name: Assert the already-current pack was skipped (sentinel unchanged)
+      ansible.builtin.assert:
+        that:
+          - _still_current.stat.exists
+        fail_msg: >-
+          the already-current pack's sentinel disappeared — it was
+          re-installed when it should have been skipped
+
+    - name: Newly-installed pack's sentinel now exists at the manifest version
+      ansible.builtin.stat:
+        path: "{{ _config_root.path }}/packs/cc-stream-needs-install/.v2.0.0.installed"
+      register: _newly_installed
+
+    - name: Assert the drifted/missing pack was installed at the manifest version
+      ansible.builtin.assert:
+        that:
+          - _newly_installed.stat.exists
+        fail_msg: >-
+          cc-stream-needs-install was not installed at v2.0.0 from the
+          injected manifest
+
+    - name: Clean up the isolated config root and asset directory
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ _config_root.path }}"
+        - "{{ _asset_dir.path }}"
+
+    # The install picked up a real pack, so it notified the role's systemd
+    # restart handler. This test has no real cribl service to restart (and
+    # runs on any dev machine, systemd or not) — end the play before handler
+    # flush instead of exercising a restart the role's own handler already
+    # covers.
+    - name: End the play before the queued systemd-restart handler flushes
+      ansible.builtin.meta: end_play

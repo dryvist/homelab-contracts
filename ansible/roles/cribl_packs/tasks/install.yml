@@ -1,0 +1,197 @@
+---
+# Manifest resolution: `cribl_packs_manifest_override` (tests only) skips the
+# HTTP fetch and injects a manifest dict directly, so the idempotency test can
+# exercise this real task file with no network and no RustFS.
+- name: Fetch the pack manifest from object storage
+  ansible.builtin.uri:
+    url: "{{ cribl_packs_manifest_url }}"
+    return_content: true
+  register: _cribl_packs_manifest_http
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: false
+  when: cribl_packs_manifest_override is not defined
+
+- name: Parse the fetched manifest
+  ansible.builtin.set_fact:
+    cribl_packs_manifest: "{{ _cribl_packs_manifest_http.content | from_json }}"
+  when: cribl_packs_manifest_override is not defined
+
+- name: Use the injected manifest override (tests only)
+  ansible.builtin.set_fact:
+    cribl_packs_manifest: "{{ cribl_packs_manifest_override }}"
+  when: cribl_packs_manifest_override is defined
+
+- name: Assert every selected pack name is published in the manifest
+  ansible.builtin.assert:
+    that:
+      - item in cribl_packs_manifest
+    fail_msg: >-
+      Pack '{{ item }}' is selected for {{ cribl_packs_target | default('this target') }}
+      but is not in the manifest ({{ cribl_packs_manifest_url }}). Check the pack
+      name against sync-cribl-packs.yml's discovered dryvist/cc-* repos.
+    quiet: true
+  loop: "{{ _cribl_packs_list }}"
+
+# Each resolved entry carries the fields the manifest publishes (version, key
+# — the bucket-relative object path — and sha256) plus the pack name itself.
+- name: Build the resolved pack list (name + manifest entry)
+  ansible.builtin.set_fact:
+    cribl_packs_resolved:
+      "{{ cribl_packs_resolved | default([]) + [cribl_packs_manifest[item] | combine({'name': item})] }}"
+  loop: "{{ _cribl_packs_list }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Ensure packs directory exists
+  ansible.builtin.file:
+    path: "{{ _cribl_packs_config_root }}/packs"
+    state: directory
+    owner: "{{ cribl_packs_user }}"
+    group: "{{ cribl_packs_group }}"
+    mode: "0755"
+
+# Detect installed pack versions via per-version sentinel files. We list each
+# pack's directory and compare against the desired sentinel name. Drift means
+# the manifest version is not currently installed.
+- name: Stat installed-version sentinel for each pack
+  ansible.builtin.stat:
+    path: "{{ _cribl_packs_config_root }}/packs/{{ item.name }}/.{{ item.version }}.installed"
+  loop: "{{ cribl_packs_resolved }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: cribl_packs_sentinel_stats
+
+# Download pack assets on the Ansible controller (unrestricted egress).
+# Cribl Edge/Stream LXCs are in the outbound-internal firewall group
+# (RFC1918-only), so they cannot reach the object store's public endpoint
+# directly. The controller fetches the .crbl asset and Ansible's
+# copy/unarchive mechanism transfers it to the target — matching the
+# controller-stage-then-copy pattern used by the artifact-mirror role for
+# Cribl tarballs.
+#
+# ansible_become: false (via vars:) is REQUIRED. Task-level `become: false`
+# alone is insufficient on Ansible 2.19: the play's `become: true` is
+# inherited on delegated tasks, causing `sudo: a password is required` on
+# the controller. Setting ansible_become via task vars explicitly overrides
+# the inherited value.
+- name: Download pack asset to controller
+  ansible.builtin.get_url:
+    url: "{{ cribl_packs_object_storage_bucket_url }}/{{ item.item.key }}"
+    dest: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
+    mode: "0644"
+    force: true
+  loop: "{{ cribl_packs_sentinel_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }} {{ item.item.version }}"
+  when: not item.stat.exists
+  delegate_to: localhost
+  connection: local
+  become: false
+  vars:
+    ansible_become: false
+
+- name: Verify downloaded pack asset sha256 against the manifest
+  ansible.builtin.stat:
+    path: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
+    checksum_algorithm: sha256
+  loop: "{{ cribl_packs_sentinel_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not item.stat.exists
+  delegate_to: localhost
+  connection: local
+  become: false
+  vars:
+    ansible_become: false
+  register: cribl_packs_download_checksums
+
+- name: Assert downloaded pack assets match the manifest sha256
+  ansible.builtin.assert:
+    that:
+      - item.stat.checksum == item.item.item.sha256
+    fail_msg: >-
+      Downloaded {{ item.item.item.name }} sha256 {{ item.stat.checksum }} does not
+      match the manifest's {{ item.item.item.sha256 }} — refusing to install a
+      pack whose asset does not match the published manifest.
+    quiet: true
+  loop: "{{ cribl_packs_download_checksums.results }}"
+  loop_control:
+    label: "{{ item.item.item.name }}"
+  when: (item.skipped | default(false)) is false
+
+# Extract to a temporary directory first so that a failed download or
+# extraction does not leave the host with a missing or partially-extracted
+# pack. Only once extraction succeeds is the live pack directory replaced
+# via an atomic rename.
+- name: Create temporary extraction directory for each pack
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: "-cribl-pack-{{ item.item.name }}"
+    path: "{{ _cribl_packs_config_root }}/packs"
+  loop: "{{ cribl_packs_sentinel_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not item.stat.exists
+  register: cribl_packs_tmp_dirs
+
+- name: Unarchive pack into temporary directory
+  ansible.builtin.unarchive:
+    src: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.item.name }}-{{ item.item.item.version }}.crbl"
+    dest: "{{ item.path }}"
+    owner: "{{ cribl_packs_user }}"
+    group: "{{ cribl_packs_group }}"
+  loop: "{{ cribl_packs_tmp_dirs.results }}"
+  loop_control:
+    label: "{{ item.item.item.name }} {{ item.item.item.version }}"
+  when: not (item.skipped | default(false))
+
+- name: Remove existing pack directory before atomic replace
+  ansible.builtin.file:
+    path: "{{ _cribl_packs_config_root }}/packs/{{ item.item.item.name }}"
+    state: absent
+  loop: "{{ cribl_packs_tmp_dirs.results }}"
+  loop_control:
+    label: "{{ item.item.item.name }}"
+  when: not (item.skipped | default(false))
+
+- name: Move extracted pack into place
+  ansible.builtin.command:
+    cmd: >-
+      mv {{ item.path }}
+      {{ _cribl_packs_config_root }}/packs/{{ item.item.item.name }}
+  loop: "{{ cribl_packs_tmp_dirs.results }}"
+  loop_control:
+    label: "{{ item.item.item.name }}"
+  when: not (item.skipped | default(false))
+  changed_when: true
+  notify: "{{ 'Restart cribl edge' if cribl_packs_target == 'edge' else 'Restart cribl stream' }}"
+
+- name: Write installed-version sentinel
+  ansible.builtin.copy:
+    dest: >-
+      {{ _cribl_packs_config_root }}/packs/{{
+      item.item.name }}/.{{ item.item.version }}.installed
+    content: "{{ item.item.version }}\n"
+    owner: "{{ cribl_packs_user }}"
+    group: "{{ cribl_packs_group }}"
+    mode: "0644"
+  loop: "{{ cribl_packs_sentinel_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not item.stat.exists
+
+- name: Remove pack staging files from controller
+  ansible.builtin.file:
+    path: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
+    state: absent
+  loop: "{{ cribl_packs_sentinel_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: not item.stat.exists
+  delegate_to: localhost
+  connection: local
+  become: false
+  vars:
+    ansible_become: false

@@ -20,8 +20,8 @@ both the data shapes and the small shared tools that enforce them:
   systemd). Needed by both `ansible-proxmox-apps` (Edge containers) and
   `ansible-proxmox` (every Proxmox host), so it lives here rather than in
   either
-- `ansible/roles/cribl_packs` — installs versioned Cribl packs from GitHub
-  releases into the local config tree. Packs are the unit of Cribl config;
+- `ansible/roles/cribl_packs` — installs Cribl packs, by name, from a RustFS
+  manifest into the local config tree. Packs are the unit of Cribl config;
   prefer them over templating `inputs.yml` / `routes.yml` per node
 - `ansible/roles/converge_gate` (also `ansible/playbooks/converge_gate.yml`,
   usable directly as `import_playbook: dryvist.homelab.converge_gate`) — the
@@ -115,7 +115,7 @@ bin/
 ansible/
   roles/inventory_resolve/     # Shared inventory-resolution role (pin via requirements.yml)
   roles/cribl_edge/            # Cribl Edge install — hosts AND containers
-  roles/cribl_packs/           # Versioned Cribl packs from GitHub releases
+  roles/cribl_packs/           # Cribl packs installed by name from a RustFS manifest
   roles/converge_gate/         # Converge wall-clock budget gate, checked between stages
   playbooks/converge_gate.yml  # import_playbook: dryvist.homelab.converge_gate passthrough
 examples/

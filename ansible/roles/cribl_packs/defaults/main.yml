@@ -14,22 +14,20 @@ cribl_packs_edge_config_root: "{{ cribl_packs_install_dir }}/local/edge"
 # Stream config tree root
 cribl_packs_stream_config_root: "{{ cribl_packs_install_dir }}/local/cribl"
 
-# Pack list for Edge LXCs (cribl_edge group). Each pack:
-#   name:    pack name (used as directory name under packs/)
-#   repo:    GitHub <owner>/<repo>
-#   version: release tag (e.g. v1.0.1)
-# Asset URL is constructed as:
-#   https://github.com/{{ repo }}/releases/download/{{ version }}/{{ name }}-{{ version }}.crbl
-cribl_packs_for_edge:
-  - name: cc-edge-copilot-otel
-    repo: JacobPEvans/cc-edge-copilot-otel
-    version: v1.0.1
-  - name: cc-edge-vscode-io
-    repo: JacobPEvans/cc-edge-vscode-io
-    version: v1.0.1
+# Object-storage (RustFS) bucket URL that playbooks/sync-cribl-packs.yml
+# (ansible-proxmox-apps) mirrors dryvist/cc-* pack releases into, and this
+# role's own manifest.json + .crbl assets live under. No default: every
+# consumer sets it in inventory (see inventory/group_vars/cribl_edge.yml /
+# cribl_stream_group.yml in ansible-proxmox-apps) from its own tofu_data,
+# since the endpoint is per-estate infrastructure, not a value this shared
+# collection can know.
+cribl_packs_object_storage_bucket_url: ""
+cribl_packs_manifest_key: cribl-packs/manifest.json
+cribl_packs_manifest_url: "{{ cribl_packs_object_storage_bucket_url }}/{{ cribl_packs_manifest_key }}"
 
-# Pack list for Stream LXCs (cribl_stream_group)
-cribl_packs_for_stream:
-  - name: cc-stream-github-copilot-rest-io
-    repo: JacobPEvans/cc-stream-github-copilot-rest-io
-    version: v1.0.0
+# Per-group pack selection: bare pack NAMES only — version, download key and
+# sha256 are resolved from the manifest at run time, never declared here.
+# Override per inventory by setting cribl_packs_for_edge / cribl_packs_for_stream
+# in group_vars.
+cribl_packs_for_edge: []
+cribl_packs_for_stream: []

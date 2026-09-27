@@ -1,56 +1,70 @@
 # cribl_packs
 
 Install Cribl `.crbl` packs onto Cribl Edge and Cribl Stream LXC containers
-from public GitHub release assets.
+from a published RustFS (S3-compatible) manifest.
 
 ## What it does
 
 For each host the role detects whether it belongs to `cribl_edge` or
-`cribl_stream_group` (set up by inventory loading), then installs the
-corresponding pack list under the right Cribl mode directory:
+`cribl_stream_group` (set up by inventory loading), fetches
+`cribl_packs_manifest_url` (a `manifest.json` published by the consuming
+repo's `sync-cribl-packs.yml` playbook — see below), and installs the
+corresponding pack list — by name only — under the right Cribl mode
+directory:
 
 - Edge LXCs (`cribl_edge` group) → `/opt/cribl/local/edge/packs/<pack-name>/`
 - Stream LXCs (`cribl_stream_group`) → `/opt/cribl/local/cribl/packs/<pack-name>/`
 
 Hosts in neither group are skipped (no-op).
 
+## Where the packs come from
+
+Every pack a group selects must be published in the manifest, keyed by pack
+name, each entry carrying `{version, key, sha256}`. A downstream repo mirrors
+`dryvist/cc-*` GitHub release assets into RustFS and publishes this manifest
+(see `playbooks/sync-cribl-packs.yml` in `ansible-proxmox-apps`). This role
+never talks to GitHub and never hardcodes a version or a repo owner — the
+manifest is the only source of truth for what "latest" is.
+
 ## Idempotency
 
 Each pack installation drops a sentinel file `.<version>.installed` inside the
-pack directory. Re-runs on the same version skip the download. Re-runs on a
-new version remove the prior pack directory, redownload, and unarchive — then
-notify the appropriate `Restart cribl` handler.
+pack directory. Re-runs where the sentinel already matches the manifest
+version skip the download. A manifest version bump removes the prior pack
+directory, redownloads (verifying the downloaded asset's sha256 against the
+manifest before extracting), unarchives — then notifies the appropriate
+`Restart cribl` handler.
 
 ## Installation
 
-This role lives in `ansible-proxmox-apps/roles/cribl_packs/` and is referenced
-directly by `playbooks/site.yml`. There is no Galaxy install step — the role
-ships in this repo.
+This role ships in `homelab-contracts` (`ansible/roles/cribl_packs`) as part
+of the `dryvist.homelab` collection, referenced by FQCN
+(`dryvist.homelab.cribl_packs`) from a consumer's `requirements.yml` — there
+is no Galaxy install step.
 
 It depends on `cribl_edge` or `cribl_stream` having already installed the
 Cribl binary and started the service, so run it after both in `site.yml`.
 
 ## Usage
 
-In `playbooks/site.yml`, after the `cribl_edge` and `cribl_stream` plays:
-
 ```yaml
 - name: Install Cribl packs
   hosts: cribl_edge:cribl_stream_group
   become: true
   roles:
-    - cribl_packs
+    - dryvist.homelab.cribl_packs
 ```
 
-Override the pack list per inventory by setting `cribl_packs_for_edge` or
-`cribl_packs_for_stream` in inventory/group_vars. See `defaults/main.yml`
-for the default list (cc-edge-copilot-otel, cc-edge-vscode-io,
-cc-stream-github-copilot-rest-io).
+Set the object-storage endpoint and the per-group pack selection in
+inventory/group_vars — see `defaults/main.yml` for the exact variable names.
+Neither has a default value: the endpoint is per-estate infrastructure and
+the pack list is deliberately empty until a consumer opts in.
 
 ## Variables
 
-See `defaults/main.yml` for the full list. Pin a specific version by editing
-the `version:` field on the relevant pack entry.
+See `defaults/main.yml` for the full list. `cribl_packs_manifest_override`
+(undocumented there on purpose) lets a test inject a manifest dict directly
+and skip the HTTP fetch — see `tests/cribl_packs/`.
 
 ## License
 
