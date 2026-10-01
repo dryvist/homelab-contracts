@@ -28,6 +28,13 @@ inputs:
       - output: splunk_hec
         pipeline: syslog
 {% endif %}
+{% if name == 'unifi' and cribl_edge_unifi_ids_enabled | bool %}
+      # Second leg, same raw gateway syslog: the IPS/IDS pack keeps only CEF
+      # Security events and hands them to unifi_ids_router (outputs.yml.j2)
+      # for Slack + Zammad. The Splunk leg above is unchanged.
+      - output: unifi_ids_router
+        pipeline: "pack:{{ cribl_edge_unifi_ids_pack }}"
+{% endif %}
     host: "0.0.0.0"
     tcpPort: {{ port }}
     udpPort: {{ port }}

@@ -189,6 +189,31 @@ cribl_edge_langfuse_public_key: "{{ lookup('env', 'LANGFUSE_PUBLIC_KEY') | defau
 cribl_edge_langfuse_secret_key: "{{ lookup('env', 'LANGFUSE_SECRET_KEY') | default('', true) }}"
 
 # =============================================================================
+# UniFi IPS/IDS alerts -> Slack + Zammad, straight from this Edge (no Splunk,
+# no ntfy in the path). The unifi syslog input gains a second QuickConnect
+# connection through the cc-edge-internal-unifi-ids pack, which keeps only the
+# gateway's CEF `UNIFIcategory=Security` events (threat blocked, honeypot)
+# and tags each copy with ids_sink; unifi_ids_router below sends the slack
+# copy to the Slack incoming webhook and the de-duplicated zammad copy to the
+# Zammad tickets API. Rendering is gated on the pack being deployed AND the
+# Slack webhook being set, so a host without them keeps its config untouched.
+# Consumers supply the secrets (OpenBao) in their inventory; nothing here
+# carries a value.
+# =============================================================================
+cribl_edge_unifi_ids_pack: cc-edge-internal-unifi-ids
+# Set true only once the pack is in cribl_packs_for_edge: the connection
+# below names it, and Edge rejects a config referencing a missing pack.
+cribl_edge_unifi_ids_pack_deployed: false
+cribl_edge_unifi_ids_slack_webhook: ""
+# Full tickets endpoint, e.g. https://zammad.<subdomain>/api/v1/tickets.
+# Empty = Slack only (the zammad copy is routed to devnull).
+cribl_edge_unifi_ids_zammad_url: ""
+cribl_edge_unifi_ids_zammad_token: ""
+cribl_edge_unifi_ids_enabled: >-
+  {{ (cribl_edge_unifi_ids_pack_deployed | bool)
+     and (cribl_edge_unifi_ids_slack_webhook | length > 0) }}
+
+# =============================================================================
 # GPU metrics (System Metrics source). Default is `disabled` — Cribl's own
 # shipped default for this group — so this role change is a no-op on every
 # host that does not explicitly override it. Enable per-host (e.g.
