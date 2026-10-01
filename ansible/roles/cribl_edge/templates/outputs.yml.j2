@@ -112,3 +112,86 @@ outputs:
     pqMaxSize: "5 GB"
     pqCompress: none
 {% endif %}
+{% if cribl_edge_unifi_ids_enabled | bool %}
+
+  # UniFi IPS/IDS fan-out (see cribl_edge_unifi_ids_* in defaults). The pack
+  # pre-renders each event's request body into ids_body and names its sink in
+  # ids_sink; this router only dispatches. Anything without a sink is
+  # dropped, so a pack change can never leak raw syslog to Slack.
+  unifi_ids_router:
+    id: unifi_ids_router
+    type: router
+    disabled: false
+    rules:
+      - filter: "ids_sink=='slack'"
+        output: slack_security_ids
+        final: true
+        description: every UniFi IPS/IDS event -> Slack
+{% if cribl_edge_unifi_ids_zammad_url | length > 0 %}
+      - filter: "ids_sink=='zammad'"
+        output: zammad_security_ids
+        final: true
+        description: one ticket per signature+source per day -> Zammad
+{% endif %}
+      - filter: "true"
+        output: devnull
+        final: true
+        description: anything else is dropped
+
+  # Slack incoming webhook: one POST per event, body {"text": ...} built by
+  # the pack. Persistent queue absorbs Slack's ~1 msg/s limit during scans.
+  slack_security_ids:
+    id: slack_security_ids
+    type: webhook
+    disabled: false
+    url: "{{ cribl_edge_unifi_ids_slack_webhook }}"
+    method: POST
+    format: custom
+    customSourceExpression: "`${ids_body}`"
+    customContentType: application/json
+    customDropWhenNull: true
+    maxPayloadEvents: 1
+    compress: false
+    rejectUnauthorized: true
+    timeoutSec: 30
+    flushPeriodSec: 1
+    concurrency: 1
+    onBackpressure: queue
+    pqPath: "$CRIBL_HOME/state/queues"
+    pqMaxFileSize: "1 MB"
+    pqMaxSize: "100 MB"
+    pqCompress: none
+{% if cribl_edge_unifi_ids_zammad_url | length > 0 %}
+
+  # Zammad tickets API: creates one ticket per pack-suppressed event in the
+  # Security IDS group, as the svc-cribl service user (its token's user
+  # becomes the customer, so the body names none).
+  zammad_security_ids:
+    id: zammad_security_ids
+    type: webhook
+    disabled: false
+    url: "{{ cribl_edge_unifi_ids_zammad_url }}"
+    method: POST
+    format: custom
+    customSourceExpression: "`${ids_body}`"
+    customContentType: application/json
+    customDropWhenNull: true
+    maxPayloadEvents: 1
+    compress: false
+    rejectUnauthorized: true
+    # Same header every other Zammad client here sends (ntfy-zammad,
+    # splunk-homelab-alerts).
+    authType: none
+    extraHttpHeaders:
+      - name: Authorization
+        value: "Token token={{ cribl_edge_unifi_ids_zammad_token }}"
+    timeoutSec: 30
+    flushPeriodSec: 1
+    concurrency: 1
+    onBackpressure: queue
+    pqPath: "$CRIBL_HOME/state/queues"
+    pqMaxFileSize: "1 MB"
+    pqMaxSize: "100 MB"
+    pqCompress: none
+{% endif %}
+{% endif %}
