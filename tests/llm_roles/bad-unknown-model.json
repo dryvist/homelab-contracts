@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0.0",
+  "models": { "m": { "id": "x/y", "concurrency": 1 } },
+  "roles": { "best": { "model": "missing", "egress": "none" } },
+  "hosts": { "server": { "resident": ["m"], "swap": [] } }
+}

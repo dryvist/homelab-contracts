@@ -1,0 +1,37 @@
+---
+# Contract for the llm_roles role: the shipped map's cross-references resolve,
+# and a map with a role pointing at an unknown model is rejected.
+# Schema-level rules (dense => concurrency 1, host class keys) are exercised by
+# the check-jsonschema steps in .github/workflows/ci.yml.
+#
+# Run: ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
+#        tests/llm_roles/test_contract.yml
+
+- name: LLM role map contract
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Load the shipped map
+      ansible.builtin.include_role:
+        name: llm_roles
+        public: true
+
+    - name: The shipped map resolves
+      ansible.builtin.include_tasks: check_refs.yml
+      vars:
+        map: "{{ llm_roles }}"
+
+    - name: Negative - a role pointing at an unknown model must fail the check
+      vars:
+        map: "{{ lookup('ansible.builtin.file', 'bad-unknown-model.json') | from_json }}"
+      block:
+        - name: Run the check against the bad map
+          ansible.builtin.include_tasks: check_refs.yml
+        - name: The bad map was accepted
+          ansible.builtin.fail:
+            msg: check_refs.yml accepted a role pointing at an unknown model.
+      rescue:
+        - name: Distinguish the expected rejection from the sentinel failure
+          ansible.builtin.assert:
+            that: "'accepted a role' not in ansible_failed_result.msg | default('')"
