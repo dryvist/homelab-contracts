@@ -13,7 +13,7 @@
     "fast": { "model": "mimo-9b", "egress": "zdr" },
     "cheap": { "model": "mimo-9b", "egress": "zdr" },
     "small": { "model": "mimo-9b", "egress": "estate" },
-    "judge": { "model": "mimo-9b", "egress": "none" },
+    "judge": { "model": "mimo-9b", "egress": "estate" },
     "recorder": { "model": "mimo-9b", "egress": "estate" },
     "ocr": { "model": "unlimited-ocr", "egress": "none" },
     "embed": { "model": null, "egress": "none" }

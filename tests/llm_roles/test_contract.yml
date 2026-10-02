@@ -22,6 +22,10 @@
       vars:
         map: "{{ llm_roles }}"
 
+    - name: The judge role allows estate egress and no cloud egress
+      ansible.builtin.assert:
+        that: llm_roles.roles.judge.egress == 'estate'
+
     - name: Negative - a role pointing at an unknown model must fail the check
       vars:
         map: "{{ lookup('ansible.builtin.file', 'bad-unknown-model.json') | from_json }}"
