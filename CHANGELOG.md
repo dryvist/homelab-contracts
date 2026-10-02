@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.12.0](https://github.com/dryvist/homelab-contracts/compare/v2.11.0...v2.12.0) (2026-10-02)
+
+
+### Features
+
+* **llm-roles:** judge role egress none -&gt; estate ([#96](https://github.com/dryvist/homelab-contracts/issues/96)) ([8204ff0](https://github.com/dryvist/homelab-contracts/commit/8204ff0ba00e5d88f1e5100f637e930063b88b27))
+
 ## [2.11.0](https://github.com/dryvist/homelab-contracts/compare/v2.10.0...v2.11.0) (2026-10-02)
 
 
