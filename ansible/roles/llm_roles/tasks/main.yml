@@ -1,0 +1,6 @@
+---
+# Load the canonical model-role map into `llm_roles` (models, roles, hosts).
+- name: Load the model-role map
+  ansible.builtin.include_vars:
+    file: "{{ role_path }}/files/model-roles.json"
+    name: llm_roles

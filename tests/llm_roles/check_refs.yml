@@ -1,0 +1,22 @@
+---
+# Cross-reference assertions for a model-role map passed as `map`.
+- name: Every role names a declared model (or null)
+  ansible.builtin.assert:
+    that: item.value.model is none or item.value.model in map.models
+    fail_msg: "role {{ item.key }} points at unknown model {{ item.value.model }}"
+    quiet: true
+  loop: "{{ map.roles | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Every host resident/swap entry and role override names a declared model
+  ansible.builtin.assert:
+    that:
+      - (item.value.resident + item.value.swap) | difference(map.models.keys() | list) | length == 0
+      - item.value.roles | default({}) | dict2items | rejectattr('value.model', 'none')
+        | rejectattr('value.model', 'in', map.models.keys() | list) | list | length == 0
+    fail_msg: "host class {{ item.key }} references an unknown model"
+    quiet: true
+  loop: "{{ map.hosts | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"

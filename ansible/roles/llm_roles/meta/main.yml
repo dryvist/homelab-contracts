@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: llm_roles
+  author: JacobPEvans
+  description: >-
+    Canonical map of LLM roles to models and per-host-class resident sets,
+    loaded as the llm_roles variable from files/model-roles.json.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - llm
+    - ansible
+dependencies: []

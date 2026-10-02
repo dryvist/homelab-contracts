@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dryvist/homelab-contracts/schemas/model-roles-v1.json",
+  "title": "dryvist LLM model-role map contract",
+  "description": "schema_version 1.x. Shape of ansible/roles/llm_roles/files/model-roles.json: models by catalog key, roles bound to a model key with an egress policy, and per-host-class resident/swap sets. Host keys are classes, never hostnames. Cross-references (role.model and hosts.*.resident/swap name a declared model) are asserted by tests/llm_roles/test_contract.yml.",
+  "type": "object",
+  "required": ["schema_version", "models", "roles", "hosts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
+    "models": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": { "$ref": "#/$defs/model" }
+    },
+    "roles": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/key" },
+      "additionalProperties": { "$ref": "#/$defs/role" }
+    },
+    "hosts": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "enum": ["workstation", "server"] },
+      "additionalProperties": { "$ref": "#/$defs/host" }
+    }
+  },
+  "$defs": {
+    "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "model": {
+      "type": "object",
+      "required": ["id", "concurrency"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "concurrency": { "type": "integer", "minimum": 1 },
+        "dense": { "type": "boolean" }
+      },
+      "if": { "properties": { "dense": { "const": true } }, "required": ["dense"] },
+      "then": { "properties": { "concurrency": { "const": 1 } } }
+    },
+    "role": {
+      "type": "object",
+      "required": ["model", "egress"],
+      "additionalProperties": false,
+      "properties": {
+        "model": { "anyOf": [{ "$ref": "#/$defs/key" }, { "type": "null" }] },
+        "egress": { "enum": ["none", "estate", "zdr", "any"] }
+      }
+    },
+    "host": {
+      "type": "object",
+      "required": ["resident", "swap"],
+      "additionalProperties": false,
+      "properties": {
+        "resident": { "type": "array", "items": { "$ref": "#/$defs/key" }, "uniqueItems": true },
+        "swap": { "type": "array", "items": { "$ref": "#/$defs/key" }, "uniqueItems": true },
+        "roles": {
+          "description": "Optional per-class role override.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/key" },
+          "additionalProperties": { "$ref": "#/$defs/role" }
+        }
+      }
+    }
+  }
+}
