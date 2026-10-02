@@ -21,6 +21,24 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "workstation_connections": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "proxman": {
+          "type": "object",
+          "required": ["url", "type", "auth_method", "credential_mount", "credential_path"],
+          "additionalProperties": false,
+          "properties": {
+            "url": { "type": "string", "pattern": "^https://[^/ ]+$" },
+            "type": { "const": "pve" },
+            "auth_method": { "const": "traditional" },
+            "credential_mount": { "type": "string", "minLength": 1 },
+            "credential_path": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
     "schema_version": {
       "description": "Semantic version of this contract. Consumers fail-fast when the major differs. Emitted by terraform-proxmox inventory_publish.tf; must be '2.x.y' for this schema.",
       "type": "string",
@@ -251,6 +269,9 @@
           "uniqueItems": true
         },
         "apex": { "type": "boolean", "description": "Host rule is the base domain itself (no <name>. prefix)." },
+        "fqdn": { "$ref": "#/$defs/ipv4OrHostname", "description": "Explicit canonical frontend FQDN, overriding apex/name derivation." },
+        "host_aliases": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/ipv4OrHostname" }, "description": "Additional frontend hostnames on the same router and backend pool." },
+        "tls_domains": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/ipv4OrHostname" }, "description": "Explicit certificate names for this route, canonical name first." },
         "scheme": { "type": "string", "enum": ["http", "https"] },
         "insecure_tls": { "type": "boolean" },
         "sticky": { "type": "boolean" },
