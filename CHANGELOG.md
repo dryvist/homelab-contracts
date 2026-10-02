@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [2.10.0](https://github.com/dryvist/homelab-contracts/compare/v2.9.0...v2.10.0) (2026-10-02)
+
+
+### Features
+
+* **llm_roles:** add canonical model-role map role and schema ([#92](https://github.com/dryvist/homelab-contracts/issues/92)) ([51589f6](https://github.com/dryvist/homelab-contracts/commit/51589f6ae819bdf1d50870801c9e6ac87a44e0de))
+
 ## [2.9.0](https://github.com/dryvist/homelab-contracts/compare/v2.8.0...v2.9.0) (2026-10-01)
 
 
