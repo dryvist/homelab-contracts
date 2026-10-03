@@ -126,8 +126,10 @@ All readable path keys for a domain are merged flat into that domain's
 
 | Env var | Purpose |
 | --- | --- |
-| `BAO_ADDR` | OpenBao ingress URL (`https://openbao.<subdomain>`). Unset ⇒ skip everything. |
-| `<DOMAIN>_VAULT_ROLE_ID` / `_SECRET_ID` | That domain's own AppRole credentials. Unset ⇒ skip just that domain. |
+| `SECRET_STORE_ADDR` (fallback `BAO_ADDR`) | Store URL. Unset ⇒ skip everything. |
+| `SECRET_STORE_<DOMAIN>_ROLE_ID` / `_SECRET_ID` (then `OPENBAO_APPROLE_<DOMAIN>_*`, `<DOMAIN>_VAULT_*`) | That domain's own credentials. Unset ⇒ skip it. |
+| `SECRET_STORE_PUBLISH_ROLE_ID` / `_SECRET_ID` (fallback `OPENBAO_APPROLE_ANSIBLE_*`) | Identity for the one publish path. |
+| `SECRET_STORE_KV_MOUNT` | KV mount name; the role default applies when unset. |
 
 On macOS these are sourced from the operator's dedicated `openbao.keychain-db`
 keychain (72h auto-lock — the keychain's lock state is the access boundary,

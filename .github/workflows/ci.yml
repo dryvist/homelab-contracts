@@ -116,9 +116,17 @@ jobs:
       # override on main must never widen past that -- a cap that reaches
       # the ceiling lets Semaphore's own kill fire first, with no PLAY RECAP
       # and no rerun hint.
-      - name: Verify domain AppRole pairs resolve OPENBAO_APPROLE_<DOMAIN> first, then legacy
+      - name: Verify store inputs resolve SECRET_STORE_* first, then the older names
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
+          SECRET_STORE_MONITORING_ROLE_ID: generic-role
+          SECRET_STORE_MONITORING_SECRET_ID: generic-secret
+          OPENBAO_APPROLE_MONITORING_ROLE_ID: new-mon-role
+          OPENBAO_APPROLE_MONITORING_SECRET_ID: new-mon-secret
+          SECRET_STORE_ADDR: https://generic.test
+          BAO_ADDR: https://legacy.test
+          OPENBAO_APPROLE_ANSIBLE_ROLE_ID: legacy-publish-role
+          OPENBAO_APPROLE_ANSIBLE_SECRET_ID: legacy-publish-secret
           OPENBAO_APPROLE_LOCAL_CLOUD_ROLE_ID: new-role
           OPENBAO_APPROLE_LOCAL_CLOUD_SECRET_ID: new-secret
           LOCAL_CLOUD_VAULT_ROLE_ID: legacy-role
