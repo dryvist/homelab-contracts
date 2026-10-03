@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.0.0](https://github.com/dryvist/homelab-contracts/compare/v2.12.0...v3.0.0) (2026-10-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ansible:** remove service_deadman from the collection ([#98](https://github.com/dryvist/homelab-contracts/issues/98))
+
+### Bug Fixes
+
+* **ansible:** remove service_deadman from the collection ([#98](https://github.com/dryvist/homelab-contracts/issues/98)) ([dd4e317](https://github.com/dryvist/homelab-contracts/commit/dd4e3171840071ef4db31969549744e2a21850a9))
+* **converge_gate:** keep the cap task name within 120 columns ([#101](https://github.com/dryvist/homelab-contracts/issues/101)) ([4193022](https://github.com/dryvist/homelab-contracts/commit/41930223c704c571f9c0f97856a0b9624ae58765))
+* **openbao_secrets:** resolve OPENBAO_APPROLE_&lt;DOMAIN&gt; pairs before the legacy names ([#100](https://github.com/dryvist/homelab-contracts/issues/100)) ([8454c14](https://github.com/dryvist/homelab-contracts/commit/8454c141b4417b6bc387a41ff5dcfad19d596444))
+
 ## [2.12.0](https://github.com/dryvist/homelab-contracts/compare/v2.11.0...v2.12.0) (2026-10-02)
 
 
