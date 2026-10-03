@@ -15,12 +15,15 @@
 # its own role_id/secret_id envs are unset (lets an operator migrate one
 # domain at a time onto OpenBao while the rest still fall back to env/SOPS).
 
-# Shared connection inputs.
-openbao_secrets_bao_addr: "{{ lookup('env', 'BAO_ADDR') | default('', true) }}"
+# Shared connection inputs. Each generic SECRET_STORE_* name is read first;
+# the older name after it is the fallback.
+openbao_secrets_bao_addr: >-
+  {{ lookup('env', 'SECRET_STORE_ADDR')
+     | default(lookup('env', 'BAO_ADDR'), true) | default('', true) }}
 # TLS terminates at the OpenBao Traefik ingress (a real cert), so verify by
 # default; override only for a direct-to-node http bootstrap endpoint.
 openbao_secrets_validate_certs: true
-openbao_secrets_kv_mount: secret
+openbao_secrets_kv_mount: "{{ lookup('env', 'SECRET_STORE_KV_MOUNT') | default('secret', true) }}"
 # Client failover across the OpenBao nodes: probe an ordered candidate list and
 # use the first reachable endpoint. See README for the full ordering + rationale.
 openbao_secrets_openbao_api_port: "{{ tofu_data['constants']['service_ports']['openbao_api'] | default(8200) }}"
@@ -44,8 +47,12 @@ openbao_secrets_bao_addr_candidates: >-
 # Everything else in this role READS. This is the one write path, and it is
 # deliberately confined to a single path prefix so a converge can never rewrite
 # platform or external credentials.
-openbao_secrets_publish_role_id: "{{ lookup('env', 'OPENBAO_APPROLE_ANSIBLE_ROLE_ID') | default('', true) }}"
-openbao_secrets_publish_secret_id: "{{ lookup('env', 'OPENBAO_APPROLE_ANSIBLE_SECRET_ID') | default('', true) }}"
+openbao_secrets_publish_role_id: >-
+  {{ lookup('env', 'SECRET_STORE_PUBLISH_ROLE_ID')
+     | default(lookup('env', 'OPENBAO_APPROLE_ANSIBLE_ROLE_ID'), true) | default('', true) }}
+openbao_secrets_publish_secret_id: >-
+  {{ lookup('env', 'SECRET_STORE_PUBLISH_SECRET_ID')
+     | default(lookup('env', 'OPENBAO_APPROLE_ANSIBLE_SECRET_ID'), true) | default('', true) }}
 
 # One entry per resource-domain identity this Ansible converge fetches for.
 # Each domain's role_id/secret_id come from its own env vars — sourced from
