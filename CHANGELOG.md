@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.1.0](https://github.com/dryvist/homelab-contracts/compare/v3.0.0...v3.1.0) (2026-10-03)
+
+
+### Features
+
+* **openbao_secrets:** read generic SECRET_STORE_* names first ([b7de356](https://github.com/dryvist/homelab-contracts/commit/b7de356116ff69b4324be1cdfd9530f99082acd2))
+* **openbao_secrets:** read generic SECRET_STORE_* names first ([77b91e1](https://github.com/dryvist/homelab-contracts/commit/77b91e1c50ca99348a86cdfbeee75c48daacde95))
+
 ## [3.0.0](https://github.com/dryvist/homelab-contracts/compare/v2.12.0...v3.0.0) (2026-10-03)
 
 
