@@ -23,7 +23,7 @@
 # that ceiling minus converge_gate_wall_clock_margin -- never the ceiling
 # itself, or this gate's own clean stop could lose the race to Semaphore's
 # hard kill.
-- name: Resolve the wall-clock cap default from the Semaphore-forwarded ceiling (or the one fallback var), minus the margin
+- name: Resolve the wall-clock cap default from the Semaphore ceiling minus the margin
   ansible.builtin.set_fact:
     converge_gate_wall_clock_cap_default: >-
       {{ (lookup('env', 'SEMAPHORE_MAX_TASK_DURATION_SEC') | trim
