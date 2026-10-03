@@ -1,0 +1,29 @@
+---
+# Resolution order for a domain's AppRole pair (openbao_secrets
+# tasks/resolve_approle.yml): OPENBAO_APPROLE_<DOMAIN>_* first, then the
+# legacy role_id_env/secret_id_env pair, else empty (the domain is skipped).
+#
+# Run (the env lookup reads the controller's own environment):
+#   OPENBAO_APPROLE_LOCAL_CLOUD_ROLE_ID=new-role OPENBAO_APPROLE_LOCAL_CLOUD_SECRET_ID=new-secret \
+#   LOCAL_CLOUD_VAULT_ROLE_ID=legacy-role LOCAL_CLOUD_VAULT_SECRET_ID=legacy-secret \
+#   APPS_VAULT_ROLE_ID=legacy-apps-role APPS_VAULT_SECRET_ID=legacy-apps-secret \
+#   ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
+#     tests/openbao_secrets/resolve_approle.yml
+
+- name: Domain AppRole pairs resolve new name first, then legacy
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../../ansible/roles/openbao_secrets/defaults/main.yml
+  vars:
+    expected:
+      local-cloud: [new-role, new-secret]
+      apps: [legacy-apps-role, legacy-apps-secret]
+      media: ["", ""]
+  tasks:
+    - name: Resolve and check each case
+      ansible.builtin.include_tasks: resolve_one.yml
+      loop: "{{ expected | dict2items }}"
+      loop_control:
+        loop_var: case

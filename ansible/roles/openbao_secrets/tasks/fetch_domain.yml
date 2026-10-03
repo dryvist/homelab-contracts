@@ -7,24 +7,14 @@
 # onto OpenBao while the rest still fall back to env/SOPS via the
 # group_vars/all.yml `{}` defaults.
 
-- name: Resolve role_id/secret_id from env for {{ openbao_domain.name }}
-  ansible.builtin.set_fact:
-    openbao_secrets_domain_role_id: >-
-      {{ lookup('env', openbao_domain.role_id_env)
-         | default(lookup('env', 'OPERATOR_VAULT_ROLE_ID')
-                   if openbao_domain.name in openbao_secrets_operator_domains
-                   else '', true) }}
-    openbao_secrets_domain_secret_id: >-
-      {{ lookup('env', openbao_domain.secret_id_env)
-         | default(lookup('env', 'OPERATOR_VAULT_SECRET_ID')
-                   if openbao_domain.name in openbao_secrets_operator_domains
-                   else '', true) }}
-  no_log: true
+- name: Resolve role_id/secret_id for {{ openbao_domain.name }}
+  ansible.builtin.include_tasks: resolve_approle.yml
 
 - name: Report missing credentials (env/SOPS fallback) for {{ openbao_domain.name }}
   ansible.builtin.debug:
     msg: >-
-      {{ openbao_domain.role_id_env }} / {{ openbao_domain.secret_id_env }}
+      OPENBAO_APPROLE_{{ openbao_domain.name | upper | replace('-', '_') }}_ROLE_ID/_SECRET_ID
+      (or {{ openbao_domain.role_id_env }} / {{ openbao_domain.secret_id_env }})
       not both set — skipping the {{ openbao_domain.name }} domain; its
       consumer roles fall back to env/SOPS secrets.
   when: >-

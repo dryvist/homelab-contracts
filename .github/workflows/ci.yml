@@ -116,6 +116,16 @@ jobs:
       # override on main must never widen past that -- a cap that reaches
       # the ceiling lets Semaphore's own kill fire first, with no PLAY RECAP
       # and no rerun hint.
+      - name: Verify domain AppRole pairs resolve OPENBAO_APPROLE_<DOMAIN> first, then legacy
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+          OPENBAO_APPROLE_LOCAL_CLOUD_ROLE_ID: new-role
+          OPENBAO_APPROLE_LOCAL_CLOUD_SECRET_ID: new-secret
+          LOCAL_CLOUD_VAULT_ROLE_ID: legacy-role
+          LOCAL_CLOUD_VAULT_SECRET_ID: legacy-secret
+          APPS_VAULT_ROLE_ID: legacy-apps-role
+          APPS_VAULT_SECRET_ID: legacy-apps-secret
+        run: ansible-playbook -i localhost, tests/openbao_secrets/resolve_approle.yml
       - name: Verify the wall-clock cap derives from the Semaphore-forwarded ceiling
         env:
           ANSIBLE_ROLES_PATH: ansible/roles

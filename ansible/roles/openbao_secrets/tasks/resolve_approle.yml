@@ -1,0 +1,24 @@
+---
+# Resolves one domain's AppRole pair from the environment. Split out of
+# fetch_domain.yml so the resolution order is testable without OpenBao.
+
+# Resolution order: the OPENBAO_APPROLE_<DOMAIN>_* pair (the name the
+# platform env documents publish), then the domain's legacy role_id_env /
+# secret_id_env pair, then the operator pair for operator domains.
+- name: Resolve role_id/secret_id from env for {{ openbao_domain.name }}
+  vars:
+    openbao_secrets_approle_env: "OPENBAO_APPROLE_{{ openbao_domain.name | upper | replace('-', '_') }}"
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_role_id: >-
+      {{ lookup('env', openbao_secrets_approle_env ~ '_ROLE_ID')
+         | default(lookup('env', openbao_domain.role_id_env), true)
+         | default(lookup('env', 'OPERATOR_VAULT_ROLE_ID')
+                   if openbao_domain.name in openbao_secrets_operator_domains
+                   else '', true) }}
+    openbao_secrets_domain_secret_id: >-
+      {{ lookup('env', openbao_secrets_approle_env ~ '_SECRET_ID')
+         | default(lookup('env', openbao_domain.secret_id_env), true)
+         | default(lookup('env', 'OPERATOR_VAULT_SECRET_ID')
+                   if openbao_domain.name in openbao_secrets_operator_domains
+                   else '', true) }}
+  no_log: true
