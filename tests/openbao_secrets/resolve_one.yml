@@ -1,0 +1,18 @@
+---
+# openbao_domain is the role's own loop variable (tasks/main.yml), set here
+# the same way before running the real task file.
+- name: Select the domain declaration — {{ case.key }}
+  ansible.builtin.set_fact:
+    openbao_domain: "{{ openbao_secrets_domains | selectattr('name', 'eq', case.key) | first }}"
+
+- name: Resolve with the real role task file — {{ case.key }}
+  ansible.builtin.include_role:
+    name: openbao_secrets
+    tasks_from: resolve_approle.yml
+
+- name: Assert the resolved pair — {{ case.key }}
+  ansible.builtin.assert:
+    that:
+      - openbao_secrets_domain_role_id == case.value[0]
+      - openbao_secrets_domain_secret_id == case.value[1]
+    fail_msg: "{{ case.key }} resolved the wrong pair"
