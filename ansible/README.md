@@ -18,7 +18,6 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `ssh_ca_trust` | Guest-side pinned-fingerprint SSH CA trust | `ansible-proxmox-apps`, `ansible-servarr` |
 | `syslog_forwarder` | Forward host + service logs to the central syslog pipeline | `ansible-proxmox-apps`, `ansible-servarr` |
 | `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, `ansible-servarr` |
-| `service_deadman` | Timer-driven deadman watchdog alerting on keystone service failure | `ansible-proxmox-apps`, `ansible-servarr` |
 | `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
 | `llm_model_catalog` | Defaults-only catalog of llm-fabric GGUF models (id, HF repo/file, pinned revision) | `ansible-proxmox`, `ansible-proxmox-ai` |
 
