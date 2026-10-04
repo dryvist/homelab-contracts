@@ -32,7 +32,7 @@
     {"name":"hermes-cloud-gemini-3.7-flash","context_window":131072,"max_output_tokens":8192,"input_cost_per_token":7.5e-7,"output_cost_per_token":3.75e-6,"monthly_budget":1.665},
     {"name":"hermes-cloud-openrouter-kimi-k2.6","context_window":131072,"max_output_tokens":8192,"input_cost_per_token":6e-7,"output_cost_per_token":3.41e-6},
     {"name":"hermes-cloud-openrouter-glm-5.2","context_window":131072,"max_output_tokens":8192,"input_cost_per_token":7.308e-7,"output_cost_per_token":2.297e-6},
-    {"name":"codex-subscription-model","context_window":128000,"max_output_tokens":128000,"request_timeout":300,"stream_timeout":15},
+    {"name":"codex-subscription-model","context_window":128000,"max_output_tokens":128000,"request_timeout":300,"stream_timeout":4},
     {"name":"codex-api-model","context_window":272000,"max_output_tokens":128000,"input_cost_per_token":1.75e-6,"output_cost_per_token":1.4e-5,"monthly_budget":1.67,"request_timeout":300,"stream_timeout":90},
     {"name":"zai-glm-4.5-flash","context_window":128000,"max_output_tokens":16384},
     {"name":"zai-glm-5.3-flash","context_window":200000,"max_output_tokens":16384,"input_cost_per_token":2e-7,"output_cost_per_token":1.1e-6,"monthly_budget":1.67},
