@@ -19,7 +19,7 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `syslog_forwarder` | Forward host + service logs to the central syslog pipeline | `ansible-proxmox-apps`, `ansible-servarr` |
 | `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, `ansible-servarr` |
 | `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
-| `llm_model_catalog` | Shared JSON catalog of model limits, deployment profiles, and optional GGUF artifacts | `ansible-proxmox`, `ansible-proxmox-ai`, `nix-ai` |
+| `llm_model_catalog` | Shared JSON model limits and optional GGUF artifacts | `ansible-proxmox`, `ansible-proxmox-ai`, `nix-ai` |
 
 ## Plugins
 
