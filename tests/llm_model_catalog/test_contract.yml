@@ -128,8 +128,10 @@
           - item.profiles.mlx.swap.max_num_sequences > 0
           - item.profiles.mlx.swap.max_request_tokens is integer
           - item.profiles.mlx.swap.max_request_tokens > 0
-          - item.profiles.mlx.swap.paged_cache_block_size is integer
-          - item.profiles.mlx.swap.paged_cache_block_size > 0
+          - >-
+            item.profiles.mlx.swap.paged_cache_block_size is not defined or
+            (item.profiles.mlx.swap.paged_cache_block_size is integer and
+             item.profiles.mlx.swap.paged_cache_block_size > 0)
           - item.profiles.mlx.swap.auto_unload_idle_seconds is integer
           - item.profiles.mlx.swap.auto_unload_idle_seconds > 0
           - item.profiles.mlx.swap.cache_memory_mb is integer
