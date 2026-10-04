@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.4.0](https://github.com/dryvist/homelab-contracts/compare/v3.3.0...v3.4.0) (2026-10-04)
+
+
+### Features
+
+* publish the shared model catalog as JSON profiles ([#112](https://github.com/dryvist/homelab-contracts/issues/112)) ([8e66995](https://github.com/dryvist/homelab-contracts/commit/8e669950f9387ab6e4597b0521ecf070af39b9cd))
+
 ## [3.3.0](https://github.com/dryvist/homelab-contracts/compare/v3.2.2...v3.3.0) (2026-10-04)
 
 
