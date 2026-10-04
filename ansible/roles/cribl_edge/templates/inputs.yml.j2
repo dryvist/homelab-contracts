@@ -121,13 +121,11 @@ inputs:
     fields:
       - name: type
         value: "'netmon'"
-{% if cribl_edge_langfuse_public_key | length > 0 %}
+{% if cribl_edge_langfuse_public_key | length > 0 or cribl_edge_phoenix_api_key | length > 0 %}
 
   # OTLP/HTTP source for the LLM fabric (routers, dify/langflow/agent-exec).
-  # Fanned out via the routes table (routes.yml, 4.12+): otel_langfuse
-  # (non-final, trace-only -> Langfuse) then otel_splunk (final, stamps
-  # index=otel -> Splunk HEC). sendToRoutes replaces the old single pinned
-  # connection — routes CAN split one input across outputs since 4.12.
+  # Traces fan out to configured trace sinks; non-trace events continue to
+  # Splunk through the routes table (routes.yml.j2, Cribl 4.12+).
   in_otel:
     id: in_otel
     type: open_telemetry
@@ -145,9 +143,9 @@ inputs:
     # every event ("Event had no scope_metrics or __criblMetrics").
     extractSpans: true
     extractMetrics: false
-    # Routes-table fan-out (4.12+): otel_langfuse applies the otel_traces
-    # trace-only filter pipeline before the Langfuse destination; otel_splunk
-    # stamps index=otel for the Splunk leg. See routes.yml.j2.
+    # Routes-table fan-out (4.12+): trace routes apply a trace-only filter
+    # before each OTLP destination; the final Splunk route excludes traces.
+    # See routes.yml.j2.
     sendToRoutes: true
     pqEnabled: true
     fields:

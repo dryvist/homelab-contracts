@@ -5,9 +5,8 @@
 # Only the otel input sends to routes (every other input pins a direct
 # input->pipeline->output connection with sendToRoutes: false, so events from
 # those inputs never reach this table). Since 4.12 routes CAN split one input
-# across outputs: a NON-final otel_langfuse route clones the stream into
-# Langfuse (traces only, via the otel_traces filter pipeline), then the FINAL
-# otel_splunk route stamps index=otel and ships the same events to Splunk.
+# across outputs. Non-final routes send traces to configured OTLP destinations;
+# the final Splunk route explicitly accepts non-trace events only.
 id: default
 routes:
 {% if cribl_edge_langfuse_public_key | length > 0 %}
@@ -20,18 +19,28 @@ routes:
     output: langfuse_otlp
     description: LLM fabric traces -> Langfuse (non-final; clones the stream)
 {% endif %}
-  - id: otel_splunk
-    name: otel_splunk
-    final: true
+{% if cribl_edge_phoenix_api_key | length > 0 %}
+  - id: otel_phoenix
+    name: otel_phoenix
+    final: false
     disabled: false
     filter: "__inputId.includes('in_otel')"
-    pipeline: otel_splunk
+    pipeline: otel_traces_phoenix
+    output: phoenix_otlp
+    description: LLM fabric traces -> Phoenix (non-final; clones the stream)
+{% endif %}
+  - id: otel_non_trace_splunk
+    name: otel_non_trace_splunk
+    final: true
+    disabled: false
+    filter: "__inputId.includes('in_otel') && (!__otlp || __otlp.type !== 'traces')"
+    pipeline: otel_non_trace_splunk
 {% if (cribl_edge_hec_namespace | default('')) | length > 0 %}
     output: splunk_hec_otel
 {% else %}
     output: splunk_hec
 {% endif %}
-    description: LLM fabric OTel -> Splunk (final; index=otel)
+    description: LLM fabric non-trace events -> Splunk (final; index=otel)
   # Defensive catch-all: nothing should reach here (all non-otel inputs pin
   # direct connections), but a final route keeps any stray event from
   # dead-ending with a routing error. main/devnull come from Cribl defaults.
