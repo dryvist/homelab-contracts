@@ -120,6 +120,18 @@
       loop_control:
         label: "{{ item.name }}"
 
+    - name: llama.cpp Vulkan profile stream timeouts are positive integers
+      ansible.builtin.assert:
+        that:
+          - item.profiles.llama_cpp_vulkan.stream_timeout is integer
+          - item.profiles.llama_cpp_vulkan.stream_timeout > 0
+        fail_msg: >-
+          {{ item.name }} has an invalid llama_cpp_vulkan stream timeout.
+        quiet: true
+      loop: "{{ llm_model_catalog_models | selectattr('profiles.llama_cpp_vulkan', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
     - name: MLX swap profile limits are positive integers
       ansible.builtin.assert:
         that:
