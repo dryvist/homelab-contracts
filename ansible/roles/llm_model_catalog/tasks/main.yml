@@ -1,0 +1,4 @@
+---
+- name: Load shared model catalog data
+  ansible.builtin.include_vars:
+    file: "{{ role_path }}/files/model-catalog.json"

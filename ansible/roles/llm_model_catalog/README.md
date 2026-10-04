@@ -6,11 +6,11 @@ Renovate-tracked commit revision.
 
 ## What it does
 
-Nothing at run time — this role has no tasks. Including it in a play loads
-`llm_model_catalog_models` (its only variable) as role defaults, which then
-stay in scope for every later role in the same play. Consumers use the model
-entry for context, output, concurrency, timeout, retry, and provider-limit
-values instead of keeping per-model copies:
+Including it in a play loads `llm_model_catalog_models` from the role's JSON
+data file into the play. The same JSON is readable by Ansible and Nix, so the
+MLX profiles and router, serving, guard, and Hermes values share one source.
+Consumers use the model entry for context, output, concurrency, timeout,
+retry, and provider-limit values instead of keeping per-model copies:
 
 - `ansible-proxmox`'s `llm_model_store_seed` role downloads each entry with
   the complete `hf_repo`, `gguf`, and `hf_revision` group onto the PVE host
@@ -43,7 +43,7 @@ roles:
 
 ## Variables
 
-See `defaults/main.yml` for the full list and each field's meaning. Entries
+See `files/model-catalog.json` for the full list and each field's meaning. Entries
 without all three HuggingFace fields are provider-hosted or otherwise supplied
 by an existing model server and are not downloaded by `llm_model_store_seed`.
 
