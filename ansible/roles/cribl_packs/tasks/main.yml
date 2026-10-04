@@ -100,7 +100,17 @@
         {
           'name': item.item,
           'version': item.json.tag_name,
-          'url': 'https://github.com/dryvist/' ~ item.item ~ '/releases/download/' ~ item.json.tag_name ~ '/' ~ item.item ~ '-' ~ item.json.tag_name ~ '.crbl'
+          'url': (
+            'https://github.com/dryvist/'
+            ~ item.item
+            ~ '/releases/download/'
+            ~ item.json.tag_name
+            ~ '/'
+            ~ item.item
+            ~ '-'
+            ~ item.json.tag_name
+            ~ '.crbl'
+          )
         }
       ] }}
   loop: "{{ cribl_packs_latest_releases.results | default([]) }}"
