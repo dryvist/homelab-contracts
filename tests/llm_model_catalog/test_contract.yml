@@ -1,10 +1,10 @@
 ---
-# Contract for the llm_model_catalog role: every entry is a complete,
-# uniquely-identified, Renovate-pinned model with no stored checksum.
+# Contract for the shared model catalog: each deployed model has one unique
+# name/alias entry, numeric serving fields are valid, and GGUF fields appear as
+# a complete group only on entries that seed artifacts.
 #
 # Run: ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
 #        tests/llm_model_catalog/test_contract.yml
-
 - name: LLM model catalog contract
   hosts: localhost
   connection: local
@@ -13,13 +13,6 @@
     - name: Load the catalog
       ansible.builtin.include_role:
         name: llm_model_catalog
-        # include_role is a DYNAMIC include: its role's vars/defaults are
-        # private to that inclusion and invisible to the rest of the play
-        # unless public is set -- unlike the static `roles:` list form this
-        # role's real consumers use (playbooks/site.yml in ansible-proxmox),
-        # where defaults from an earlier role in the list are already public
-        # to every later one. Needed here only because every later task in
-        # THIS test file reads llm_model_catalog_models directly.
         public: true
 
     - name: The catalog is non-empty
@@ -28,41 +21,107 @@
           - llm_model_catalog_models | length > 0
         fail_msg: llm_model_catalog_models must declare at least one model.
 
-    - name: Every entry has the required fields and no stored checksum
+    - name: Every entry has a name, complete optional artifacts, and valid numeric limits
       ansible.builtin.assert:
         that:
           - item.name is defined and item.name | length > 0
-          - item.hf_repo is defined and item.hf_repo | length > 0
-          - item.gguf is defined and item.gguf | length > 0
-          - item.hf_revision is defined
-          - item.hf_revision is match('^[0-9a-f]{7,40}$')
+          - (item.hf_repo is defined) == (item.gguf is defined)
+          - (item.hf_repo is defined) == (item.hf_revision is defined)
+          - item.hf_revision is not defined or item.hf_revision is match('^[0-9a-f]{7,40}$')
           - item.sha256 is not defined
           - item.checksum is not defined
+          - >-
+            item.aliases is not defined or
+            (item.aliases is sequence and item.aliases is not string)
+          - >-
+            item.context_window is not defined or
+            (item.context_window is integer and item.context_window > 0)
+          - >-
+            item.max_output_tokens is not defined or
+            (item.max_output_tokens is integer and item.max_output_tokens > 0)
+          - >-
+            item.max_parallel_requests is not defined or
+            (item.max_parallel_requests is integer and
+             item.max_parallel_requests > 0)
+          - >-
+            item.request_timeout is not defined or
+            (item.request_timeout is integer and item.request_timeout > 0)
+          - >-
+            item.stream_timeout is not defined or
+            (item.stream_timeout is integer and item.stream_timeout > 0)
+          - >-
+            item.num_retries is not defined or
+            (item.num_retries is integer and item.num_retries >= 0)
+          - >-
+            item.allowed_fails is not defined or
+            (item.allowed_fails is integer and item.allowed_fails > 0)
+          - >-
+            item.cooldown_time is not defined or
+            (item.cooldown_time is integer and item.cooldown_time > 0)
+          - >-
+            item.goal_judge_timeout_seconds is not defined or
+            (item.goal_judge_timeout_seconds is integer and
+             item.goal_judge_timeout_seconds > 0)
+          - >-
+            item.input_cost_per_token is not defined or
+            (item.input_cost_per_token is number and
+             item.input_cost_per_token >= 0)
+          - >-
+            item.output_cost_per_token is not defined or
+            (item.output_cost_per_token is number and
+             item.output_cost_per_token >= 0)
+          - >-
+            item.monthly_budget is not defined or
+            (item.monthly_budget is number and item.monthly_budget > 0)
         fail_msg: >-
-          {{ item.name | default('(unnamed)') }} is missing a required field,
-          has a non-hex hf_revision, or stores a checksum this role must
-          never keep (sha256 is derived from HuggingFace's own LFS metadata
-          at run time by the consuming role).
+          {{ item.name | default('(unnamed)') }} has an incomplete artifact
+          group, an invalid revision, a stored checksum, or an invalid numeric
+          model field.
         quiet: true
       loop: "{{ llm_model_catalog_models }}"
       loop_control:
         label: "{{ item.name | default('(unnamed)') }}"
 
-    - name: Compute (hf_repo, gguf) pair keys for the uniqueness check
+    - name: Collect catalog names and aliases for cross-reference checks
       ansible.builtin.set_fact:
-        llm_model_catalog_pair_keys: >-
-          {{ (llm_model_catalog_pair_keys | default([])) + [item.hf_repo ~ '|' ~ item.gguf] }}
+        llm_model_catalog_identifiers: >-
+          {{ (llm_model_catalog_identifiers | default([]))
+             + [item.name] + (item.aliases | default([])) }}
       loop: "{{ llm_model_catalog_models }}"
       loop_control:
         label: "{{ item.name }}"
 
-    - name: Every model id and every (hf_repo, gguf) pair is unique
+    - name: Collect artifact identity pairs only for GGUF-backed entries
+      ansible.builtin.set_fact:
+        llm_model_catalog_pair_keys: >-
+          {{ (llm_model_catalog_pair_keys | default([])) + [item.hf_repo ~ '|' ~ item.gguf] }}
+      loop: "{{ llm_model_catalog_models | selectattr('hf_repo', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Every catalog identifier and GGUF identity is unique
       ansible.builtin.assert:
         that:
-          - (llm_model_catalog_models | map(attribute='name') | list
-             | unique | length) == (llm_model_catalog_models | length)
-          - (llm_model_catalog_pair_keys | unique | length)
-            == (llm_model_catalog_pair_keys | length)
+          - >-
+            (llm_model_catalog_identifiers | unique | length) ==
+            (llm_model_catalog_identifiers | length)
+          - >-
+            (llm_model_catalog_pair_keys | unique | length) ==
+            (llm_model_catalog_pair_keys | length)
         fail_msg: >-
-          The catalog declares a duplicate model name or (hf_repo, gguf)
-          pair -- each entry must be unique.
+          The catalog declares a duplicate model name/alias or (hf_repo, gguf)
+          pair; each identity must be unique.
+
+    - name: Catalog aliases reference a declared model
+      ansible.builtin.assert:
+        that:
+          - >-
+            item.catalog_model is not defined or
+            item.catalog_model in llm_model_catalog_identifiers
+        fail_msg: >-
+          {{ item.name }} references missing catalog model
+          {{ item.catalog_model | default('(undefined)') }}.
+        quiet: true
+      loop: "{{ llm_model_catalog_models }}"
+      loop_control:
+        label: "{{ item.name }}"
