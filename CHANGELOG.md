@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.2.1](https://github.com/dryvist/homelab-contracts/compare/v3.2.0...v3.2.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* route Edge traces to Langfuse and Phoenix ([#106](https://github.com/dryvist/homelab-contracts/issues/106)) ([ded7355](https://github.com/dryvist/homelab-contracts/commit/ded735510ac3d706b19c90d830a96e03f1a08e14))
+
 ## [3.2.0](https://github.com/dryvist/homelab-contracts/compare/v3.1.0...v3.2.0) (2026-10-04)
 
 
