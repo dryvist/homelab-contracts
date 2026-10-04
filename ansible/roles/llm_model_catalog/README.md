@@ -20,6 +20,9 @@ retry, and provider-limit values instead of keeping per-model copies:
 - The router and Hermes presets project the same model fields to their output
   formats; repo CI verifies that projections agree with the catalog.
 
+An MLX entry can also define `profiles.mlx.swap` for its on-demand serving
+limits; static resident and swap profiles are projected separately.
+
 Checksums are never stored here: the sha256 for a download is read from
 HuggingFace's own LFS blob metadata at run time, pinned against the exact
 `hf_revision` each entry declares — never a hand-copied literal that could

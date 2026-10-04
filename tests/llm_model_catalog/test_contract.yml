@@ -120,6 +120,24 @@
       loop_control:
         label: "{{ item.name }}"
 
+    - name: MLX swap profile limits are positive integers
+      ansible.builtin.assert:
+        that:
+          - item.profiles.mlx.swap is mapping
+          - item.profiles.mlx.swap.max_num_sequences is integer
+          - item.profiles.mlx.swap.max_num_sequences > 0
+          - item.profiles.mlx.swap.max_request_tokens is integer
+          - item.profiles.mlx.swap.max_request_tokens > 0
+          - item.profiles.mlx.swap.paged_cache_block_size is integer
+          - item.profiles.mlx.swap.paged_cache_block_size > 0
+          - item.profiles.mlx.swap.auto_unload_idle_seconds is integer
+          - item.profiles.mlx.swap.auto_unload_idle_seconds > 0
+          - item.profiles.mlx.swap.cache_memory_mb is integer
+          - item.profiles.mlx.swap.cache_memory_mb > 0
+      loop: "{{ llm_model_catalog_models | selectattr('profiles.mlx.swap', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
     - name: Collect catalog names and aliases for cross-reference checks
       ansible.builtin.set_fact:
         llm_model_catalog_identifiers: >-
