@@ -2,29 +2,12 @@
 # Cribl Edge native installation defaults
 
 # Installation
-# Always the rolling "latest" release: Cribl's CDN prunes old versioned
-# builds (4.12.2 vanished 2026-07, breaking every fresh install on a pin),
-# and the 4.12+ OTel routes fan-out this role depends on is present in all
-# newer releases. Install is fresh-install-only (gated on the binary's
-# absence), so a moving tag never mutates a running Edge.
-# NOTE: the cribl_edge group_vars override the tarball URL with the MinIO
-# mirror; keep the mirrored infra/cribl-linux-x64.tgz object current when
-# re-staging Edge containers.
-cribl_edge_version: "latest"
-# Upstream release URL. Cribl's CDN uses two different filename patterns:
-#   - versioned release: https://cdn.cribl.io/dl/4.12.2/cribl-4.12.2-linux-x64.tgz
-#   - rolling "latest":  https://cdn.cribl.io/dl/latest/cribl-linux-x64.tgz    (no version in filename)
-# Group vars for the `cribl_edge` group override this with a MinIO mirror URL
-# because the cribl-edge containers have the `outbound-internal` firewall and
-# cannot reach cdn.cribl.io directly.
-# With version == latest this default is a placeholder that tasks/main.yml
-# replaces with the URL body of the `dl/latest` CDN pointer at run time (the
-# static dl/latest/cribl-linux-x64.tgz object is abandoned upstream — it
-# still serves the 2024 4.8.0-alpha build).
+# The full Cribl release, including its build id, comes from the shared catalog.
+cribl_edge_version: "{{ cribl_catalog.version }}"
+# The CDN directory uses the numeric release while the filename uses the full
+# version with build id. The cribl_edge group may override this with its mirror.
 cribl_edge_tarball_url: >-
-  https://cdn.cribl.io/dl/{{ cribl_edge_version }}/{{
-  'cribl-linux-x64.tgz' if cribl_edge_version == 'latest'
-  else 'cribl-' + cribl_edge_version + '-linux-x64.tgz' }}
+  https://cdn.cribl.io/dl/{{ cribl_edge_version.split('-')[0] }}/cribl-{{ cribl_edge_version }}-linux-x64.tgz
 cribl_edge_install_dir: /opt/cribl
 
 # Service user
@@ -223,7 +206,7 @@ cribl_edge_unifi_ids_enabled: >-
 # prerequisite for collection but do not document the failure mode when
 # it is absent, and this could not be verified against a live instance),
 # so this stays opt-in rather than fleet-wide until that is confirmed.
-# Schema verified by extracting the live Cribl 4.20.1 release and reading
+# Schema verified by extracting a live Cribl release and reading
 # its own UI form schema (no public docs page exposes the raw field names):
 # `gpu` is a top-level sibling of `host`, not nested under host.custom.
 # custom.perGpu / custom.detail names and default `mode: disabled` come

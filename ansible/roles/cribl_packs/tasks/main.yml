@@ -1,4 +1,9 @@
 ---
+- name: Load shared Cribl catalog
+  ansible.builtin.include_vars:
+    file: "{{ role_path }}/../cribl_edge/files/cribl.json"
+    name: cribl_catalog
+
 # Resolve pack target and per-target paths from inventory group membership.
 - name: Determine pack target
   ansible.builtin.set_fact:
@@ -19,11 +24,89 @@
         cribl_packs_edge_config_root if cribl_packs_target == 'edge'
         else cribl_packs_stream_config_root
       }}
-    _cribl_packs_list: >-
+    _cribl_packs_names: >-
       {{
         cribl_packs_for_edge if cribl_packs_target == 'edge'
         else cribl_packs_for_stream
       }}
+    _cribl_packs_list: []
+
+- name: Read the mirrored Cribl pack manifest
+  ansible.builtin.uri:
+    url: "{{ cribl_packs_object_storage_base_url }}/manifest.json"
+    return_content: true
+    status_code: 200
+  register: cribl_packs_manifest_response
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: false
+  when: cribl_packs_object_storage_base_url is defined
+
+- name: Load mirrored Cribl pack manifest
+  ansible.builtin.set_fact:
+    _cribl_packs_manifest: "{{ cribl_packs_manifest_response.content | from_json }}"
+  when: cribl_packs_object_storage_base_url is defined
+
+- name: Validate catalog packs in the mirrored manifest
+  ansible.builtin.assert:
+    that:
+      - item in _cribl_packs_manifest
+      - _cribl_packs_manifest[item].version | length > 0
+      - _cribl_packs_manifest[item].sha256 | length == 64
+  loop: "{{ _cribl_packs_names }}"
+  loop_control:
+    label: "{{ item }}"
+  when: cribl_packs_object_storage_base_url is defined
+
+- name: Resolve Cribl packs from the mirrored manifest
+  ansible.builtin.set_fact:
+    _cribl_packs_list: >-
+      {{ _cribl_packs_list + [
+        {
+          'name': item,
+          'version': _cribl_packs_manifest[item].version,
+          'url': cribl_packs_object_storage_base_url ~ '/' ~ item ~ '.crbl',
+          'checksum': 'sha256:' ~ _cribl_packs_manifest[item].sha256
+        }
+      ] }}
+  loop: "{{ _cribl_packs_names }}"
+  loop_control:
+    label: "{{ item }}"
+  when: cribl_packs_object_storage_base_url is defined
+
+- name: Read the latest GitHub release for each Cribl pack
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/dryvist/{{ item }}/releases/latest"
+    headers:
+      Accept: application/vnd.github+json
+      X-GitHub-Api-Version: "2022-11-28"
+    return_content: true
+    status_code: 200
+  loop: "{{ _cribl_packs_names }}"
+  loop_control:
+    label: "{{ item }}"
+  register: cribl_packs_latest_releases
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: false
+  when: cribl_packs_object_storage_base_url is not defined
+
+- name: Resolve Cribl pack release descriptors
+  ansible.builtin.set_fact:
+    _cribl_packs_list: >-
+      {{ (_cribl_packs_list | default([])) + [
+        {
+          'name': item.item,
+          'version': item.json.tag_name,
+          'url': 'https://github.com/dryvist/' ~ item.item ~ '/releases/download/' ~ item.json.tag_name ~ '/' ~ item.item ~ '-' ~ item.json.tag_name ~ '.crbl'
+        }
+      ] }}
+  loop: "{{ cribl_packs_latest_releases.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }} {{ item.json.tag_name }}"
+  when: cribl_packs_object_storage_base_url is not defined
 
 - name: Ensure packs directory exists
   ansible.builtin.file:
@@ -58,10 +141,9 @@
 # the inherited value.
 - name: Download pack asset to controller
   ansible.builtin.get_url:
-    url: >-
-      https://github.com/{{ item.item.repo }}/releases/download/{{
-      item.item.version }}/{{ item.item.name }}-{{ item.item.version }}.crbl
+    url: "{{ item.item.url }}"
     dest: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
+    checksum: "{{ item.item.checksum | default(omit, true) }}"
     mode: "0644"
     force: true
   loop: "{{ cribl_packs_sentinel_stats.results }}"
