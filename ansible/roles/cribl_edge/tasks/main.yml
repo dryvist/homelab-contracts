@@ -112,7 +112,8 @@
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/syslog"
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/netmon"
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_traces"
-    - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_splunk"
+    - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_traces_phoenix"
+    - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_non_trace_splunk"
 
 - name: Deploy Cribl Edge outputs configuration
   ansible.builtin.template:
@@ -160,21 +161,27 @@
     mode: "0644"
   notify: Restart cribl edge
 
-- name: Deploy otel Splunk-leg pipeline configuration
+- name: Deploy otel Phoenix trace pipeline configuration
   ansible.builtin.template:
-    src: pipelines/otel_splunk/conf.yml.j2
-    dest: "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_splunk/conf.yml"
+    src: pipelines/otel_traces_phoenix/conf.yml.j2
+    dest: "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_traces_phoenix/conf.yml"
     owner: "{{ cribl_edge_user }}"
     group: "{{ cribl_edge_group }}"
     mode: "0644"
   notify: Restart cribl edge
 
-# Routes table (4.12+): the otel input sends to routes, which CAN split one
-# input across outputs now — otel_langfuse (non-final -> Langfuse) then
-# otel_splunk (final -> Splunk, index=otel). Every other input still pins a
-# direct connection and never reaches the table. This REPLACES the old
-# "remove stale routes.yml" cleanup that the 4.8.0-alpha limitation forced;
-# only the passthru pipeline removal remains.
+- name: Deploy otel non-trace Splunk pipeline configuration
+  ansible.builtin.template:
+    src: pipelines/otel_non_trace_splunk/conf.yml.j2
+    dest: "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_non_trace_splunk/conf.yml"
+    owner: "{{ cribl_edge_user }}"
+    group: "{{ cribl_edge_group }}"
+    mode: "0644"
+  notify: Restart cribl edge
+
+# Routes table (4.12+): the otel input sends traces to Langfuse and Phoenix
+# through non-final routes, then non-trace events to Splunk. Every other input
+# still pins a direct connection and never reaches the table.
 - name: Deploy Cribl Edge routes table (otel fan-out)
   ansible.builtin.template:
     src: routes.yml.j2
@@ -182,6 +189,12 @@
     owner: "{{ cribl_edge_user }}"
     group: "{{ cribl_edge_group }}"
     mode: "0644"
+  notify: Restart cribl edge
+
+- name: Remove stale Cribl Edge OTel Splunk trace pipeline
+  ansible.builtin.file:
+    path: "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_splunk"
+    state: absent
   notify: Restart cribl edge
 
 - name: Remove stale Cribl Edge passthru pipeline

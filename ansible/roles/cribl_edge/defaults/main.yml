@@ -155,13 +155,11 @@ cribl_edge_hec_input_token: "{{ lookup('env', 'NETMON_HEC_TOKEN') | default('', 
 
 # =============================================================================
 # OTLP/HTTP source for the LLM fabric (LiteLLM routers + orchestration apps
-# emit OTel to this Edge) and its Langfuse destination. Port from tofu
-# constants; project keys from Doppler env (pre-provisioned via the langfuse
-# role's LANGFUSE_INIT_*). Rendering is gated on the keys being present, so a
-# host without them keeps its existing pipeline untouched. Since 4.12 the
-# otel input is fanned out via the routes table (routes.yml.j2): a non-final
-# otel_langfuse route feeds Langfuse and a final otel_splunk route stamps
-# index=otel for Splunk — routes CAN split one input across outputs now.
+# emit OTel to this Edge) and its trace destinations. Port from tofu constants;
+# Langfuse and Phoenix credentials come from their existing environment vars.
+# The source is rendered when either trace sink is configured. Since 4.12 the
+# routes table fans traces out to Langfuse and Phoenix, while non-trace events
+# continue to Splunk.
 # =============================================================================
 cribl_edge_otel_port: >-
   {{ hostvars['localhost']['tofu_data']['constants']['service_ports']['otel_traces_http'] }}
@@ -170,6 +168,10 @@ cribl_edge_langfuse_url: >-
   | mandatory('PROXMOX_SUBDOMAIN required') }}/api/public/otel
 cribl_edge_langfuse_public_key: "{{ lookup('env', 'LANGFUSE_PUBLIC_KEY') | default('', true) }}"
 cribl_edge_langfuse_secret_key: "{{ lookup('env', 'LANGFUSE_SECRET_KEY') | default('', true) }}"
+cribl_edge_phoenix_url: >-
+  https://phoenix.{{ lookup('env', 'PROXMOX_SUBDOMAIN')
+  | mandatory('PROXMOX_SUBDOMAIN required') }}
+cribl_edge_phoenix_api_key: "{{ lookup('env', 'PHOENIX_INGEST_API_KEY') | default('', true) }}"
 
 # =============================================================================
 # UniFi IPS/IDS alerts -> Slack + Zammad, straight from this Edge (no Splunk,
