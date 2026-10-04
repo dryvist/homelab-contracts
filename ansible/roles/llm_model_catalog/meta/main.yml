@@ -3,9 +3,9 @@ galaxy_info:
   role_name: llm_model_catalog
   author: JacobPEvans
   description: >-
-    Single-source catalog of GGUF models served on the llm fabric: model id,
-    HuggingFace repo, filename, and a Renovate-tracked commit pin. No tasks —
-    defaults only.
+    Single-source catalog of homelab model profiles, limits, aliases, and
+    optional Renovate-tracked HuggingFace artifact pins. Tasks load the shared
+    JSON data file for Ansible consumers.
   license: MIT
   min_ansible_version: "2.16"
   platforms:

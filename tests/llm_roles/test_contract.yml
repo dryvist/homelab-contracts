@@ -17,10 +17,28 @@
         name: llm_roles
         public: true
 
+    - name: Load the shared model catalog
+      ansible.builtin.include_role:
+        name: llm_model_catalog
+        public: true
+
     - name: The shipped map resolves
       ansible.builtin.include_tasks: check_refs.yml
       vars:
         map: "{{ llm_roles }}"
+
+    - name: Map models reference the shared catalog and contain no concurrency copy
+      ansible.builtin.assert:
+        that:
+          - item.value.id in (llm_model_catalog_models | map(attribute='name') | list)
+          - item.value.concurrency is not defined
+        fail_msg: >-
+          {{ item.key }} must resolve by id from llm_model_catalog_models and
+          must not duplicate its catalog concurrency limit.
+        quiet: true
+      loop: "{{ llm_roles.models | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
 
     - name: The judge role allows estate egress and no cloud egress
       ansible.builtin.assert:

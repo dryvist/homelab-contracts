@@ -62,6 +62,7 @@
             item.goal_judge_timeout_seconds is not defined or
             (item.goal_judge_timeout_seconds is integer and
              item.goal_judge_timeout_seconds > 0)
+          - item.profiles is not defined or item.profiles is mapping
           - >-
             item.input_cost_per_token is not defined or
             (item.input_cost_per_token is number and
@@ -81,6 +82,43 @@
       loop: "{{ llm_model_catalog_models }}"
       loop_control:
         label: "{{ item.name | default('(unnamed)') }}"
+
+    - name: MLX profile serving limits are positive integers
+      ansible.builtin.assert:
+        that:
+          - item.profiles.mlx.context_window is integer
+          - item.profiles.mlx.context_window > 0
+          - >-
+            item.profiles.mlx.max_output_tokens is not defined or
+            (item.profiles.mlx.max_output_tokens is integer and
+             item.profiles.mlx.max_output_tokens > 0)
+          - >-
+            item.profiles.mlx.max_parallel_requests is not defined or
+            (item.profiles.mlx.max_parallel_requests is integer and
+             item.profiles.mlx.max_parallel_requests > 0)
+          - >-
+            item.profiles.mlx.queue_size is not defined or
+            (item.profiles.mlx.queue_size is integer and
+             item.profiles.mlx.queue_size > 0)
+          - >-
+            item.profiles.mlx.max_num_sequences is not defined or
+            (item.profiles.mlx.max_num_sequences is integer and
+             item.profiles.mlx.max_num_sequences > 0)
+          - >-
+            item.profiles.mlx.paged_cache_block_size is not defined or
+            (item.profiles.mlx.paged_cache_block_size is integer and
+             item.profiles.mlx.paged_cache_block_size > 0)
+          - >-
+            item.profiles.mlx.prefill_tokens_per_second is not defined or
+            (item.profiles.mlx.prefill_tokens_per_second is number and
+             item.profiles.mlx.prefill_tokens_per_second > 0)
+          - >-
+            item.profiles.mlx.decode_tokens_per_second is not defined or
+            (item.profiles.mlx.decode_tokens_per_second is number and
+             item.profiles.mlx.decode_tokens_per_second > 0)
+      loop: "{{ llm_model_catalog_models | selectattr('profiles.mlx', 'defined') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
 
     - name: Collect catalog names and aliases for cross-reference checks
       ansible.builtin.set_fact:
