@@ -9,8 +9,110 @@ setup() {
   DEPLOYMENT_JSON="$BATS_TEST_DIRNAME/../bin/deployment-json"
   # ensure no ambient config leaks in
   unset BAO_ADDR BAO_TOKEN FLOW_LOCK_ROLE_ID FLOW_LOCK_SECRET_ID
+  unset OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID
   unset FLOW_LOCK_BOOTSTRAP FLOW_LOCK_LEASE_ID
   unset S3_ENDPOINT S3_ACCESS_KEY S3_SECRET_KEY
+}
+
+fake_flow_lock_openbao() {
+  STUB="$BATS_TEST_TMPDIR/stub"
+  mkdir -p "$STUB"
+  cat > "$STUB/curl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+method=GET
+url=""
+config=""
+request_body=""
+request_data=""
+read_body=false
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -X) method="$2"; shift 2 ;;
+    -H) shift 2 ;;
+    -w) shift 2 ;;
+    --config) config="$2"; shift 2 ;;
+    --data-binary) read_body=true; shift 2 ;;
+    -d) request_data="$2"; shift 2 ;;
+    -s|-S|-sS) shift ;;
+    */v1/*) url="$1"; shift ;;
+    *) shift ;;
+  esac
+done
+auth_token=-
+if [ "$config" = "-" ]; then
+  while IFS= read -r config_line; do
+    case "$config_line" in
+      'header = "X-Vault-Token: '*)
+        auth_token="${config_line#*X-Vault-Token: }"
+        auth_token="${auth_token%\"}"
+        ;;
+    esac
+  done
+elif [ -n "$config" ]; then
+  while IFS= read -r config_line; do
+    case "$config_line" in
+      'header = "X-Vault-Token: '*)
+        auth_token="${config_line#*X-Vault-Token: }"
+        auth_token="${auth_token%\"}"
+        ;;
+    esac
+  done < "$config"
+fi
+if [ "$read_body" = true ]; then
+  request_body="$(cat)"
+fi
+path="${url#*/v1/}"
+role=-
+response='{"errors":["fixture did not match"]}'
+status=500
+case "$path" in
+  auth/approle/login)
+    if [[ "$request_body" == *issuer-secret* ]]; then
+      role=issuer
+      response='{"auth":{"client_token":"issuer-token"}}'
+      status=200
+    elif [[ "$request_body" == *flow-lock-secret* ]]; then
+      role=flow-lock
+      response='{"auth":{"client_token":"flow-lock-token"}}'
+      status=200
+    fi
+    ;;
+  auth/approle/role/flow-lock/role-id)
+    response='{"data":{"role_id":"flow-lock-role-id"}}'
+    status=200
+    ;;
+  auth/approle/role/flow-lock/secret-id)
+    response='{"data":{"secret_id":"flow-lock-secret"}}'
+    status=200
+    ;;
+  secret/data/locks/global)
+    if [ "$method" = POST ]; then
+      jq -r '.data.lease_id' <<<"$request_data" > "$FLOW_LOCK_FIXTURE_LEASE_ID"
+      response='{"data":{"version":1}}'
+      status=200
+    elif [ "$method" = GET ] && [ -f "$FLOW_LOCK_FIXTURE_LEASE_ID" ]; then
+      lease_id="$(cat "$FLOW_LOCK_FIXTURE_LEASE_ID")"
+      response="$(jq -nc --arg lease_id "$lease_id" '{data:{metadata:{version:1},data:{lease_id:$lease_id,holder:{user:"test",host:"",pid:1},flow:"test",repo:"test",expires_at:(now|floor+600),renewals:0}}}')"
+      status=200
+    else
+      response='{"errors":["not found"]}'
+      status=404
+    fi
+    ;;
+  secret/metadata/locks/global)
+    response=''
+    status=204
+    ;;
+esac
+printf '%s\t%s\t%s\t%s\n' "$method" "$path" "$auth_token" "$role" >> "$FLOW_LOCK_API_LOG"
+printf '%s\n%s\n' "$response" "$status"
+SH
+  chmod +x "$STUB/curl"
+  export FLOW_LOCK_API_LOG="$BATS_TEST_TMPDIR/openbao-calls"
+  export FLOW_LOCK_FIXTURE_LEASE_ID="$BATS_TEST_TMPDIR/lease-id"
+  : > "$FLOW_LOCK_API_LOG"
+  export PATH="$STUB:$PATH"
 }
 
 # ---- flow-lock --------------------------------------------------------------
@@ -50,8 +152,61 @@ setup() {
   [[ "$output" == *"invalid duration"* ]]
 }
 
-@test "bootstrap mode runs the child with no lease and passes exit code through" {
-  FLOW_LOCK_BOOTSTRAP=1 run "$FLOW_LOCK" run -- sh -c 'exit 7'
+@test "flow-lock status mints a one-use credential through approle-issuer once" {
+  fake_flow_lock_openbao
+  export BAO_ADDR=fixture
+  export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
+  export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
+
+  run "$FLOW_LOCK" status
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"flow-lock: free (no lease held)"* ]]
+  [ "$(wc -l < "$FLOW_LOCK_API_LOG" | tr -d ' ')" -eq 5 ]
+  grep -Fx $'POST\tauth/approle/login\t-\tissuer' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'GET\tauth/approle/role/flow-lock/role-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'POST\tauth/approle/role/flow-lock/secret-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'POST\tauth/approle/login\t-\tflow-lock' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'GET\tsecret/data/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "flow-lock status treats a supplied BAO_TOKEN as issuer authority" {
+  fake_flow_lock_openbao
+  BAO_ADDR=fixture BAO_TOKEN=issuer-token run "$FLOW_LOCK" status
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"flow-lock: free (no lease held)"* ]]
+  [ "$(wc -l < "$FLOW_LOCK_API_LOG" | tr -d ' ')" -eq 4 ]
+  grep -Fx $'GET\tauth/approle/role/flow-lock/role-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "flow-lock status refuses the obsolete static flow-lock pair" {
+  BAO_ADDR=fixture FLOW_LOCK_ROLE_ID=old-role FLOW_LOCK_SECRET_ID=old-secret run "$FLOW_LOCK" status
+
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID/SECRET_ID"* ]]
+}
+
+@test "flow-lock run reuses the scoped token and withholds issuer inputs from the child" {
+  fake_flow_lock_openbao
+  export BAO_ADDR=fixture
+  export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
+  export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
+
+  run "$FLOW_LOCK" run --ttl 3s --timeout 0 -- sh -c 'test -z "${FLOW_LOCK_ROLE_ID:-}" && test -z "${FLOW_LOCK_SECRET_ID:-}" && test -z "${OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID:-}" && test -z "${OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID:-}" && test -z "${BAO_TOKEN:-}"'
+
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'auth/approle/login' "$FLOW_LOCK_API_LOG")" -eq 2 ]
+  [ "$(grep -c 'auth/approle/role/flow-lock/secret-id' "$FLOW_LOCK_API_LOG")" -eq 1 ]
+  [ "$(grep -c $'POST\tsecret/data/locks/global\tflow-lock-token' "$FLOW_LOCK_API_LOG")" -eq 1 ]
+  [ "$(grep -c $'GET\tsecret/data/locks/global\tflow-lock-token' "$FLOW_LOCK_API_LOG")" -eq 1 ]
+  grep -Fx $'DELETE\tsecret/metadata/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "bootstrap mode runs the child without mint credentials and passes exit code through" {
+  FLOW_LOCK_BOOTSTRAP=1 OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role \
+    OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret BAO_TOKEN=issuer-token \
+    run "$FLOW_LOCK" run -- sh -c 'test -z "${OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID:-}" && test -z "${OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID:-}" && test -z "${BAO_TOKEN:-}" && exit 7'
   [ "$status" -eq 7 ]
   [[ "$output" == *"BOOTSTRAP MODE"* ]]
 }

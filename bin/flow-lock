@@ -11,11 +11,13 @@
 # injected into the child environment after the lease is held — no lease, no
 # creds, so concurrent flows are excluded by construction, not convention.
 #
-# Environment (OpenBao connection plus the secret-zero token):
+# Environment (OpenBao connection plus the AppRole issuer identity):
 #   BAO_ADDR                 OpenBao URL (required)
-#   FLOW_LOCK_ROLE_ID        AppRole role_id  (or provide BAO_TOKEN directly)
-#   FLOW_LOCK_SECRET_ID      AppRole secret_id
-#   BAO_TOKEN                pre-issued token (skips AppRole login)
+#   OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID
+#   OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID
+#                            approle-issuer credentials; mints a fresh,
+#                            single-use flow-lock secret_id for each command
+#   BAO_TOKEN                optional pre-issued approle-issuer token
 #   FLOW_LOCK_MOUNT          KV v2 mount            (default: secret)
 #   FLOW_LOCK_KEY            lease key              (default: locks/global)
 #   FLOW_LOCK_CREDS_BASE     creds path prefix      (default: infra)
@@ -26,6 +28,10 @@
 # (EX_TEMPFAIL, scriptable retry); 70 OpenBao/internal error; 64 usage.
 
 set -euo pipefail
+
+# The old standing flow-lock pair is no longer an input and must not reach the
+# child command while callers finish removing those Doppler entries.
+unset FLOW_LOCK_ROLE_ID FLOW_LOCK_SECRET_ID
 
 FLOW_LOCK_MOUNT="${FLOW_LOCK_MOUNT:-secret}"
 FLOW_LOCK_KEY="${FLOW_LOCK_KEY:-locks/global}"
@@ -79,30 +85,96 @@ require_env() {
 
 # ---- OpenBao HTTP helpers ---------------------------------------------------
 
+BAO_ISSUER_TOKEN_CACHED=""
 BAO_TOKEN_CACHED=""
+
+clear_issuer_credentials() {
+  unset BAO_TOKEN OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID
+  unset OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID
+}
+
+# AppRole login accepts its JSON body on stdin so secret_ids never appear in
+# curl's arguments. The response is returned to the caller for immediate use.
+approle_login() {
+  local role_id="$1" secret_id="$2" response status body
+  response="$(
+    OPENBAO_LOGIN_ROLE_ID="$role_id" OPENBAO_LOGIN_SECRET_ID="$secret_id" \
+      jq -nc '{role_id:env.OPENBAO_LOGIN_ROLE_ID,secret_id:env.OPENBAO_LOGIN_SECRET_ID}' |
+      curl -sS -X POST -H 'Content-Type: application/json' \
+        -w '\n%{http_code}' --data-binary @- "$BAO_ADDR/v1/auth/approle/login"
+  )" || die "AppRole login request failed (is OpenBao up at $BAO_ADDR?)"
+  status="$(printf '%s\n' "$response" | awk 'END { print }')"
+  body="$(printf '%s' "$response" | sed '$d')"
+  [ "$status" = "200" ] || die "AppRole login rejected: $(jq -r '.errors[0] // "unknown error"' <<<"$body" 2>/dev/null)"
+  jq -er '.auth.client_token' <<<"$body" 2>/dev/null \
+    || die "AppRole login response did not contain a client token"
+}
+
+bao_issuer_token() {
+  [ -n "$BAO_ISSUER_TOKEN_CACHED" ] && return 0
+  local provided_token issuer_role_id issuer_secret_id
+  provided_token="$(printenv BAO_TOKEN 2>/dev/null || true)"
+  if [ -n "$provided_token" ]; then
+    BAO_ISSUER_TOKEN_CACHED="$provided_token"
+  else
+    issuer_role_id="$(printenv OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID 2>/dev/null || true)"
+    issuer_secret_id="$(printenv OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID 2>/dev/null || true)"
+    if [ -z "$issuer_role_id" ] || [ -z "$issuer_secret_id" ]; then
+      die "no BAO_TOKEN or OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID/SECRET_ID" "$EX_USAGE"
+    fi
+    BAO_ISSUER_TOKEN_CACHED="$(approle_login "$issuer_role_id" "$issuer_secret_id")"
+  fi
+  # Neither the minting identity nor the obsolete flow-lock pair should reach
+  # the wrapped command. bao_token() retains only the narrower flow-lock token.
+  clear_issuer_credentials
+  unset issuer_role_id issuer_secret_id provided_token
+}
+
+# curl reads the token header through a pipe-backed config, not its argv. The
+# body, when present, contains no credential material.
+bao_api_with_token() {
+  local method="$1" path="$2" token="$3" body="${4:-}"
+  local args=(--config - -sS -X "$method" -H 'Content-Type: application/json'
+    -w '\n%{http_code}'
+    "$BAO_ADDR/v1/$path")
+  [ -n "$body" ] && args+=(-d "$body")
+  printf 'header = "X-Vault-Token: %s"\n' "$token" | curl "${args[@]}"
+}
 
 bao_token() {
   if [ -n "$BAO_TOKEN_CACHED" ]; then printf '%s' "$BAO_TOKEN_CACHED"; return; fi
-  if [ -n "${BAO_TOKEN:-}" ]; then BAO_TOKEN_CACHED="$BAO_TOKEN"; printf '%s' "$BAO_TOKEN_CACHED"; return; fi
-  if [ -z "${FLOW_LOCK_ROLE_ID:-}" ] || [ -z "${FLOW_LOCK_SECRET_ID:-}" ]; then
-    die "no BAO_TOKEN and no FLOW_LOCK_ROLE_ID/FLOW_LOCK_SECRET_ID" "$EX_USAGE"
-  fi
-  local resp
-  resp="$(curl -sS -X POST "$BAO_ADDR/v1/auth/approle/login" \
-    -d "{\"role_id\":\"$FLOW_LOCK_ROLE_ID\",\"secret_id\":\"$FLOW_LOCK_SECRET_ID\"}")" \
-    || die "AppRole login request failed (is OpenBao up at $BAO_ADDR?)"
-  BAO_TOKEN_CACHED="$(jq -er '.auth.client_token' <<<"$resp" 2>/dev/null)" \
-    || die "AppRole login rejected: $(jq -r '.errors[0] // "unknown error"' <<<"$resp")"
+  local issuer_token role_response secret_response status body flow_lock_role_id flow_lock_secret_id
+  bao_issuer_token
+  issuer_token="$BAO_ISSUER_TOKEN_CACHED"
+
+  role_response="$(bao_api_with_token GET auth/approle/role/flow-lock/role-id "$issuer_token" '')" \
+    || die "could not read the flow-lock role id from OpenBao"
+  status="$(printf '%s\n' "$role_response" | awk 'END { print }')"
+  body="$(printf '%s' "$role_response" | sed '$d')"
+  [ "$status" = "200" ] || die "flow-lock role-id read failed (HTTP $status)"
+  flow_lock_role_id="$(jq -er '.data.role_id' <<<"$body" 2>/dev/null)" \
+    || die "flow-lock role-id response did not contain a role id"
+
+  secret_response="$(bao_api_with_token POST auth/approle/role/flow-lock/secret-id "$issuer_token" '')" \
+    || die "could not mint a flow-lock secret id from OpenBao"
+  status="$(printf '%s\n' "$secret_response" | awk 'END { print }')"
+  body="$(printf '%s' "$secret_response" | sed '$d')"
+  [ "$status" = "200" ] || die "flow-lock secret-id mint failed (HTTP $status)"
+  flow_lock_secret_id="$(jq -er '.data.secret_id' <<<"$body" 2>/dev/null)" \
+    || die "flow-lock secret-id response did not contain a secret id"
+  unset issuer_token role_response secret_response body
+  BAO_ISSUER_TOKEN_CACHED=""
+  BAO_TOKEN_CACHED="$(approle_login "$flow_lock_role_id" "$flow_lock_secret_id")"
+  unset flow_lock_role_id flow_lock_secret_id
   printf '%s' "$BAO_TOKEN_CACHED"
 }
 
 # bao_api METHOD PATH [JSON_BODY] -> body on stdout; returns curl/HTTP status
 bao_api() {
-  local method="$1" path="$2" body="${3:-}"
-  local args=(-sS -X "$method" -H "X-Vault-Token: $(bao_token)" \
-    -H "Content-Type: application/json" -w '\n%{http_code}' "$BAO_ADDR/v1/$path")
-  [ -n "$body" ] && args+=(-d "$body")
-  curl "${args[@]}"
+  local method="$1" path="$2" body=""
+  [ "$#" -lt 3 ] || body="$3"
+  [ -n "$BAO_TOKEN_CACHED" ] || die "flow-lock token was not initialized"
+  bao_api_with_token "$method" "$path" "$BAO_TOKEN_CACHED" "$body"
 }
 
 # splits the bao_api combined output into BAO_BODY / BAO_STATUS globals
@@ -270,6 +342,7 @@ cmd_run() {
   [ $# -gt 0 ] || die "run: no command given (use: flow-lock run [opts] -- CMD)" "$EX_USAGE"
 
   if [ "${FLOW_LOCK_BOOTSTRAP:-}" = "1" ]; then
+    clear_issuer_credentials
     log "==============================================================="
     log "BOOTSTRAP MODE: NO lease held, NO gated creds injected."
     log "Only valid for managing OpenBao itself while it is down."
@@ -281,6 +354,7 @@ cmd_run() {
   local ttl_s timeout_s
   ttl_s="$(ttl_to_seconds "$ttl")"
   timeout_s="$(ttl_to_seconds "$timeout")"
+  bao_token >/dev/null
 
   acquire "$ttl_s" "$timeout_s"
   log "lease acquired (lease_id=$LEASE_ID version=$LEASE_VERSION ttl=${ttl_s}s flow=$FLOW_NAME)"
@@ -328,6 +402,7 @@ cmd_run() {
 
 cmd_status() {
   require_env
+  bao_token >/dev/null
   read_lease
   if [ -z "$CUR_DATA" ]; then
     echo "flow-lock: free (no lease held)"
@@ -350,6 +425,7 @@ cmd_break() {
   done
   [ -n "$reason" ] || die "break: --reason is required" "$EX_USAGE"
   require_env
+  bao_token >/dev/null
   read_lease
   [ -n "$CUR_DATA" ] || { echo "flow-lock: nothing to break (free)"; exit 0; }
   echo "flow-lock: about to FORCE-BREAK: $(describe_holder "$CUR_DATA")"
@@ -379,6 +455,7 @@ cmd_release() {
   done
   [ -n "$lease_id" ] || die "release: --lease-id is required" "$EX_USAGE"
   require_env
+  bao_token >/dev/null
   read_lease
   [ -n "$CUR_DATA" ] || { echo "flow-lock: already free"; exit 0; }
   local held_id
