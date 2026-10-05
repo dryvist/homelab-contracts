@@ -27,14 +27,18 @@
       vars:
         map: "{{ llm_roles }}"
 
-    - name: Map models reference the shared catalog and contain no concurrency copy
+    - name: Map model concurrency is projected from the shared catalog
       ansible.builtin.assert:
         that:
           - item.value.id in (llm_model_catalog_models | map(attribute='name') | list)
-          - item.value.concurrency is not defined
+          - >-
+            item.value.concurrency
+            == (llm_model_catalog_models
+                | selectattr('name', 'equalto', item.value.id)
+                | map(attribute='max_parallel_requests') | first)
         fail_msg: >-
-          {{ item.key }} must resolve by id from llm_model_catalog_models and
-          must not duplicate its catalog concurrency limit.
+          {{ item.key }} concurrency must be projected from its catalog
+          max_parallel_requests value.
         quiet: true
       loop: "{{ llm_roles.models | dict2items }}"
       loop_control:

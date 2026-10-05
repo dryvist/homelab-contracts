@@ -1,6 +1,46 @@
 ---
-# Load the canonical model-role map into `llm_roles` (models, roles, hosts).
+# Load the canonical model-role map and project its per-model concurrency from
+# the shared model catalog. The JSON map owns model ids and role/host topology;
+# max_parallel_requests has one source in model-catalog.json.
 - name: Load the model-role map
   ansible.builtin.include_vars:
     file: "{{ role_path }}/files/model-roles.json"
-    name: llm_roles
+    name: _llm_roles_source
+
+- name: Load the shared model catalog
+  ansible.builtin.include_role:
+    name: llm_model_catalog
+    public: true
+
+- name: Project model concurrency from the shared catalog
+  ansible.builtin.set_fact:
+    _llm_roles_projection: >-
+      {%- set ns = namespace(models={}, errors=[]) -%}
+      {%- for item in _llm_roles_source.models | dict2items -%}
+      {%- set matches = llm_model_catalog_models
+            | selectattr('name', 'equalto', item.value.id) | list -%}
+      {%- if item.value.concurrency is defined
+            or matches | length != 1
+            or matches[0].max_parallel_requests is not defined -%}
+      {%- set ns.errors = ns.errors + [item.key ~ ': raw concurrency is forbidden; expected one catalog model with max_parallel_requests'] -%}
+      {%- else -%}
+      {%- set ns.models = ns.models | combine({item.key: item.value | combine({'concurrency': matches[0].max_parallel_requests})}) -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ {'models': ns.models, 'errors': ns.errors} | to_json }}
+
+- name: Assert every role-map model has a catalog concurrency value
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - (_llm_roles_projection | from_json).errors | length == 0
+    fail_msg: >-
+      Every model-role map model must resolve to exactly one shared catalog
+      entry with max_parallel_requests:
+      {{ (_llm_roles_projection | from_json).errors }}
+
+- name: Publish the role map with catalog concurrency projected  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    llm_roles: >-
+      {{ _llm_roles_source | combine(
+           {'models': (_llm_roles_projection | from_json).models}, recursive=true) }}
