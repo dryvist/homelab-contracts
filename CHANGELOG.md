@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.5.0](https://github.com/dryvist/homelab-contracts/compare/v3.4.2...v3.5.0) (2026-10-05)
+
+
+### Features
+
+* **flow-lock:** add per-call AppRole token command ([#119](https://github.com/dryvist/homelab-contracts/issues/119)) ([86bd2a7](https://github.com/dryvist/homelab-contracts/commit/86bd2a767fb53c538db7e3f5199b2212086ea9aa))
+
 ## [3.4.2](https://github.com/dryvist/homelab-contracts/compare/v3.4.1...v3.4.2) (2026-10-05)
 
 
