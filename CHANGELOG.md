@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.4.1](https://github.com/dryvist/homelab-contracts/compare/v3.4.0...v3.4.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **catalog:** validate backend capacity profiles ([#114](https://github.com/dryvist/homelab-contracts/issues/114)) ([850d4b6](https://github.com/dryvist/homelab-contracts/commit/850d4b60aa661ac55ea5884693266f78cc4bf307))
+
 ## [3.4.0](https://github.com/dryvist/homelab-contracts/compare/v3.3.0...v3.4.0) (2026-10-04)
 
 
