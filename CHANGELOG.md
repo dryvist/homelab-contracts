@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.4.2](https://github.com/dryvist/homelab-contracts/compare/v3.4.1...v3.4.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* mint flow-lock credentials through approle-issuer ([62b7250](https://github.com/dryvist/homelab-contracts/commit/62b72502177895f302c27755cea7ff8b80ea07d0))
+
 ## [3.4.1](https://github.com/dryvist/homelab-contracts/compare/v3.4.0...v3.4.1) (2026-10-05)
 
 
