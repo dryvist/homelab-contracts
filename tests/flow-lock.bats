@@ -76,6 +76,15 @@ case "$path" in
       role=flow-lock
       response='{"auth":{"client_token":"flow-lock-token"}}'
       status=200
+    elif [[ "$request_body" == *reconcile-secret* ]]; then
+      role=openbao-reconcile
+      if [ "${FLOW_LOCK_FIXTURE_REJECT_RECONCILE:-}" = 1 ]; then
+        response='{"errors":["invalid role or secret ID"]}'
+        status=400
+      else
+        response='{"auth":{"client_token":"reconcile-token"}}'
+        status=200
+      fi
     fi
     ;;
   auth/approle/role/flow-lock/role-id)
@@ -83,8 +92,20 @@ case "$path" in
     status=200
     ;;
   auth/approle/role/flow-lock/secret-id)
-    response='{"data":{"secret_id":"flow-lock-secret"}}'
+    response='{"data":{"secret_id":"flow-lock-secret","secret_id_accessor":"flow-lock-accessor"}}'
     status=200
+    ;;
+  auth/approle/role/openbao-reconcile/role-id)
+    response='{"data":{"role_id":"reconcile-role-id"}}'
+    status=200
+    ;;
+  auth/approle/role/openbao-reconcile/secret-id)
+    response='{"data":{"secret_id":"reconcile-secret","secret_id_accessor":"reconcile-accessor"}}'
+    status=200
+    ;;
+  auth/approle/role/flow-lock/secret-id-accessor/destroy|auth/approle/role/openbao-reconcile/secret-id-accessor/destroy)
+    response=''
+    status=204
     ;;
   secret/data/locks/global)
     if [ "$method" = POST ]; then
@@ -127,6 +148,7 @@ SH
   run "$FLOW_LOCK" help
   [ "$status" -eq 0 ]
   [[ "$output" == *"Force-break"* ]]
+  [[ "$output" == *"flow-lock approle-token ROLE"* ]]
 }
 
 @test "flow-lock unknown subcommand exits 64" {
@@ -162,12 +184,57 @@ SH
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"flow-lock: free (no lease held)"* ]]
-  [ "$(wc -l < "$FLOW_LOCK_API_LOG" | tr -d ' ')" -eq 5 ]
+  [ "$(wc -l < "$FLOW_LOCK_API_LOG" | tr -d ' ')" -eq 6 ]
   grep -Fx $'POST\tauth/approle/login\t-\tissuer' "$FLOW_LOCK_API_LOG"
   grep -Fx $'GET\tauth/approle/role/flow-lock/role-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
   grep -Fx $'POST\tauth/approle/role/flow-lock/secret-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
   grep -Fx $'POST\tauth/approle/login\t-\tflow-lock' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'POST\tauth/approle/role/flow-lock/secret-id-accessor/destroy\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
   grep -Fx $'GET\tsecret/data/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "approle-token mints a fresh credential for the requested role" {
+  fake_flow_lock_openbao
+  export BAO_ADDR=fixture
+  export BAO_TOKEN=unrelated-runner-token
+  export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
+  export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
+
+  run "$FLOW_LOCK" approle-token openbao-reconcile
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "reconcile-token" ]
+  grep -Fx $'POST\tauth/approle/login\t-\tissuer' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'GET\tauth/approle/role/openbao-reconcile/role-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'POST\tauth/approle/role/openbao-reconcile/secret-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'POST\tauth/approle/login\t-\topenbao-reconcile' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor/destroy\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "approle-token revokes its secret id when the target login fails" {
+  fake_flow_lock_openbao
+  export BAO_ADDR=fixture
+  export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
+  export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
+  export FLOW_LOCK_FIXTURE_REJECT_RECONCILE=1
+
+  run "$FLOW_LOCK" approle-token openbao-reconcile
+
+  [ "$status" -eq 70 ]
+  [[ "$output" == *"invalid role or secret ID"* ]]
+  grep -Fx $'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor/destroy\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "approle-token rejects malformed role names before calling OpenBao" {
+  fake_flow_lock_openbao
+  export BAO_ADDR=fixture
+  export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
+  export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
+
+  run "$FLOW_LOCK" approle-token 'role/secret-id'
+
+  [ "$status" -eq 64 ]
+  [ ! -s "$FLOW_LOCK_API_LOG" ]
 }
 
 @test "flow-lock status treats a supplied BAO_TOKEN as issuer authority" {
@@ -176,8 +243,9 @@ SH
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"flow-lock: free (no lease held)"* ]]
-  [ "$(wc -l < "$FLOW_LOCK_API_LOG" | tr -d ' ')" -eq 4 ]
+  [ "$(wc -l < "$FLOW_LOCK_API_LOG" | tr -d ' ')" -eq 5 ]
   grep -Fx $'GET\tauth/approle/role/flow-lock/role-id\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'POST\tauth/approle/role/flow-lock/secret-id-accessor/destroy\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
 }
 
 @test "flow-lock status refuses the obsolete static flow-lock pair" {
@@ -197,7 +265,8 @@ SH
 
   [ "$status" -eq 0 ]
   [ "$(grep -c 'auth/approle/login' "$FLOW_LOCK_API_LOG")" -eq 2 ]
-  [ "$(grep -c 'auth/approle/role/flow-lock/secret-id' "$FLOW_LOCK_API_LOG")" -eq 1 ]
+  [ "$(grep -F -c $'POST\tauth/approle/role/flow-lock/secret-id\t' "$FLOW_LOCK_API_LOG")" -eq 1 ]
+  [ "$(grep -F -c $'POST\tauth/approle/role/flow-lock/secret-id-accessor/destroy\t' "$FLOW_LOCK_API_LOG")" -eq 1 ]
   [ "$(grep -c $'POST\tsecret/data/locks/global\tflow-lock-token' "$FLOW_LOCK_API_LOG")" -eq 1 ]
   [ "$(grep -c $'GET\tsecret/data/locks/global\tflow-lock-token' "$FLOW_LOCK_API_LOG")" -eq 1 ]
   grep -Fx $'DELETE\tsecret/metadata/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"

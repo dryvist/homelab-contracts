@@ -45,12 +45,14 @@ usage() {
   cat <<'EOF'
 Usage:
   flow-lock run [--flow NAME] [--ttl 15m] [--timeout 10m] [--creds a,b,...] -- CMD [ARGS...]
+  flow-lock approle-token ROLE
   flow-lock status
   flow-lock break --reason STR [--yes]
   flow-lock release --lease-id UUID
   flow-lock help
 
 run      Acquire the global lease, inject gated creds, exec CMD, release.
+approle-token ROLE  Mint and log in with one fresh secret_id for ROLE.
 status   Show the current lease holder (if any).
 break    Force-break a stuck lease (audited; prompts unless --yes).
 release  Clean up a lease left by a crashed wrapper (lease-id must match).
@@ -87,6 +89,9 @@ require_env() {
 
 BAO_ISSUER_TOKEN_CACHED=""
 BAO_TOKEN_CACHED=""
+MINTED_APPROLE_TOKEN=""
+MINTED_APPROLE_NAME=""
+MINTED_APPROLE_SECRET_ID_ACCESSOR=""
 
 clear_issuer_credentials() {
   unset BAO_TOKEN OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID
@@ -141,32 +146,104 @@ bao_api_with_token() {
   printf 'header = "X-Vault-Token: %s"\n' "$token" | curl "${args[@]}"
 }
 
-bao_token() {
-  if [ -n "$BAO_TOKEN_CACHED" ]; then printf '%s' "$BAO_TOKEN_CACHED"; return; fi
-  local issuer_token role_response secret_response status body flow_lock_role_id flow_lock_secret_id
+revoke_minted_approle_secret_id() {
+  [ -n "$MINTED_APPROLE_SECRET_ID_ACCESSOR" ] || return 0
+  [ -n "$BAO_ISSUER_TOKEN_CACHED" ] || {
+    log "could not revoke the temporary $MINTED_APPROLE_NAME secret_id: issuer token unavailable"
+    return 1
+  }
+
+  local body response status
+  body="$(OPENBAO_SECRET_ID_ACCESSOR="$MINTED_APPROLE_SECRET_ID_ACCESSOR" \
+    jq -nc '{secret_id_accessor:env.OPENBAO_SECRET_ID_ACCESSOR}')"
+  response="$(bao_api_with_token POST \
+    "auth/approle/role/$MINTED_APPROLE_NAME/secret-id-accessor/destroy" \
+    "$BAO_ISSUER_TOKEN_CACHED" "$body")" || {
+      log "could not revoke the temporary $MINTED_APPROLE_NAME secret_id"
+      return 1
+    }
+  status="$(printf '%s\n' "$response" | awk 'END { print }')"
+  case "$status" in
+    200|204)
+      MINTED_APPROLE_NAME=""
+      MINTED_APPROLE_SECRET_ID_ACCESSOR=""
+      return 0
+      ;;
+    *)
+      log "temporary $MINTED_APPROLE_NAME secret_id revocation failed (HTTP $status)"
+      return 1
+      ;;
+  esac
+}
+
+cleanup_minted_approle_secret_id_on_exit() {
+  local exit_code=$?
+  trap - EXIT
+  if ! revoke_minted_approle_secret_id && [ "$exit_code" -eq 0 ]; then
+    exit_code="$EX_SOFTWARE"
+  fi
+  exit "$exit_code"
+}
+trap cleanup_minted_approle_secret_id_on_exit EXIT
+
+mint_approle_token() {
+  local approle_name="$1"
+  [[ "$approle_name" =~ ^[A-Za-z0-9_-]+$ ]] \
+    || die "invalid AppRole name: $approle_name" "$EX_USAGE"
+  local issuer_token role_response secret_response status body role_id secret_id
+  local secret_id_accessor client_token
   bao_issuer_token
   issuer_token="$BAO_ISSUER_TOKEN_CACHED"
 
-  role_response="$(bao_api_with_token GET auth/approle/role/flow-lock/role-id "$issuer_token" '')" \
-    || die "could not read the flow-lock role id from OpenBao"
+  role_response="$(bao_api_with_token GET "auth/approle/role/$approle_name/role-id" "$issuer_token" '')" \
+    || die "could not read the $approle_name role id from OpenBao"
   status="$(printf '%s\n' "$role_response" | awk 'END { print }')"
   body="$(printf '%s' "$role_response" | sed '$d')"
-  [ "$status" = "200" ] || die "flow-lock role-id read failed (HTTP $status)"
-  flow_lock_role_id="$(jq -er '.data.role_id' <<<"$body" 2>/dev/null)" \
-    || die "flow-lock role-id response did not contain a role id"
+  [ "$status" = "200" ] || die "$approle_name role-id read failed (HTTP $status)"
+  role_id="$(jq -er '.data.role_id' <<<"$body" 2>/dev/null)" \
+    || die "$approle_name role-id response did not contain a role id"
 
-  secret_response="$(bao_api_with_token POST auth/approle/role/flow-lock/secret-id "$issuer_token" '')" \
-    || die "could not mint a flow-lock secret id from OpenBao"
+  secret_response="$(bao_api_with_token POST "auth/approle/role/$approle_name/secret-id" "$issuer_token" '')" \
+    || die "could not mint a $approle_name secret id from OpenBao"
   status="$(printf '%s\n' "$secret_response" | awk 'END { print }')"
   body="$(printf '%s' "$secret_response" | sed '$d')"
-  [ "$status" = "200" ] || die "flow-lock secret-id mint failed (HTTP $status)"
-  flow_lock_secret_id="$(jq -er '.data.secret_id' <<<"$body" 2>/dev/null)" \
-    || die "flow-lock secret-id response did not contain a secret id"
-  unset issuer_token role_response secret_response body
+  [ "$status" = "200" ] || die "$approle_name secret-id mint failed (HTTP $status)"
+  secret_id="$(jq -er '.data.secret_id' <<<"$body" 2>/dev/null)" \
+    || die "$approle_name secret-id response did not contain a secret id"
+  secret_id_accessor="$(jq -er '.data.secret_id_accessor' <<<"$body" 2>/dev/null)" \
+    || die "$approle_name secret-id response did not contain an accessor"
+  MINTED_APPROLE_NAME="$approle_name"
+  MINTED_APPROLE_SECRET_ID_ACCESSOR="$secret_id_accessor"
+  unset issuer_token role_response secret_response body secret_id_accessor
+
+  if client_token="$(approle_login "$role_id" "$secret_id")"; then
+    MINTED_APPROLE_TOKEN="$client_token"
+  else
+    unset role_id secret_id client_token
+    revoke_minted_approle_secret_id || die "could not revoke the temporary $approle_name secret_id"
+    die "could not log in with the temporary $approle_name secret_id"
+  fi
+  unset role_id secret_id client_token
+  revoke_minted_approle_secret_id \
+    || die "could not revoke the temporary $approle_name secret_id"
   BAO_ISSUER_TOKEN_CACHED=""
-  BAO_TOKEN_CACHED="$(approle_login "$flow_lock_role_id" "$flow_lock_secret_id")"
-  unset flow_lock_role_id flow_lock_secret_id
+}
+
+bao_token() {
+  if [ -n "$BAO_TOKEN_CACHED" ]; then printf '%s' "$BAO_TOKEN_CACHED"; return; fi
+  mint_approle_token flow-lock
+  BAO_TOKEN_CACHED="$MINTED_APPROLE_TOKEN"
   printf '%s' "$BAO_TOKEN_CACHED"
+}
+
+cmd_approle_token() {
+  [ "$#" -eq 1 ] || die "approle-token: exactly one ROLE is required" "$EX_USAGE"
+  require_env
+  # The caller may already hold a different BAO_TOKEN (for example, the
+  # runner's SSH-signing identity). Mint only with the dedicated issuer pair.
+  unset BAO_TOKEN
+  mint_approle_token "$1"
+  printf '%s' "$MINTED_APPROLE_TOKEN"
 }
 
 # bao_api METHOD PATH [JSON_BODY] -> body on stdout; returns curl/HTTP status
@@ -468,6 +545,7 @@ cmd_release() {
 
 case "${1:-}" in
   run) shift; cmd_run "$@" ;;
+  approle-token) shift; cmd_approle_token "$@" ;;
   status) shift; cmd_status "$@" ;;
   break) shift; cmd_break "$@" ;;
   release) shift; cmd_release "$@" ;;
