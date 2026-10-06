@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.5.2](https://github.com/dryvist/homelab-contracts/compare/v3.5.1...v3.5.2) (2026-10-06)
+
+
+### Bug Fixes
+
+* **catalog:** restore lineage for squashed mlx profile commit 2f397694 ([960c483](https://github.com/dryvist/homelab-contracts/commit/960c4831bafe07cb696158ac5308965dccf0ce9d))
+
 ## [3.5.1](https://github.com/dryvist/homelab-contracts/compare/v3.5.0...v3.5.1) (2026-10-06)
 
 
