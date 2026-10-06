@@ -63,6 +63,14 @@ if [ "$read_body" = true ]; then
   request_body="$(cat)"
 fi
 path="${url#*/v1/}"
+fixture_secret_id_response() {
+  if [ -n "${FLOW_LOCK_FIXTURE_NUM_USES:-}" ]; then
+    jq -nc --arg s "$1" --arg a "$2" --argjson n "$FLOW_LOCK_FIXTURE_NUM_USES" \
+      '{data:{secret_id:$s,secret_id_accessor:$a,secret_id_num_uses:$n}}'
+  else
+    jq -nc --arg s "$1" --arg a "$2" '{data:{secret_id:$s,secret_id_accessor:$a}}'
+  fi
+}
 role=-
 response='{"errors":["fixture did not match"]}'
 status=500
@@ -92,7 +100,7 @@ case "$path" in
     status=200
     ;;
   auth/approle/role/flow-lock/secret-id)
-    response='{"data":{"secret_id":"flow-lock-secret","secret_id_accessor":"flow-lock-accessor"}}'
+    response="$(fixture_secret_id_response flow-lock-secret flow-lock-accessor)"
     status=200
     ;;
   auth/approle/role/openbao-reconcile/role-id)
@@ -100,12 +108,12 @@ case "$path" in
     status=200
     ;;
   auth/approle/role/openbao-reconcile/secret-id)
-    response='{"data":{"secret_id":"reconcile-secret","secret_id_accessor":"reconcile-accessor"}}'
+    response="$(fixture_secret_id_response reconcile-secret reconcile-accessor)"
     status=200
     ;;
   auth/approle/role/flow-lock/secret-id-accessor/destroy|auth/approle/role/openbao-reconcile/secret-id-accessor/destroy)
     response=''
-    status=204
+    status="${FLOW_LOCK_FIXTURE_DESTROY_STATUS:-204}"
     ;;
   secret/data/locks/global)
     if [ "$method" = POST ]; then
@@ -223,6 +231,76 @@ SH
   [ "$status" -eq 70 ]
   [[ "$output" == *"invalid role or secret ID"* ]]
   grep -Fx $'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor/destroy\tissuer-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+approle_env() {
+  fake_flow_lock_openbao
+  export BAO_ADDR=fixture
+  export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
+  export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
+}
+
+DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor/destroy\tissuer-token\t-'
+
+@test "approle-token skips the destroy when the secret id is single-use and login succeeded" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_NUM_USES=1
+
+  run "$FLOW_LOCK" approle-token openbao-reconcile
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "reconcile-token" ]
+  grep -Fx $'POST\tauth/approle/login\t-\topenbao-reconcile' "$FLOW_LOCK_API_LOG"
+  ! grep -F 'secret-id-accessor/destroy' "$FLOW_LOCK_API_LOG"
+}
+
+@test "approle-token still destroys the secret id when num_uses is absent, 0 or above 1" {
+  approle_env
+  run "$FLOW_LOCK" approle-token openbao-reconcile
+  [ "$status" -eq 0 ]
+  grep -Fx "$DESTROY_RECONCILE" "$FLOW_LOCK_API_LOG"
+
+  for uses in 0 5; do
+    : > "$FLOW_LOCK_API_LOG"
+    FLOW_LOCK_FIXTURE_NUM_USES="$uses" run "$FLOW_LOCK" approle-token openbao-reconcile
+    [ "$status" -eq 0 ]
+    grep -Fx "$DESTROY_RECONCILE" "$FLOW_LOCK_API_LOG"
+  done
+}
+
+@test "approle-token destroys the secret id and fails when login fails with num_uses 1" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_NUM_USES=1
+  export FLOW_LOCK_FIXTURE_REJECT_RECONCILE=1
+
+  run "$FLOW_LOCK" approle-token openbao-reconcile
+
+  [ "$status" -eq 70 ]
+  grep -Fx "$DESTROY_RECONCILE" "$FLOW_LOCK_API_LOG"
+}
+
+@test "approle-token fails when the destroy is required and the server rejects it" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_NUM_USES=5
+  export FLOW_LOCK_FIXTURE_DESTROY_STATUS=500
+
+  run "$FLOW_LOCK" approle-token openbao-reconcile
+
+  [ "$status" -eq 70 ]
+  [[ "$output" == *"revocation failed (HTTP 500)"* ]]
+}
+
+@test "flow-lock status skips the destroy when the secret id is single-use" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_NUM_USES=1
+
+  run "$FLOW_LOCK" status
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"flow-lock: free (no lease held)"* ]]
+  grep -Fx $'POST\tauth/approle/login\t-\tflow-lock' "$FLOW_LOCK_API_LOG"
+  grep -Fx $'GET\tsecret/data/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+  ! grep -F 'secret-id-accessor/destroy' "$FLOW_LOCK_API_LOG"
 }
 
 @test "approle-token rejects malformed role names before calling OpenBao" {

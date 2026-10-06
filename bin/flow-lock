@@ -105,8 +105,8 @@ approle_login() {
   response="$(
     OPENBAO_LOGIN_ROLE_ID="$role_id" OPENBAO_LOGIN_SECRET_ID="$secret_id" \
       jq -nc '{role_id:env.OPENBAO_LOGIN_ROLE_ID,secret_id:env.OPENBAO_LOGIN_SECRET_ID}' |
-      curl -sS -X POST -H 'Content-Type: application/json' \
-        -w '\n%{http_code}' --data-binary @- "$BAO_ADDR/v1/auth/approle/login"
+      curl -sS --max-time "${FLOW_LOCK_API_MAX_TIME:-30}" -X POST \
+        -H 'Content-Type: application/json' -w '\n%{http_code}' --data-binary @- "$BAO_ADDR/v1/auth/approle/login"
   )" || die "AppRole login request failed (is OpenBao up at $BAO_ADDR?)"
   status="$(printf '%s\n' "$response" | awk 'END { print }')"
   body="$(printf '%s' "$response" | sed '$d')"
@@ -139,7 +139,8 @@ bao_issuer_token() {
 # body, when present, contains no credential material.
 bao_api_with_token() {
   local method="$1" path="$2" token="$3" body="${4:-}"
-  local args=(--config - -sS -X "$method" -H 'Content-Type: application/json'
+  local args=(--config - -sS --max-time "${FLOW_LOCK_API_MAX_TIME:-30}"
+    -X "$method" -H 'Content-Type: application/json'
     -w '\n%{http_code}'
     "$BAO_ADDR/v1/$path")
   [ -n "$body" ] && args+=(-d "$body")
@@ -191,7 +192,7 @@ mint_approle_token() {
   [[ "$approle_name" =~ ^[A-Za-z0-9_-]+$ ]] \
     || die "invalid AppRole name: $approle_name" "$EX_USAGE"
   local issuer_token role_response secret_response status body role_id secret_id
-  local secret_id_accessor client_token
+  local secret_id_accessor client_token secret_id_num_uses
   bao_issuer_token
   issuer_token="$BAO_ISSUER_TOKEN_CACHED"
 
@@ -212,6 +213,8 @@ mint_approle_token() {
     || die "$approle_name secret-id response did not contain a secret id"
   secret_id_accessor="$(jq -er '.data.secret_id_accessor' <<<"$body" 2>/dev/null)" \
     || die "$approle_name secret-id response did not contain an accessor"
+  secret_id_num_uses="$(jq -r '.data.secret_id_num_uses // empty' <<<"$body" 2>/dev/null)" \
+    || secret_id_num_uses=""
   MINTED_APPROLE_NAME="$approle_name"
   MINTED_APPROLE_SECRET_ID_ACCESSOR="$secret_id_accessor"
   unset issuer_token role_response secret_response body secret_id_accessor
@@ -224,8 +227,16 @@ mint_approle_token() {
     die "could not log in with the temporary $approle_name secret_id"
   fi
   unset role_id secret_id client_token
-  revoke_minted_approle_secret_id \
-    || die "could not revoke the temporary $approle_name secret_id"
+  if [ "$secret_id_num_uses" = "1" ]; then
+    # A single-use secret_id is consumed by the successful login above, and the
+    # server does not answer a destroy of an accessor that no longer exists, so
+    # the destroy is skipped.
+    MINTED_APPROLE_NAME=""
+    MINTED_APPROLE_SECRET_ID_ACCESSOR=""
+  else
+    revoke_minted_approle_secret_id \
+      || die "could not revoke the temporary $approle_name secret_id"
+  fi
   BAO_ISSUER_TOKEN_CACHED=""
 }
 
