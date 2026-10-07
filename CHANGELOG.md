@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.8.0](https://github.com/dryvist/homelab-contracts/compare/v3.7.0...v3.8.0) (2026-10-07)
+
+
+### Features
+
+* catalog Stage 0 checkpoint provenance ([d7f585f](https://github.com/dryvist/homelab-contracts/commit/d7f585f20e774a651511a2f731f7791de9f97f23))
+
 ## [3.7.0](https://github.com/dryvist/homelab-contracts/compare/v3.6.1...v3.7.0) (2026-10-07)
 
 
