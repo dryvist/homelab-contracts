@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.7.0](https://github.com/dryvist/homelab-contracts/compare/v3.6.1...v3.7.0) (2026-10-07)
+
+
+### Features
+
+* add shared router key catalog ([d9b1dd9](https://github.com/dryvist/homelab-contracts/commit/d9b1dd94d1f36030b82d4e9390c74fb786ab9877))
+* add shared router key catalog ([6c7769c](https://github.com/dryvist/homelab-contracts/commit/6c7769c74c0f509adca2cca7a573ba177eb6205b))
+
 ## [3.6.1](https://github.com/dryvist/homelab-contracts/compare/v3.6.0...v3.6.1) (2026-10-07)
 
 
