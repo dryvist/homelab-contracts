@@ -48,6 +48,11 @@
       ansible.builtin.assert:
         that: llm_roles.roles.judge.egress == 'estate'
 
+    - name: The embedding role stays unbound until consumers route task types
+      ansible.builtin.assert:
+        that: llm_roles.roles.embed.model is none
+        fail_msg: The generic model-role map must not route embeddings through chat serving.
+
     - name: Negative - a role pointing at an unknown model must fail the check
       vars:
         map: "{{ lookup('ansible.builtin.file', 'bad-unknown-model.json') | from_json }}"

@@ -23,6 +23,18 @@ retry, and provider-limit values instead of keeping per-model copies:
 An MLX entry can also define `profiles.mlx.swap` for its on-demand serving
 limits; static resident and swap profiles are projected separately.
 
+Stage 0 evaluation checkpoints use a separate `stage0` object. It records the
+source Hugging Face repository, immutable revision, pipeline tag, and license.
+An available Metal artifact records its own repository and revision, the source
+checkpoint it was converted from, its format, runtime revision, and endpoint.
+The decision checkpoints record their CPU reference server and System One API;
+they do not claim a converted Metal artifact.
+
+The `embed` role remains unbound in `model-roles.json` until consumers add
+task-aware routing that sends embedding requests to an embeddings endpoint and
+keeps them separate from chat completions. That consumer change belongs in
+`nix-ai` and its local LiteLLM route compiler.
+
 Checksums are never stored here: the sha256 for a download is read from
 HuggingFace's own LFS blob metadata at run time, pinned against the exact
 `hf_revision` each entry declares — never a hand-copied literal that could

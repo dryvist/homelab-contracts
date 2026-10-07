@@ -195,3 +195,6 @@
       loop: "{{ llm_model_catalog_models }}"
       loop_control:
         label: "{{ item.name }}"
+
+    - name: Validate Stage 0 model metadata
+      ansible.builtin.include_tasks: stage0_contract.yml
