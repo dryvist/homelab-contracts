@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/dryvist/homelab-contracts/schemas/ansible-inventory-v1.json",
   "title": "dryvist homelab ansible_inventory contract",
-  "description": "schema_version 2.2.0. Shape of the ansible_inventory.json artifact written by dryvist/terraform-proxmox (inventory_publish.tf, local.ansible_inventory) to the S3 state backend and consumed by dryvist/ansible-proxmox, dryvist/ansible-proxmox-apps, and dryvist/ansible-splunk through the shared inventory_resolve role. v2 reconciles the schema to the REAL producer output (issue #134): the top-level keys are exactly what inventory_publish.tf emits. 2.1 adds the optional desired_state fingerprint, which is what makes \"is an apply owed?\" answerable by a consumer holding only the artifact. 2.2 adds the optional workstation_connections block and the ingress fqdn/host_aliases/tls_domains fields for shared ingress aliasing and certificate domains. Additive keys bump the minor; breaking changes bump the major and add a versions/v<X.Y.Z>/ snapshot.",
+  "description": "schema_version 2.3.0. Shape of the ansible_inventory.json artifact written by dryvist/terraform-proxmox (inventory_publish.tf, local.ansible_inventory) to the S3 state backend and consumed by dryvist/ansible-proxmox, dryvist/ansible-proxmox-apps, and dryvist/ansible-splunk through the shared inventory_resolve role. v2 reconciles the schema to the REAL producer output (issue #134): the top-level keys are exactly what inventory_publish.tf emits. 2.1 adds the optional desired_state fingerprint, which is what makes \"is an apply owed?\" answerable by a consumer holding only the artifact. 2.2 adds the optional workstation_connections block and the ingress fqdn/host_aliases/tls_domains fields for shared ingress aliasing and certificate domains. 2.3 adds node capability tags. Additive keys bump the minor; breaking changes bump the major and add a versions/v<X.Y.Z>/ snapshot.",
   "type": "object",
   "required": [
     "schema_version",
@@ -43,7 +43,7 @@
       "description": "Semantic version of this contract. Consumers fail-fast when the major differs. Emitted by terraform-proxmox inventory_publish.tf; must be '2.x.y' for this schema.",
       "type": "string",
       "pattern": "^2\\.\\d+\\.\\d+$",
-      "examples": ["2.2.0"]
+      "examples": ["2.3.0"]
     },
     "domain": {
       "description": "Internal DNS domain for FQDN resolution (e.g. 'example.com'). MAY be empty: terraform-proxmox supports an empty domain (locals.tf falls back to a bare hostname). The ansible-proxmox-apps loader separately requires a non-empty domain at runtime, since per-node ansible_host is derived as {node-role}.{domain}.",
@@ -305,6 +305,12 @@
         "commissioned": {
           "type": "boolean",
           "description": "false = declared but not yet installed; ansible-proxmox skips it."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Capability tags consumed by Ansible to derive node groups and select matching roles."
         }
       }
     },
