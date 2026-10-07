@@ -52,8 +52,10 @@ inputs:
   # running on :9100 with nothing consuming it and no host metrics in Splunk:
   # the collector existed, the route never did.
   #
-  # Declaring it here uses the agent already on the box instead of scraping a
-  # second one, so there is no extra listener and no firewall rule. Metric
+  # Declaring it here uses the agent already on the box, so there is no extra
+  # listener and no firewall rule. It carries no hardware-sensor group: fan and
+  # temperature series come from the opt-in in_node_exporter source below, which
+  # scrapes the local node_exporter for exactly those series. Metric
   # events carry __criblMetrics; the Splunk HEC destination serialises them in
   # metric format and the per-index token lands them in the os_metrics metric
   # index without a pipeline.
@@ -84,6 +86,10 @@ inputs:
       # victoriametrics_rw. See cribl_edge_stream_s2s_metrics_host/port.
       - output: cribl_stream_s2s_metrics
 
+{% if cribl_edge_node_exporter_scrape_enabled | bool %}
+{% include 'inputs_node_exporter.yml.j2' %}
+
+{% endif %}
   # Splunk-HEC source for the per-WAN netmon probers (roles/netmon Telegraf
   # outputs.http). Routed to the netmon pipeline -> Splunk netmon index.
   in_netmon_hec:

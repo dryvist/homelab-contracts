@@ -158,6 +158,11 @@ jobs:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/converge_gate/failed_hosts_from_hostvars.yml
 
+      - name: Verify the cribl_edge node_exporter hardware-sensor source renders only when enabled
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/cribl_edge/node_exporter_scrape.yml
+
   test-converge-telemetry:
     name: pytest converge_telemetry callback
     runs-on: ubuntu-latest

@@ -114,6 +114,7 @@
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_traces"
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_traces_phoenix"
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_non_trace_splunk"
+    - "{{ cribl_edge_install_dir }}/local/edge/pipelines/node_exporter_hwmon"
 
 - name: Deploy Cribl Edge outputs configuration
   ansible.builtin.template:
@@ -177,6 +178,16 @@
     owner: "{{ cribl_edge_user }}"
     group: "{{ cribl_edge_group }}"
     mode: "0644"
+  notify: Restart cribl edge
+
+- name: Deploy node_exporter hardware-sensor filter pipeline
+  ansible.builtin.template:
+    src: pipelines/node_exporter_hwmon/conf.yml.j2
+    dest: "{{ cribl_edge_install_dir }}/local/edge/pipelines/node_exporter_hwmon/conf.yml"
+    owner: "{{ cribl_edge_user }}"
+    group: "{{ cribl_edge_group }}"
+    mode: "0644"
+  when: cribl_edge_node_exporter_scrape_enabled | bool
   notify: Restart cribl edge
 
 # Routes table (4.12+): the otel input sends traces to Langfuse and Phoenix

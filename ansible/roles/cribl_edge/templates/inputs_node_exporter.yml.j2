@@ -1,0 +1,37 @@
+  # Hardware sensor series (fans, temperatures) from the node's own
+  # node_exporter. System Metrics has no hwmon group, so this source makes one
+  # local HTTP scrape every cribl_edge_node_exporter_interval seconds, narrowed
+  # by the node_exporter_hwmon pipeline to the series in
+  # cribl_edge_node_exporter_keep_match. Same two legs as in_system_metrics.
+  in_node_exporter:
+    id: in_node_exporter
+    type: edge_prometheus
+    disabled: false
+    sendToRoutes: false
+    discoveryType: static
+    interval: {{ cribl_edge_node_exporter_interval }}
+    timeout: 5000
+    fieldPerMetric: false
+    targets:
+      - protocol: http
+        host: "{{ cribl_edge_node_exporter_host }}"
+        port: {{ cribl_edge_node_exporter_port }}
+        path: /metrics
+    # The target address would otherwise become the host dimension; keep it
+    # equal to the hostname the System Metrics source reports.
+    fields:
+      - name: host
+        value: "'{{ ansible_facts['hostname'] }}'"
+    persistence:
+      enable: true
+      maxDataSize: 100MB
+    connections:
+{% if (cribl_edge_hec_namespace | default('')) | length > 0 %}
+      - output: splunk_hec_os_metrics
+        pipeline: node_exporter_hwmon
+{% else %}
+      - output: splunk_hec
+        pipeline: node_exporter_hwmon
+{% endif %}
+      - output: cribl_stream_s2s_metrics
+        pipeline: node_exporter_hwmon

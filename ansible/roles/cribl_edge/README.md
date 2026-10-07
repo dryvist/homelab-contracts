@@ -17,7 +17,7 @@ queue disk at `/opt/cribl/data`.
 
 ## Role Variables
 
-All variables in `defaults/main.yml` are user-configurable.
+All variables in `defaults/main/` are user-configurable.
 
 ### Key Variables
 
@@ -30,6 +30,8 @@ All variables in `defaults/main.yml` are user-configurable.
 | `cribl_edge_gpu_mode` | disabled | System Metrics GPU group mode (disabled/basic/all/custom); set to `custom` per-host to enable |
 | `cribl_edge_gpu_per_gpu` | true | Per-GPU metric events (custom mode) |
 | `cribl_edge_gpu_detail` | false | Full/detailed GPU metric set (custom mode) |
+| `cribl_edge_node_exporter_scrape_enabled` | false | Scrape the local node_exporter for fan/temperature (hwmon) series; per-host opt-in |
+| `cribl_edge_node_exporter_keep_match` | hwmon fan/pwm/temp names | Metric-name regex kept; all other node_exporter series are dropped |
 | `cribl_edge_stream_s2s_metrics_host` | `syslog.<PROXMOX_SUBDOMAIN>` | Cribl Stream S2S metrics receiver FQDN |
 
 ## Examples

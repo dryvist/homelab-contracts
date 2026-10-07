@@ -1,0 +1,26 @@
+---
+# Hardware sensor series (fans, temperatures) scraped from the node's own
+# node_exporter by an Edge Prometheus source. Opt-in per host, off by default.
+#
+# The System Metrics source has no hardware-sensor group, so fan speed is
+# otherwise absent from Splunk and VictoriaMetrics. node_exporter's hwmon
+# collector already exposes it; this source scrapes that one local endpoint,
+# keeps only the series matched below, and sends them down the same two legs
+# as in_system_metrics (Splunk os_metrics HEC and the Stream S2S metrics
+# receiver). The node_exporter itself is installed by a separate role.
+cribl_edge_node_exporter_scrape_enabled: false
+
+# node_exporter binds to the host's primary address by default, not loopback,
+# so the target defaults to that address. Override when it is bound elsewhere.
+cribl_edge_node_exporter_host: "{{ ansible_facts['default_ipv4']['address'] }}"
+cribl_edge_node_exporter_port: 9100
+
+# Seconds between scrapes; Cribl requires an integer that divides 60.
+cribl_edge_node_exporter_interval: 30
+
+# Metric names kept (JS regex BODY matched against the whole metric name, no
+# slashes). Everything else node_exporter exposes is dropped at the pipeline.
+# Fan: speed, limits and target, plus the PWM duty. Temperature: reading and
+# its max/crit limits. chip_names maps the opaque chip label to a driver name.
+cribl_edge_node_exporter_keep_match: >-
+  ^node_hwmon_(fan_(rpm|min_rpm|max_rpm|target_rpm)|pwm|temp_(celsius|max_celsius|crit_celsius)|chip_names)$
