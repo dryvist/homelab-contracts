@@ -1,0 +1,361 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dryvist/homelab-contracts/schemas/ansible-inventory-v1.json",
+  "title": "dryvist homelab ansible_inventory contract",
+  "description": "schema_version 2.3.0. Shape of the ansible_inventory.json artifact written by dryvist/terraform-proxmox (inventory_publish.tf, local.ansible_inventory) to the S3 state backend and consumed by dryvist/ansible-proxmox, dryvist/ansible-proxmox-apps, and dryvist/ansible-splunk through the shared inventory_resolve role. v2 reconciles the schema to the REAL producer output (issue #134): the top-level keys are exactly what inventory_publish.tf emits. 2.1 adds the optional desired_state fingerprint, which is what makes \"is an apply owed?\" answerable by a consumer holding only the artifact. 2.2 adds the optional workstation_connections block and the ingress fqdn/host_aliases/tls_domains fields for shared ingress aliasing and certificate domains. 2.3 adds node capability tags. Additive keys bump the minor; breaking changes bump the major and add a versions/v<X.Y.Z>/ snapshot.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "domain",
+    "containers",
+    "vms",
+    "docker_vms",
+    "splunk_vm",
+    "constants",
+    "ingress",
+    "ingress_vip",
+    "ingress_hosts",
+    "host_services",
+    "nodes",
+    "node_storage"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "workstation_connections": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "proxman": {
+          "type": "object",
+          "required": ["url", "type", "auth_method", "credential_mount", "credential_path"],
+          "additionalProperties": false,
+          "properties": {
+            "url": { "type": "string", "pattern": "^https://[^/ ]+$" },
+            "type": { "const": "pve" },
+            "auth_method": { "const": "traditional" },
+            "credential_mount": { "type": "string", "minLength": 1 },
+            "credential_path": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "schema_version": {
+      "description": "Semantic version of this contract. Consumers fail-fast when the major differs. Emitted by terraform-proxmox inventory_publish.tf; must be '2.x.y' for this schema.",
+      "type": "string",
+      "pattern": "^2\\.\\d+\\.\\d+$",
+      "examples": ["2.3.0"]
+    },
+    "domain": {
+      "description": "Internal DNS domain for FQDN resolution (e.g. 'example.com'). MAY be empty: terraform-proxmox supports an empty domain (locals.tf falls back to a bare hostname). The ansible-proxmox-apps loader separately requires a non-empty domain at runtime, since per-node ansible_host is derived as {node-role}.{domain}.",
+      "type": "string"
+    },
+    "containers": {
+      "description": "LXC containers managed by terraform-proxmox (community.proxmox.proxmox_pct_remote connection). Map of logical key -> container metadata. May be empty ({}).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/container" }
+    },
+    "vms": {
+      "description": "VMs (SSH connection) managed by terraform-proxmox. Map of logical key -> VM metadata. May be empty ({}).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/vm" }
+    },
+    "docker_vms": {
+      "description": "Subset of vms tagged 'docker' (e.g. the CI runners host). Map of logical key -> VM metadata. May be empty ({}).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/vm" }
+    },
+    "splunk_vm": {
+      "description": "Splunk Enterprise VM (vendor-only Docker deployment). Single-key object keyed 'splunk'.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/vm" }
+    },
+    "constants": {
+      "description": "Pipeline constants from terraform-proxmox local.pipeline_constants: the single source of truth for service / syslog / netflow / notification / vector-DB and other port families plus their routing maps, surfaced to consumers via the artifact. New port families are additive: additionalProperties accepts any further map (portMap or routing map), so adding one upstream does NOT force a schema major bump or break pinned consumers. The five families consumers depend on are required and strictly typed as portMap.",
+      "type": "object",
+      "required": [
+        "service_ports",
+        "syslog_ports",
+        "netflow_ports",
+        "notification_ports",
+        "vector_db_ports"
+      ],
+      "properties": {
+        "service_ports": { "$ref": "#/$defs/portMap" },
+        "syslog_ports": { "$ref": "#/$defs/portMap" },
+        "netflow_ports": { "$ref": "#/$defs/portMap" },
+        "notification_ports": { "$ref": "#/$defs/portMap" },
+        "vector_db_ports": { "$ref": "#/$defs/portMap" },
+        "ingress_ports": { "$ref": "#/$defs/portMap" },
+        "iac_platform_ports": { "$ref": "#/$defs/portMap" },
+        "honeypot_ports": { "$ref": "#/$defs/portMap" },
+        "media_ports": { "$ref": "#/$defs/portMap" },
+        "ai_log_ports": { "$ref": "#/$defs/portMap" },
+        "syslog_port_map": { "$ref": "#/$defs/routingMap" },
+        "ai_log_routing": { "$ref": "#/$defs/routingMap" }
+      },
+      "additionalProperties": { "type": "object" }
+    },
+    "ingress": {
+      "description": "Traefik HTTPS ingress route table (local.ingress): one route per fronted service UI. Consumed by the ansible-proxmox-apps traefik + technitium_dns roles. May be empty ([]).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/ingressRoute" }
+    },
+    "ingress_vip": {
+      "description": "keepalived VRRP virtual IP that fronted-service DNS records point at. Empty string when fewer than two ingress instances exist (keepalived never binds the VIP), so the technitium_dns role falls back to the single Traefik host.",
+      "type": "string",
+      "anyOf": [
+        { "const": "" },
+        { "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$" }
+      ]
+    },
+    "ingress_hosts": {
+      "description": "Advertised address of each ingress instance (the keepalived unicast_peer members): a static host IP or a DNS-first FQDN. May be empty ([]).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/ipv4OrHostname" },
+      "uniqueItems": true
+    },
+    "host_services": {
+      "description": "Host-level service config (e.g. NAS via ZFS + Samba) consumed by ansible-proxmox. Free-form per-service object so Ansible roles own validation. May be empty ({}).",
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "nodes": {
+      "description": "Proxmox cluster node inventory (non-secret identity). ansible-proxmox targets these and skips nodes where commissioned = false. May be empty ({}).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/node" }
+    },
+    "node_storage": {
+      "description": "Per-node ZFS pools/datasets/quotas for ansible-proxmox to provision; Terraform only references the datastore by id. May be empty ({}).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/nodeStorage" }
+    },
+    "desired_state": {
+      "description": "Fingerprint of the desired-state object this artifact was rendered from. An apply is the only thing that refreshes it, so a consumer comparing it against the live desired-state object learns whether an apply is owed before it converges — the one link in the pipeline with no other signal. Optional: absent on artifacts published before schema_version 2.1.0, and consumers treat absence as 'cannot check', never as 'current'.",
+      "type": "object",
+      "required": ["etag"],
+      "additionalProperties": false,
+      "properties": {
+        "etag": {
+          "description": "ETag of the desired-state object, unquoted. MAY be empty when the object store returned none, which disables the downstream check rather than failing it. No timestamp is published beside it: a consumer that can read the live object for comparison reads its last-modified from the same call, and that live value is the useful one — the artifact's own copy only ever describes the past.",
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ipv4": {
+      "type": "string",
+      "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$"
+    },
+    "ipv4OrHostname": {
+      "type": "string",
+      "description": "Static guests: IPv4 address. DHCP-first guests: hostname/FQDN (a DNS A record resolves it to the DHCP reservation).",
+      "anyOf": [
+        { "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$" },
+        { "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$" }
+      ]
+    },
+    "portMap": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "additionalProperties": false
+    },
+    "routingMap": {
+      "description": "name -> routing object (e.g. syslog_port_map, ai_log_routing). Inner objects carry Splunk index/sourcetype plus port fields; extra fields are tolerated so upstream can extend routing metadata without a schema major bump.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "container": {
+      "type": "object",
+      "required": ["vmid", "hostname", "ip", "node", "ansible_connection"],
+      "additionalProperties": false,
+      "properties": {
+        "vmid": { "type": "integer", "minimum": 100, "maximum": 999999999 },
+        "hostname": { "type": "string", "minLength": 1 },
+        "ip": { "$ref": "#/$defs/ipv4OrHostname" },
+        "mac": {
+          "type": ["string", "null"],
+          "pattern": "^([0-9a-f]{2}:){5}[0-9a-f]{2}$",
+          "description": "Deterministic locally-administered MAC for DHCP-first guests (02: prefix); null for static guests."
+        },
+        "reserved_ip": {
+          "type": ["string", "null"],
+          "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$",
+          "description": "DHCP-reservation address for DHCP-first guests (UniFi pins the MAC here; the DNS A record resolves here); null for static guests."
+        },
+        "node": { "type": "string", "minLength": 1 },
+        "ansible_connection": {
+          "type": "string",
+          "enum": ["community.proxmox.proxmox_pct_remote", "ssh", "local"]
+        },
+        "ansible_pct_vmid": { "type": ["integer", "null"], "minimum": 100, "maximum": 999999999 },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "pool_id": { "type": ["string", "null"] }
+      },
+      "if": {
+        "properties": {
+          "ansible_connection": { "const": "community.proxmox.proxmox_pct_remote" }
+        }
+      },
+      "then": {
+        "required": ["ansible_pct_vmid"],
+        "properties": {
+          "ansible_pct_vmid": { "type": "integer", "minimum": 100, "maximum": 999999999 }
+        }
+      }
+    },
+    "vm": {
+      "type": "object",
+      "required": ["vmid", "hostname", "ip", "node", "ansible_connection"],
+      "additionalProperties": false,
+      "properties": {
+        "vmid": { "type": "integer", "minimum": 100, "maximum": 999999999 },
+        "hostname": { "type": "string", "minLength": 1 },
+        "ip": { "$ref": "#/$defs/ipv4OrHostname" },
+        "mac": {
+          "type": ["string", "null"],
+          "pattern": "^([0-9a-f]{2}:){5}[0-9a-f]{2}$",
+          "description": "Deterministic locally-administered MAC for DHCP-first VMs (02: prefix); null/absent for static VMs."
+        },
+        "reserved_ip": {
+          "type": ["string", "null"],
+          "pattern": "^(\\d{1,3}\\.){3}\\d{1,3}$",
+          "description": "DHCP-reservation address for DHCP-first VMs; null/absent for static VMs."
+        },
+        "node": { "type": "string", "minLength": 1 },
+        "ansible_connection": {
+          "type": "string",
+          "enum": ["ssh", "local"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "pool_id": { "type": ["string", "null"] }
+      }
+    },
+    "ingressRoute": {
+      "type": "object",
+      "description": "One fronted service. Mirrors the inventory_publish.tf precondition: name + port > 0 + (a single-backend ip OR a load-balanced backends pool).",
+      "required": ["name", "port"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "ip": { "$ref": "#/$defs/ipv4OrHostname" },
+        "backends": {
+          "type": "array",
+          "description": "Load-balanced backend pool (apex or named route). Members are static host IPs or DNS-first FQDNs.",
+          "items": { "$ref": "#/$defs/ipv4OrHostname" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "apex": { "type": "boolean", "description": "Host rule is the base domain itself (no <name>. prefix)." },
+        "fqdn": { "$ref": "#/$defs/ipv4OrHostname", "description": "Explicit canonical frontend FQDN, overriding apex/name derivation." },
+        "host_aliases": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/ipv4OrHostname" }, "description": "Additional frontend hostnames on the same router and backend pool." },
+        "tls_domains": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/ipv4OrHostname" }, "description": "Explicit certificate names for this route, canonical name first." },
+        "scheme": { "type": "string", "enum": ["http", "https"] },
+        "insecure_tls": { "type": "boolean" },
+        "sticky": { "type": "boolean" },
+        "health_check": { "type": "boolean" },
+        "health_check_path": { "type": "string", "minLength": 1 },
+        "response_header_timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ms|s|m|h)$",
+          "description": "How long the ingress waits for this backend's response headers before answering 504, as a Go duration (Traefik responseHeaderTimeout). Omitted: the ingress default. \"0s\": no limit, for a backend that bounds its own request lifetime (an LLM router with a per-attempt timeout) and legitimately computes for minutes before its first byte."
+        }
+      },
+      "anyOf": [
+        { "required": ["ip"] },
+        { "required": ["backends"] }
+      ]
+    },
+    "node": {
+      "type": "object",
+      "required": ["role"],
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Role label used to derive the per-node management FQDN {role}.{domain}."
+        },
+        "hardware": {
+          "type": ["string", "null"],
+          "description": "Capability-neutral hardware class label; null when unset."
+        },
+        "commissioned": {
+          "type": "boolean",
+          "description": "false = declared but not yet installed; ansible-proxmox skips it."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Capability tags consumed by Ansible to derive node groups and select matching roles."
+        }
+      }
+    },
+    "nodeStorage": {
+      "type": "object",
+      "required": ["pools"],
+      "additionalProperties": false,
+      "properties": {
+        "pools": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/zfsPool" }
+        }
+      }
+    },
+    "zfsPool": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "raid": { "type": ["string", "null"], "description": "raidz1 | raidz2 | mirror (informational)." },
+        "protected": { "type": "boolean" },
+        "register": { "type": "boolean" },
+        "content": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "datasets": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/zfsDataset" }
+        }
+      }
+    },
+    "zfsDataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "quota": { "type": ["string", "null"] },
+        "mountpoint": { "type": ["string", "null"] },
+        "nfs_export": { "type": ["string", "null"] },
+        "properties": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}
