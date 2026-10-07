@@ -27,6 +27,7 @@ All variables in `defaults/main/` are user-configurable.
 | `cribl_edge_service_enabled` | true | Enable on boot |
 | `cribl_edge_listen_ports` | 1514-1518 | Syslog listener ports |
 | `cribl_edge_hec_token` | (from Doppler) | Splunk HEC auth |
+| `cribl_edge_force_restart` | false | Restart the service once this run even with no config change (pass as `-e`, never persist) |
 | `cribl_edge_gpu_mode` | disabled | System Metrics GPU group mode (disabled/basic/all/custom); set to `custom` per-host to enable |
 | `cribl_edge_gpu_per_gpu` | true | Per-GPU metric events (custom mode) |
 | `cribl_edge_gpu_detail` | false | Full/detailed GPU metric set (custom mode) |

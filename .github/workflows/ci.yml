@@ -163,6 +163,11 @@ jobs:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/cribl_edge/node_exporter_scrape.yml
 
+      - name: Verify the cribl_edge role applies its own restart before the play can end the host
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/cribl_edge/handlers_flushed.yml
+
   test-converge-telemetry:
     name: pytest converge_telemetry callback
     runs-on: ubuntu-latest
