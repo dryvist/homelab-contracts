@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.2.0",
+  "schema_version": "2.3.0",
   "domain": "example.com",
   "containers": {
     "example-static": {
@@ -183,7 +183,8 @@
     "node-1": {
       "role": "node-1",
       "hardware": "example-server",
-      "commissioned": true
+      "commissioned": true,
+      "tags": ["nvidia-gpu"]
     },
     "node-2": {
       "role": "node-2",
