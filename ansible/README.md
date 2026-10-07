@@ -20,7 +20,7 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, `ansible-servarr` |
 | `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
 | `llm_model_catalog` | Shared JSON model limits and optional GGUF artifacts | `ansible-proxmox`, `ansible-proxmox-ai`, `nix-ai` |
-| `llm_router_key_catalog` | Shared router key fields and program key dimensions | `ansible-proxmox-apps`, `ansible-proxmox-ai` |
+| `llm_router_key_catalog` | Shared benchmark key field | `ansible-proxmox-apps`, `ansible-proxmox-ai` |
 
 ## Plugins
 
@@ -73,9 +73,9 @@ roles:
   - role: llm_model_store_seed # reads llm_model_catalog_models
 ```
 
-`llm_router_key_catalog` loads the router's benchmark and program key fields
-from its shared JSON data. The OpenBao generator and router role use the same
-field names, while the router projects only currently reachable targets:
+`llm_router_key_catalog` loads the router's benchmark key field from its shared
+JSON data. The OpenBao generator uses this field under `benchmark`; request
+attribution stays in the router's existing request metadata:
 
 ```yaml
 roles:

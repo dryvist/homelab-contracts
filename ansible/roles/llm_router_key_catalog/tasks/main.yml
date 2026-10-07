@@ -4,33 +4,11 @@
     file: "{{ role_path }}/files/router-key-catalog.json"
     name: llm_router_key_catalog_facts
 
-- name: Expand the program key dimensions into aliases and fields
-  ansible.builtin.set_fact:
-    llm_router_key_catalog_facts: >-
-      {%- set ns = namespace(keys=[]) -%}
-      {%- for runner in llm_router_key_catalog_facts.llm_router_key_catalog_source.program.runners -%}
-      {%- for purpose in llm_router_key_catalog_facts.llm_router_key_catalog_source.program.purposes -%}
-      {%- for target in llm_router_key_catalog_facts.llm_router_key_catalog_source.program.targets -%}
-      {%- set alias = 'program-' ~ runner ~ '-' ~ purpose ~ '-' ~ target -%}
-      {%- set field = (alias | regex_replace('[^a-zA-Z0-9_]', '_')) ~ '_llm_router_key' -%}
-      {%- set ns.keys = ns.keys + [{'runner': runner, 'purpose': purpose,
-           'target': target, 'alias': alias, 'field': field}] -%}
-      {%- endfor -%}
-      {%- endfor -%}
-      {%- endfor -%}
-      {{ llm_router_key_catalog_facts | combine({'program_key_definitions': ns.keys}, recursive=true) }}
-
-- name: Publish the shared consumer projections
+- name: Publish the single benchmark field for OpenBao
   ansible.builtin.set_fact:
     llm_router_key_catalog_facts: >-
       {{ llm_router_key_catalog_facts | combine({
-           'program_key_catalog': {
-             'benchmark': llm_router_key_catalog_facts.program_key_definitions
-                          | map(attribute='field') | list
-           },
            'openbao_router_key_catalog': {
              'benchmark': [llm_router_key_catalog_facts.llm_router_key_catalog_source.benchmark_field]
-                          + (llm_router_key_catalog_facts.program_key_definitions
-                             | map(attribute='field') | list)
            }
          }, recursive=true) }}

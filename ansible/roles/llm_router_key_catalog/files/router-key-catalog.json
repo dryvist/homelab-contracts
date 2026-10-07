@@ -1,57 +1,5 @@
 {
   "llm_router_key_catalog_source": {
-    "benchmark_field": "benchmark_llm_router_key",
-    "program": {
-      "runners": [
-        "lm-eval",
-        "langfuse-experiments",
-        "dify-workflows",
-        "promptfoo",
-        "claude-code",
-        "qwen-code",
-        "zcode",
-        "codex",
-        "opencode",
-        "hermes-default",
-        "hermes-splunk-admin",
-        "hermes-homelab-admin",
-        "hermes-github-maint"
-      ],
-      "purposes": [
-        "benchmark",
-        "live"
-      ],
-      "targets": [
-        "large",
-        "hermes-router",
-        "light",
-        "codex-subscription",
-        "codex-api",
-        "cpu-moe",
-        "cpu-9b",
-        "vllm",
-        "hermes-local",
-        "opencode",
-        "hermes-cloud",
-        "hermes-cloud-router",
-        "hermes-cloud-openrouter",
-        "hermes-cloud-alibaba",
-        "hermes-cloud-gemini",
-        "openrouter",
-        "zai",
-        "gpu",
-        "hermes-default",
-        "hermes-local-4080",
-        "nvidia/nemotron-3-ultra-550b-a55b:free",
-        "minimax/minimax-m3",
-        "minimax/minimax-m2.5",
-        "deepseek/deepseek-v4-flash",
-        "opencode/glm-5.3-flash",
-        "opencode/minimax-m3",
-        "z-ai/glm-5.3-flash",
-        "zai-glm-4.5-flash",
-        "zai-glm-5.3-flash"
-      ]
-    }
+    "benchmark_field": "benchmark_llm_router_key"
   }
 }
