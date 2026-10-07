@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: llm_router_key_catalog
+  author: JacobPEvans
+  description: >-
+    Single-source field names and dimensions for generated LiteLLM router
+    keys shared by the OpenBao generator and router consumers.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - llm
+    - ansible
+dependencies: []

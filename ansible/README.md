@@ -20,6 +20,7 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, `ansible-servarr` |
 | `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
 | `llm_model_catalog` | Shared JSON model limits and optional GGUF artifacts | `ansible-proxmox`, `ansible-proxmox-ai`, `nix-ai` |
+| `llm_router_key_catalog` | Shared router key fields and program key dimensions | `ansible-proxmox-apps`, `ansible-proxmox-ai` |
 
 ## Plugins
 
@@ -70,6 +71,16 @@ file, making it available to every role that runs after it in the same play:
 roles:
   - role: dryvist.homelab.llm_model_catalog
   - role: llm_model_store_seed # reads llm_model_catalog_models
+```
+
+`llm_router_key_catalog` loads the router's benchmark and program key fields
+from its shared JSON data. The OpenBao generator and router role use the same
+field names, while the router projects only currently reachable targets:
+
+```yaml
+roles:
+  - role: dryvist.homelab.llm_router_key_catalog
+  - role: openbao # reads llm_router_key_catalog_facts.openbao_router_key_catalog
 ```
 
 Reference the callback plugin the same way, in `ansible.cfg`:
