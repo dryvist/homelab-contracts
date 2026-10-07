@@ -238,6 +238,23 @@
     enabled: true
     daemon_reload: true
 
+# Run the queued restart here, inside this role. A later role in the same play
+# (cribl_packs) ends the host with `meta: end_host` for hosts outside the
+# cribl_edge group, and ansible discards pending handlers when a host ends
+# early, so every config change on those hosts was written to disk and never
+# loaded. The service was already started above, so the unit exists.
+- name: Apply queued Cribl Edge restart before the play can end the host
+  ansible.builtin.meta: flush_handlers
+
+# One-shot recovery for a node whose config changed while the restart was being
+# dropped: the files already match, so nothing notifies the handler. Run with
+# `-e cribl_edge_force_restart=true` once, then leave it unset.
+- name: Restart Cribl Edge on request
+  ansible.builtin.systemd:
+    name: "{{ cribl_edge_service_name }}"
+    state: restarted
+  when: cribl_edge_force_restart | bool
+
 - name: Verify Cribl Edge service is running
   ansible.builtin.systemd:
     name: "{{ cribl_edge_service_name }}"

@@ -1,0 +1,23 @@
+---
+# Contract: the role applies its queued restart itself. cribl_packs runs next
+# in the same play and ends the host (`meta: end_host`) on hosts outside the
+# cribl_edge group; ansible drops pending handlers when a host ends early, so
+# a restart left to end-of-play never happens there. Asserts a flush_handlers
+# step follows every task that notifies the restart handler.
+- name: Check the cribl_edge role flushes its own handlers
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    role_dir: "{{ playbook_dir }}/../../ansible/roles/cribl_edge"
+  tasks:
+    - name: Read the role tasks
+      ansible.builtin.set_fact:
+        text: "{{ lookup('ansible.builtin.file', role_dir ~ '/tasks/main.yml') }}"
+    - name: Assert a flush follows the last notifying task
+      ansible.builtin.assert:
+        that:
+          - "text.count('notify: Restart cribl edge') > 0"
+          - "text.count('meta: flush_handlers') == 1"
+          - "text.rfind('meta: flush_handlers') > text.rfind('notify: Restart cribl edge')"
+        fail_msg: "tasks/main.yml needs one flush_handlers step after the last notify"
