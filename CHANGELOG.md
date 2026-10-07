@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.6.0](https://github.com/dryvist/homelab-contracts/compare/v3.5.2...v3.6.0) (2026-10-07)
+
+
+### Features
+
+* **cribl_edge:** opt-in scrape of local node_exporter hardware sensors ([#125](https://github.com/dryvist/homelab-contracts/issues/125)) ([469cd58](https://github.com/dryvist/homelab-contracts/commit/469cd58dbf3c8d94eab341c1dceff0a41354aede))
+
 ## [3.5.2](https://github.com/dryvist/homelab-contracts/compare/v3.5.1...v3.5.2) (2026-10-06)
 
 
