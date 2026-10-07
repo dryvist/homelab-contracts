@@ -1,0 +1,127 @@
+---
+- name: Collect Stage 0 entries
+  ansible.builtin.set_fact:
+    stage0_catalog_entries: >-
+      {{ llm_model_catalog_models
+         | selectattr('stage0', 'defined')
+         | list }}
+
+- name: The Stage 0 catalog contains the selected serving identities
+  ansible.builtin.assert:
+    that:
+      - >-
+        (stage0_catalog_entries | map(attribute='name') | sort | list)
+        ==
+        ['convaiinnovations/laya-typed-decisions',
+         'manjunathshiva/opendecider-nano',
+         'nativ-community/embeddinggemma-2-mxfp8']
+    fail_msg: >-
+      The Stage 0 catalog entries must match the selected serving identities.
+
+- name: Every Stage 0 checkpoint carries an immutable HF identity
+  ansible.builtin.assert:
+    that:
+      - item.stage0.source_checkpoint.repo_id is string
+      - item.stage0.source_checkpoint.repo_id | length > 0
+      - item.stage0.source_checkpoint.revision is match('^[0-9a-f]{40}$')
+      - item.stage0.source_checkpoint.pipeline_tag is string
+      - item.stage0.source_checkpoint.pipeline_tag | length > 0
+      - item.stage0.source_checkpoint.license is string
+      - item.stage0.source_checkpoint.license | length > 0
+      - item.max_parallel_requests == 4
+      - item.stage0.serving.format is string
+      - item.stage0.serving.runtime is string
+      - item.stage0.serving.endpoint is string
+    fail_msg: >-
+      {{ item.name }} has incomplete Stage 0 checkpoint, serving, or
+      admission-cap metadata.
+    quiet: true
+  loop: "{{ stage0_catalog_entries }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Stage 0 checkpoint pins and task tags match the selected sources
+  ansible.builtin.assert:
+    that:
+      - entry.stage0.source_checkpoint.repo_id == item.repo_id
+      - entry.stage0.source_checkpoint.revision == item.revision
+      - entry.stage0.source_checkpoint.pipeline_tag == item.pipeline_tag
+      - entry.stage0.source_checkpoint.license == 'apache-2.0'
+    fail_msg: >-
+      {{ item.name }} does not match its selected immutable HF checkpoint.
+    quiet: true
+  vars:
+    entry: >-
+      {{ stage0_catalog_entries
+         | selectattr('name', 'equalto', item.name)
+         | first }}
+  loop:
+    - name: nativ-community/embeddinggemma-2-mxfp8
+      repo_id: google/embeddinggemma-2
+      revision: 914f7f89142e33e77833254d9c9b90c3cef7303b
+      pipeline_tag: feature-extraction
+    - name: manjunathshiva/opendecider-nano
+      repo_id: manjunathshiva/opendecider-nano
+      revision: 10c4b349f63d28186a46eacb6478cfce29c488e8
+      pipeline_tag: zero-shot-classification
+    - name: convaiinnovations/laya-typed-decisions
+      repo_id: convaiinnovations/laya-typed-decisions
+      revision: e929ae5cf69bc34259cd2f95c9e91145b818b1f0
+      pipeline_tag: text-classification
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: EmbeddingGemma records its exact MLX conversion and server contract
+  ansible.builtin.assert:
+    that:
+      - entry.stage0.serving.format == 'mlx-mxfp8'
+      - entry.stage0.serving.runtime == 'mlx-vlm'
+      - >-
+        entry.stage0.serving.runtime_revision
+        == '3d87e88402f307efbf68e568971aa887ee7d9ed0'
+      - entry.stage0.serving.endpoint == '/v1/embeddings'
+      - entry.stage0.serving.converted_artifact.repo_id == entry.name
+      - >-
+        entry.stage0.serving.converted_artifact.revision
+        == 'a35a0bd2132265bc29a9130a1b2bcd545ad4b765'
+      - entry.stage0.serving.converted_artifact.license == 'apache-2.0'
+      - >-
+        entry.stage0.serving.converted_artifact.derived_from.repo_id
+        == entry.stage0.source_checkpoint.repo_id
+      - >-
+        entry.stage0.serving.converted_artifact.derived_from.revision
+        == entry.stage0.source_checkpoint.revision
+    fail_msg: >-
+      EmbeddingGemma must identify the exact source, conversion, runtime,
+      and embeddings endpoint.
+    quiet: true
+  vars:
+    entry: >-
+      {{ stage0_catalog_entries
+         | selectattr('name', 'equalto',
+             'nativ-community/embeddinggemma-2-mxfp8')
+         | first }}
+
+- name: >-
+    Decision checkpoints record CPU reference servers without Metal
+    conversions
+  ansible.builtin.assert:
+    that:
+      - item.stage0.serving.format == 'transformers'
+      - item.stage0.serving.api == 'system-one'
+      - item.stage0.serving.endpoint == '/v1/systemone'
+      - item.stage0.serving.reference_device == 'cpu'
+      - item.stage0.serving.artifact_status == 'source-only'
+      - item.stage0.serving.converted_artifact is not defined
+      - item.stage0.serving.metal_artifact is not defined
+    fail_msg: >-
+      {{ item.name }} must remain a source-only CPU reference path without
+      a Metal conversion claim.
+    quiet: true
+  loop: >-
+    {{ stage0_catalog_entries
+       | rejectattr('name', 'equalto',
+           'nativ-community/embeddinggemma-2-mxfp8')
+       | list }}
+  loop_control:
+    label: "{{ item.name }}"
