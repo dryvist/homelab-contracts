@@ -1,0 +1,57 @@
+---
+# Contract for the opt-in node_exporter hardware-sensor source: absent by
+# default, and when enabled it scrapes the one local target, filters to the
+# hwmon series, and feeds both metrics legs. Renders the real templates.
+- name: Render cribl_edge inputs and the hwmon pipeline
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    role_dir: "{{ playbook_dir }}/../../ansible/roles/cribl_edge"
+    cribl_edge_syslog_port_mappings: {}
+    cribl_edge_syslog_routing: {}
+    cribl_edge_hec_namespace: ns
+    cribl_edge_hec_input_port: 8088
+    cribl_edge_hec_input_token: ""
+    cribl_edge_unifi_ids_enabled: false
+    cribl_edge_langfuse_public_key: ""
+    cribl_edge_phoenix_api_key: ""
+    cribl_edge_gpu_mode: disabled
+    cribl_edge_gpu_per_gpu: true
+    cribl_edge_gpu_detail: false
+    cribl_edge_node_exporter_host: 192.0.2.10
+    cribl_edge_node_exporter_port: 9100
+    cribl_edge_node_exporter_interval: 30
+    cribl_edge_node_exporter_keep_match: >-
+      ^node_hwmon_(fan_(rpm|min_rpm|max_rpm|target_rpm)|pwm|temp_(celsius|max_celsius|crit_celsius)|chip_names)$
+    ansible_facts:
+      hostname: gpu-node
+  tasks:
+    - name: Render the inputs with the scrape on, and the filter pipeline
+      ansible.builtin.set_fact:
+        pipe: "{{ lookup('ansible.builtin.template', role_dir ~ '/templates/pipelines/node_exporter_hwmon/conf.yml.j2') | from_yaml }}"
+        inputs_on: "{{ lookup('ansible.builtin.template', role_dir ~ '/templates/inputs.yml.j2') | from_yaml }}"
+      vars:
+        cribl_edge_node_exporter_scrape_enabled: true
+    - name: Render the inputs with the scrape off
+      ansible.builtin.set_fact:
+        inputs_off: "{{ lookup('ansible.builtin.template', role_dir ~ '/templates/inputs.yml.j2') | from_yaml }}"
+      vars:
+        cribl_edge_node_exporter_scrape_enabled: false
+    - name: Assert the contract
+      ansible.builtin.assert:
+        that:
+          - "'in_node_exporter' not in inputs_off.inputs"
+          - "'in_system_metrics' in inputs_off.inputs"
+          - "'in_node_exporter' in inputs_on.inputs"
+          - inputs_on.inputs.in_node_exporter.type == 'edge_prometheus'
+          - inputs_on.inputs.in_node_exporter.targets | length == 1
+          - inputs_on.inputs.in_node_exporter.targets[0].host == '192.0.2.10'
+          - inputs_on.inputs.in_node_exporter.targets[0].port == 9100
+          - inputs_on.inputs.in_node_exporter.fields[0].value == "'gpu-node'"
+          - inputs_on.inputs.in_node_exporter.connections | map(attribute='output') | sort == ['cribl_stream_s2s_metrics', 'splunk_hec_os_metrics']
+          - inputs_on.inputs.in_node_exporter.connections | map(attribute='pipeline') | unique | list == ['node_exporter_hwmon']
+          - pipe.functions[0].id == 'drop'
+          - "'node_hwmon_fan_rpm' is match(cribl_edge_node_exporter_keep_match)"
+          - "'node_cpu_seconds_total' is not match(cribl_edge_node_exporter_keep_match)"
+          - "pipe.functions[0].filter is search('node_hwmon_')"
