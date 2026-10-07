@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [3.6.1](https://github.com/dryvist/homelab-contracts/compare/v3.6.0...v3.6.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* **cribl_edge:** apply the queued restart before cribl_packs ends the host ([#127](https://github.com/dryvist/homelab-contracts/issues/127)) ([b6ca769](https://github.com/dryvist/homelab-contracts/commit/b6ca7699875cc885a749cb3e7003fc0a718aa981))
+
 ## [3.6.0](https://github.com/dryvist/homelab-contracts/compare/v3.5.2...v3.6.0) (2026-10-07)
 
 
