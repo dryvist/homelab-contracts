@@ -11,58 +11,17 @@
         name: llm_router_key_catalog
         public: true
 
-    - name: Benchmark field and program dimensions are declared
+    - name: The benchmark field is declared
       ansible.builtin.assert:
         that:
           - llm_router_key_catalog_facts.llm_router_key_catalog_source.benchmark_field == 'benchmark_llm_router_key'
-          - llm_router_key_catalog_facts.llm_router_key_catalog_source.program.runners | length > 0
-          - llm_router_key_catalog_facts.llm_router_key_catalog_source.program.purposes == ['benchmark', 'live']
-          - llm_router_key_catalog_facts.llm_router_key_catalog_source.program.targets | length > 0
-          - >-
-            (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.runners | unique | length)
-            == (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.runners | length)
-          - >-
-            (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.purposes | unique | length)
-            == (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.purposes | length)
-          - >-
-            (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.targets | unique | length)
-            == (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.targets | length)
+          - llm_router_key_catalog_facts.openbao_router_key_catalog.keys() | list == ['benchmark']
+          - llm_router_key_catalog_facts.openbao_router_key_catalog.benchmark == ['benchmark_llm_router_key']
+          - llm_router_key_catalog_facts.program_key_definitions is not defined
+          - llm_router_key_catalog_facts.program_key_catalog is not defined
 
-    - name: Collect invalid program definitions
-      ansible.builtin.set_fact:
-        _invalid_program_definitions: >-
-          {%- set ns = namespace(items=[]) -%}
-          {%- for item in llm_router_key_catalog_facts.program_key_definitions -%}
-          {%- set expected_alias = 'program-' ~ item.runner ~ '-' ~ item.purpose ~ '-' ~ item.target -%}
-          {%- set expected_field = (expected_alias | regex_replace('[^a-zA-Z0-9_]', '_')) ~ '_llm_router_key' -%}
-          {%- if item.alias != expected_alias or item.field != expected_field
-                or item.runner not in llm_router_key_catalog_facts.llm_router_key_catalog_source.program.runners
-                or item.purpose not in llm_router_key_catalog_facts.llm_router_key_catalog_source.program.purposes
-                or item.target not in llm_router_key_catalog_facts.llm_router_key_catalog_source.program.targets -%}
-          {%- set ns.items = ns.items + [item.alias] -%}
-          {%- endif -%}
-          {%- endfor -%}
-          {{ ns.items }}
-
-    - name: Generated identifiers are unique, complete, and shared by both consumers
+    - name: No program key projections are published
       ansible.builtin.assert:
         that:
-          - _invalid_program_definitions | length == 0
-          - >-
-            (llm_router_key_catalog_facts.program_key_definitions | map(attribute='alias') | unique | length)
-            == (llm_router_key_catalog_facts.program_key_definitions | length)
-          - >-
-            (llm_router_key_catalog_facts.program_key_definitions | map(attribute='field') | unique | length)
-            == (llm_router_key_catalog_facts.program_key_definitions | length)
-          - >-
-            llm_router_key_catalog_facts.program_key_definitions | length
-            == (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.runners | length)
-               * (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.purposes | length)
-               * (llm_router_key_catalog_facts.llm_router_key_catalog_source.program.targets | length)
-          - >-
-            llm_router_key_catalog_facts.program_key_catalog.benchmark
-            == (llm_router_key_catalog_facts.program_key_definitions | map(attribute='field') | list)
-          - >-
-            llm_router_key_catalog_facts.openbao_router_key_catalog.benchmark
-            == [llm_router_key_catalog_facts.llm_router_key_catalog_source.benchmark_field]
-               + (llm_router_key_catalog_facts.program_key_catalog.benchmark)
+          - llm_router_key_catalog_facts.openbao_router_key_catalog.benchmark | length == 1
+          - llm_router_key_catalog_facts.openbao_router_key_catalog.benchmark[0] == 'benchmark_llm_router_key'
