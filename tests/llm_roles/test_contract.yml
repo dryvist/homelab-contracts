@@ -30,7 +30,9 @@
     - name: Map model concurrency is projected from the shared catalog
       ansible.builtin.assert:
         that:
-          - item.value.id in (llm_model_catalog_models | map(attribute='name') | list)
+          - >-
+            item.value.id in
+            (llm_model_catalog_models | map(attribute='name') | list)
           - >-
             item.value.concurrency
             == (llm_model_catalog_models
@@ -51,11 +53,71 @@
     - name: The embedding role stays unbound until consumers route task types
       ansible.builtin.assert:
         that: llm_roles.roles.embed.model is none
-        fail_msg: The generic model-role map must not route embeddings through chat serving.
+        fail_msg: >-
+          The generic model-role map must not route embeddings through chat
+          serving.
+
+    - name: Stage 0 semantic model IDs resolve through the catalog
+      ansible.builtin.assert:
+        that:
+          - >-
+            llm_roles.models.stage0_embedding.id
+            == 'nativ-community/embeddinggemma-2-mxfp8'
+          - >-
+            llm_roles.models.stage0_systemone_opendecider.id
+            == 'manjunathshiva/opendecider-nano'
+          - >-
+            llm_roles.models.stage0_systemone_laya.id
+            == 'convaiinnovations/laya-typed-decisions'
+          - >-
+            llm_roles.roles.stage0_embedding.model == 'stage0_embedding'
+          - >-
+            llm_roles.roles.stage0_systemone_opendecider.model
+            == 'stage0_systemone_opendecider'
+          - >-
+            llm_roles.roles.stage0_systemone_laya.model
+            == 'stage0_systemone_laya'
+          - llm_roles.roles.stage0_embedding.egress == 'none'
+          - >-
+            llm_roles.roles.stage0_systemone_opendecider.egress == 'none'
+          - llm_roles.roles.stage0_systemone_laya.egress == 'none'
+          - llm_roles.models.stage0_embedding.concurrency == 4
+          - llm_roles.models.stage0_systemone_opendecider.concurrency == 4
+          - llm_roles.models.stage0_systemone_laya.concurrency == 4
+        fail_msg: >-
+          Stage 0 semantic model-role IDs must resolve to their catalog entry
+          and admission cap.
+
+    - name: Stage 0 models stay on demand for both Mac host classes
+      ansible.builtin.assert:
+        that:
+          - "'stage0_embedding' in llm_roles.hosts.workstation.swap"
+          - "'stage0_systemone_opendecider' in llm_roles.hosts.workstation.swap"
+          - "'stage0_systemone_laya' in llm_roles.hosts.workstation.swap"
+          - "'stage0_embedding' in llm_roles.hosts.server.swap"
+          - "'stage0_systemone_opendecider' in llm_roles.hosts.server.swap"
+          - "'stage0_systemone_laya' in llm_roles.hosts.server.swap"
+          - "'stage0_embedding' not in llm_roles.hosts.workstation.resident"
+          - >-
+            'stage0_systemone_opendecider' not in
+            llm_roles.hosts.workstation.resident
+          - >-
+            'stage0_systemone_laya' not in
+            llm_roles.hosts.workstation.resident
+          - "'stage0_embedding' not in llm_roles.hosts.server.resident"
+          - >-
+            'stage0_systemone_opendecider' not in
+            llm_roles.hosts.server.resident
+          - "'stage0_systemone_laya' not in llm_roles.hosts.server.resident"
+        fail_msg: >-
+          Stage 0 models must remain in the on-demand swap set for each Mac
+          host class, not in the always-resident set.
 
     - name: Negative - a role pointing at an unknown model must fail the check
       vars:
-        map: "{{ lookup('ansible.builtin.file', 'bad-unknown-model.json') | from_json }}"
+        map: >-
+          {{ lookup('ansible.builtin.file', 'bad-unknown-model.json')
+             | from_json }}
       block:
         - name: Run the check against the bad map
           ansible.builtin.include_tasks: check_refs.yml
@@ -65,4 +127,6 @@
       rescue:
         - name: Distinguish the expected rejection from the sentinel failure
           ansible.builtin.assert:
-            that: "'accepted a role' not in ansible_failed_result.msg | default('')"
+            that: >-
+              'accepted a role' not in ansible_failed_result.msg
+              | default('')

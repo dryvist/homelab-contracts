@@ -30,10 +30,20 @@ checkpoint it was converted from, its format, runtime revision, and endpoint.
 The decision checkpoints record their CPU reference server and System One API;
 they do not claim a converted Metal artifact.
 
-The `embed` role remains unbound in `model-roles.json` until consumers add
-task-aware routing that sends embedding requests to an embeddings endpoint and
-keeps them separate from chat completions. That consumer change belongs in
-`nix-ai` and its local LiteLLM route compiler.
+Each Stage 0 model declares `max_parallel_requests: 4` as its consumer-side
+in-flight admission cap. This is a routing default accepted by the current
+consumer limit, not measured service capacity or throughput. Load clients may
+run the requested closed-loop concurrency ladder above this cap; record queued
+requests and the cap with each result.
+
+The model map's `stage0_embedding`, `stage0_systemone_opendecider`, and
+`stage0_systemone_laya` IDs resolve to the three catalog entries. Consumers can
+use these stable IDs without copying physical model IDs into host/provider
+configuration. Their `egress` values are declared classifications; this
+catalog does not enforce endpoint fallback policy. Consumers must verify their
+local routes in their own rendered-configuration tests. The generic `embed`
+role remains unbound until its consumer sends embedding tasks to the embedding
+endpoint rather than chat completions.
 
 Checksums are never stored here: the sha256 for a download is read from
 HuggingFace's own LFS blob metadata at run time, pinned against the exact

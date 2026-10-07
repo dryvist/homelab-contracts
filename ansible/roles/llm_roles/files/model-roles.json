@@ -3,7 +3,10 @@
   "models": {
     "qwen38-27b": { "id": "mlx-community/Qwen3.8-27B-4bit", "dense": true },
     "mimo-9b": { "id": "mlx-community/MiMo-V2.6-Distill-Qwen-9B-OptiQ-4bit" },
-    "unlimited-ocr": { "id": "mlx-community/Unlimited-OCR-bf16" }
+    "unlimited-ocr": { "id": "mlx-community/Unlimited-OCR-bf16" },
+    "stage0_embedding": { "id": "nativ-community/embeddinggemma-2-mxfp8" },
+    "stage0_systemone_opendecider": { "id": "manjunathshiva/opendecider-nano" },
+    "stage0_systemone_laya": { "id": "convaiinnovations/laya-typed-decisions" }
   },
   "roles": {
     "best": { "model": "qwen38-27b", "egress": "zdr" },
@@ -16,10 +19,25 @@
     "judge": { "model": "mimo-9b", "egress": "estate" },
     "recorder": { "model": "mimo-9b", "egress": "estate" },
     "ocr": { "model": "unlimited-ocr", "egress": "none" },
-    "embed": { "model": null, "egress": "none" }
+    "embed": { "model": null, "egress": "none" },
+    "stage0_embedding": { "model": "stage0_embedding", "egress": "none" },
+    "stage0_systemone_opendecider": { "model": "stage0_systemone_opendecider", "egress": "none" },
+    "stage0_systemone_laya": { "model": "stage0_systemone_laya", "egress": "none" }
   },
   "hosts": {
-    "workstation": { "resident": ["qwen38-27b", "mimo-9b"], "swap": [] },
-    "server": { "resident": ["qwen38-27b", "mimo-9b"], "swap": ["unlimited-ocr"], "roles": {} }
+    "workstation": {
+      "resident": ["qwen38-27b", "mimo-9b"],
+      "swap": ["stage0_embedding", "stage0_systemone_opendecider", "stage0_systemone_laya"]
+    },
+    "server": {
+      "resident": ["qwen38-27b", "mimo-9b"],
+      "swap": [
+        "unlimited-ocr",
+        "stage0_embedding",
+        "stage0_systemone_opendecider",
+        "stage0_systemone_laya"
+      ],
+      "roles": {}
+    }
   }
 }
