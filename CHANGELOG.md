@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.1.0](https://github.com/dryvist/homelab-contracts/compare/v5.0.0...v5.1.0) (2026-10-08)
+
+
+### Features
+
+* **catalog:** add hermes-cloud GLM 5.3 flash entries ([a2996df](https://github.com/dryvist/homelab-contracts/commit/a2996df67bb7347d07965ff8ac256c5cfd4477f5))
+* **catalog:** add hermes-cloud GLM 5.3 flash entries ([064fa0d](https://github.com/dryvist/homelab-contracts/commit/064fa0d037aed52ffdaa993fa21333308d52aa7b))
+
 ## [5.0.0](https://github.com/dryvist/homelab-contracts/compare/v4.0.0...v5.0.0) (2026-10-07)
 
 
