@@ -27,16 +27,11 @@
   "hosts": {
     "workstation": {
       "resident": ["qwen38-27b", "mimo-9b"],
-      "swap": ["stage0_embedding", "stage0_systemone_opendecider", "stage0_systemone_laya"]
+      "swap": []
     },
     "server": {
       "resident": ["qwen38-27b", "mimo-9b"],
-      "swap": [
-        "unlimited-ocr",
-        "stage0_embedding",
-        "stage0_systemone_opendecider",
-        "stage0_systemone_laya"
-      ],
+      "swap": ["unlimited-ocr"],
       "roles": {}
     }
   }
