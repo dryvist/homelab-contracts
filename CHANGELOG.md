@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.1.1](https://github.com/dryvist/homelab-contracts/compare/v5.1.0...v5.1.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **roles:** keep Stage 0 models out of the Mac host sets ([8c9b31a](https://github.com/dryvist/homelab-contracts/commit/8c9b31a4fbacd26ca62b79c9705d9eccfef6ba20))
+* **roles:** keep Stage 0 models out of the Mac host sets ([1471b37](https://github.com/dryvist/homelab-contracts/commit/1471b37278154c02ebffcea62439b65a923a7245))
+
 ## [5.1.0](https://github.com/dryvist/homelab-contracts/compare/v5.0.0...v5.1.0) (2026-10-08)
 
 
