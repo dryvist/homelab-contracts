@@ -88,30 +88,16 @@
           Stage 0 semantic model-role IDs must resolve to their catalog entry
           and admission cap.
 
-    - name: Stage 0 models stay on demand for both Mac host classes
+    - name: No Mac host class keeps a Stage 0 model
       ansible.builtin.assert:
         that:
-          - "'stage0_embedding' in llm_roles.hosts.workstation.swap"
-          - "'stage0_systemone_opendecider' in llm_roles.hosts.workstation.swap"
-          - "'stage0_systemone_laya' in llm_roles.hosts.workstation.swap"
-          - "'stage0_embedding' in llm_roles.hosts.server.swap"
-          - "'stage0_systemone_opendecider' in llm_roles.hosts.server.swap"
-          - "'stage0_systemone_laya' in llm_roles.hosts.server.swap"
-          - "'stage0_embedding' not in llm_roles.hosts.workstation.resident"
           - >-
-            'stage0_systemone_opendecider' not in
-            llm_roles.hosts.workstation.resident
-          - >-
-            'stage0_systemone_laya' not in
-            llm_roles.hosts.workstation.resident
-          - "'stage0_embedding' not in llm_roles.hosts.server.resident"
-          - >-
-            'stage0_systemone_opendecider' not in
-            llm_roles.hosts.server.resident
-          - "'stage0_systemone_laya' not in llm_roles.hosts.server.resident"
+            (llm_roles.hosts[item].resident + llm_roles.hosts[item].swap)
+            | select('match', '^stage0_') | list | length == 0
         fail_msg: >-
-          Stage 0 models must remain in the on-demand swap set for each Mac
-          host class, not in the always-resident set.
+          Host class {{ item }} keeps a Stage 0 model in its resident or swap
+          set.
+      loop: "{{ llm_roles.hosts | list }}"
 
     - name: Negative - a role pointing at an unknown model must fail the check
       vars:
