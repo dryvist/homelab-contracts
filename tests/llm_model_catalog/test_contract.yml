@@ -120,7 +120,7 @@
       loop_control:
         label: "{{ item.name }}"
 
-    - name: llama.cpp Vulkan profile stream timeouts are positive integers
+    - name: Llama.cpp Vulkan profile stream timeouts are positive integers
       ansible.builtin.assert:
         that:
           - item.profiles.llama_cpp_vulkan.stream_timeout is integer
