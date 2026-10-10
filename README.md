@@ -131,9 +131,11 @@ docs/
   assets/                      # Mermaid `.mmd` sources + rendered `.svg`
 flake.nix                      # packages.flow-lock + dev shell (consumers pin by tag)
 .github/workflows/
-  ci.yml                       # validate.sh + semver gate + shellcheck + bats + ansible-lint
+  ci-gate.yml                  # Thin caller of the org CI gate (profile: ansible)
+  ci.yml                       # Schema checks, shape-snapshot gate, shellcheck, bats, ansible-lint, role contract tests
   release-please.yml           # release-please managed CHANGELOG + tags
   mermaid-render-check.yml     # Re-renders .mmd; fails PR on diff
+  review-thread-resolver.yml   # Resolves stale bot review threads on PR events
 ```
 
 ## How to bump the schema
