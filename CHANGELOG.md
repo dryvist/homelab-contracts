@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.3.0](https://github.com/dryvist/homelab-contracts/compare/v5.2.0...v5.3.0) (2026-10-10)
+
+
+### Features
+
+* **llm-model-catalog:** add the codex-ci-model entry ([#146](https://github.com/dryvist/homelab-contracts/issues/146)) ([92c5de3](https://github.com/dryvist/homelab-contracts/commit/92c5de3981af846d37163bcc41486006028bd0c8))
+
 ## [5.2.0](https://github.com/dryvist/homelab-contracts/compare/v5.1.1...v5.2.0) (2026-10-10)
 
 
