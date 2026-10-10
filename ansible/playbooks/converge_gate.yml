@@ -12,13 +12,8 @@
     - always
   vars:
     ansible_become: false
-  tasks:
-    # include_role resolves the name at run time, so the role is found from the
-    # source tree and from an installed copy of the collection alike. apply
-    # keeps the role's tasks running under --tags.
-    - name: Run the shared gate role
-      ansible.builtin.include_role:
-        name: converge_gate
-        apply:
-          tags:
-            - always
+  roles:
+    # A playbook under a collection's playbooks/ directory runs in that
+    # collection's context (as if `collections: [dryvist.homelab]` were set
+    # on it), so the bare role name resolves without an FQCN.
+    - role: converge_gate
