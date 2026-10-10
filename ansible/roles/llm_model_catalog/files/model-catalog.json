@@ -46,6 +46,8 @@
     {"name":"deepseek/deepseek-v4-flash","context_window":1000000},
     {"name":"minimax/minimax-m2.5","context_window":204800},
     {"name":"z-ai/glm-5.3-flash","context_window":1310720,"max_output_tokens":131072,"input_cost_per_token":7.5e-8,"output_cost_per_token":2.5e-7},
-    {"name":"minimax/minimax-m3","context_window":1048576}
+    {"name":"minimax/minimax-m3","context_window":1048576},
+    {"name":"openrouter/free","context_window":200000,"max_output_tokens":8192},
+    {"name":"openrouter/auto","context_window":2000000,"max_output_tokens":8192}
   ]
 }
