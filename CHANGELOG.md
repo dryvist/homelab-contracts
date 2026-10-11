@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.4.0](https://github.com/dryvist/homelab-contracts/compare/v5.3.1...v5.4.0) (2026-10-11)
+
+
+### Features
+
+* **cribl_edge:** route Proxmox nodes, match NVMe errors, ship Edge metrics ([#162](https://github.com/dryvist/homelab-contracts/issues/162)) ([228c5a7](https://github.com/dryvist/homelab-contracts/commit/228c5a7019806a4cde456b939e12da22619cebd5))
+* **cribl_edge:** route pve-* hosts to os_proxmox, match NVMe errors, ship Edge internal metrics ([c2f72e1](https://github.com/dryvist/homelab-contracts/commit/c2f72e192dbc33ab41892de3bc8de36d80a17785))
+
 ## [5.3.1](https://github.com/dryvist/homelab-contracts/compare/v5.3.0...v5.3.1) (2026-10-11)
 
 
