@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.3.1](https://github.com/dryvist/homelab-contracts/compare/v5.3.0...v5.3.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **syslog-forwarder:** forward imfile inputs without writing local syslog ([#159](https://github.com/dryvist/homelab-contracts/issues/159)) ([ea72bc4](https://github.com/dryvist/homelab-contracts/commit/ea72bc4f26f8ed94a461d010ef355b2d2213f761))
+
 ## [5.3.0](https://github.com/dryvist/homelab-contracts/compare/v5.2.0...v5.3.0) (2026-10-10)
 
 
