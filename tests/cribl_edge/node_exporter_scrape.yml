@@ -43,6 +43,10 @@
         that:
           - "'in_node_exporter' not in inputs_off.inputs"
           - "'in_system_metrics' in inputs_off.inputs"
+          - inputs_off.inputs.in_cribl_metrics.type == 'cribl_metrics'
+          - >-
+            inputs_off.inputs.in_cribl_metrics.connections | map(attribute='output')
+            | list == ['splunk_hec_os_metrics']
           - "'in_node_exporter' in inputs_on.inputs"
           - inputs_on.inputs.in_node_exporter.type == 'edge_prometheus'
           - inputs_on.inputs.in_node_exporter.targets | length == 1
