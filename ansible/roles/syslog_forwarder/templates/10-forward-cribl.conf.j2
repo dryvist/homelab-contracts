@@ -47,3 +47,9 @@ if $programname == '{{ route.program }}' then {
            queue.maxDiskSpace="{{ syslog_forwarder_queue_max_disk_space }}"
            queue.saveOnShutdown="on"
            action.resumeRetryCount="-1")
+{% if syslog_forwarder_imfile_inputs %}
+# imfile lines already live in their source file: forward only. This drop-in is
+# included before the base config's local file rules, so `stop` keeps them out
+# of /var/log/syslog.
+if $inputname == 'imfile' then stop
+{% endif %}
