@@ -67,7 +67,7 @@ cribl_edge_unifi_fw_match: >-
 # escaped (\/) because the pipeline interpolates this between /.../ literals.
 # Single source of truth — tune HERE only; the pipeline just interpolates it.
 cribl_edge_hardware_match: >-
-  smartd|medium error|failed command|I\/O error|vdev_state=|\bZED\b|\bZFS\b
+  smartd|medium error|failed command|I\/O error|nvme.*(timeout|reset|I\/O error)|vdev_state=|\bZED\b|\bZFS\b
 
 # os catch-all decomposition, by HOST.
 #
@@ -92,7 +92,7 @@ cribl_edge_hardware_match: >-
 #
 # An empty mapping disables the split entirely and everything stays in os.
 cribl_edge_os_host_routing:
-  os_proxmox: '^pve(\d+|-scripts-local)$'
+  os_proxmox: '^pve(\d+|-scripts-local|-[a-z0-9]+)$'
   os_ai: '^(llm-router-\d+|llm-light|open-webui|hermes-agent|agentgateway|agent-exec)$'
 
 # Edge API bind port from tofu constants (no hardcoded values).

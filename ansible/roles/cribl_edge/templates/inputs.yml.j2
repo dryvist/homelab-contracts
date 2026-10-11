@@ -44,6 +44,19 @@ inputs:
         value: "'syslog'"
 
 {% endfor %}
+  # Edge internal metrics share the system-metrics HEC destination.
+  in_cribl_metrics:
+    id: in_cribl_metrics
+    type: cribl_metrics
+    disabled: false
+    sendToRoutes: false
+    connections:
+{% if (cribl_edge_hec_namespace | default('')) | length > 0 %}
+      - output: splunk_hec_os_metrics
+{% else %}
+      - output: splunk_hec
+{% endif %}
+
   # Host CPU / memory / disk / network metrics, collected by Edge itself.
   #
   # Edge ships this source enabled in its default config, but this template is
