@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.5.0](https://github.com/dryvist/homelab-contracts/compare/v5.4.0...v5.5.0) (2026-10-12)
+
+
+### Features
+
+* **schemas:** declare agents and hermes_agents in ansible-inventory 2.4.0 ([#165](https://github.com/dryvist/homelab-contracts/issues/165)) ([a9a25cc](https://github.com/dryvist/homelab-contracts/commit/a9a25cc13dd6a069e1e1605ce4ab68df57e26704))
+
 ## [5.4.0](https://github.com/dryvist/homelab-contracts/compare/v5.3.1...v5.4.0) (2026-10-11)
 
 
