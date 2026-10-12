@@ -1,0 +1,31 @@
+{
+  "schema_version": "2.4.0",
+  "domain": "example.test",
+  "containers": {},
+  "agents": {},
+  "hermes_agents": {},
+  "vms": {},
+  "docker_vms": {},
+  "splunk_vm": {
+    "splunk-example": {
+      "vmid": 999999998,
+      "hostname": "splunk-example.example.test",
+      "ip": "192.0.2.55",
+      "node": "node-example-1",
+      "ansible_connection": "ssh"
+    }
+  },
+  "constants": {
+    "service_ports": { "example_service": 10001 },
+    "syslog_ports": { "example_syslog": 10002 },
+    "netflow_ports": { "example_netflow": 10003 },
+    "notification_ports": { "example_notification": 10004 },
+    "vector_db_ports": { "example_vector_db": 10005 }
+  },
+  "ingress": [],
+  "ingress_vip": "",
+  "ingress_hosts": [],
+  "host_services": {},
+  "nodes": {},
+  "node_storage": {}
+}

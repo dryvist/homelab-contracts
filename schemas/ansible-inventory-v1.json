@@ -2,12 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/dryvist/homelab-contracts/schemas/ansible-inventory-v1.json",
   "title": "dryvist homelab ansible_inventory contract",
-  "description": "schema_version 2.3.0. Shape of the ansible_inventory.json artifact written by dryvist/terraform-proxmox (inventory_publish.tf, local.ansible_inventory) to the S3 state backend and consumed by dryvist/ansible-proxmox, dryvist/ansible-proxmox-apps, and dryvist/ansible-splunk through the shared inventory_resolve role. v2 reconciles the schema to the REAL producer output (issue #134): the top-level keys are exactly what inventory_publish.tf emits. 2.1 adds the optional desired_state fingerprint, which is what makes \"is an apply owed?\" answerable by a consumer holding only the artifact. 2.2 adds the optional workstation_connections block and the ingress fqdn/host_aliases/tls_domains fields for shared ingress aliasing and certificate domains. 2.3 adds node capability tags. Additive keys bump the minor; breaking changes bump the major and add a versions/v<X.Y.Z>/ snapshot.",
+  "description": "schema_version 2.4.0. Shape of the ansible_inventory.json artifact written by dryvist/terraform-proxmox (inventory_publish.tf, local.ansible_inventory) to the S3 state backend and consumed by dryvist/ansible-proxmox, dryvist/ansible-proxmox-apps, and dryvist/ansible-splunk through the shared inventory_resolve role. v2 reconciles the schema to the REAL producer output (issue #134): the top-level keys are exactly what inventory_publish.tf emits. 2.1 adds the optional desired_state fingerprint, which is what makes \"is an apply owed?\" answerable by a consumer holding only the artifact. 2.2 adds the optional workstation_connections block and the ingress fqdn/host_aliases/tls_domains fields for shared ingress aliasing and certificate domains. 2.3 adds node capability tags. 2.4 adds the agents roster and declares the emitted hermes_agents endpoints. Additive keys bump the minor; breaking changes bump the major and add a versions/v<X.Y.Z>/ snapshot.",
   "type": "object",
   "required": [
     "schema_version",
     "domain",
     "containers",
+    "agents",
+    "hermes_agents",
     "vms",
     "docker_vms",
     "splunk_vm",
@@ -43,7 +45,7 @@
       "description": "Semantic version of this contract. Consumers fail-fast when the major differs. Emitted by terraform-proxmox inventory_publish.tf; must be '2.x.y' for this schema.",
       "type": "string",
       "pattern": "^2\\.\\d+\\.\\d+$",
-      "examples": ["2.3.0"]
+      "examples": ["2.4.0"]
     },
     "domain": {
       "description": "Internal DNS domain for FQDN resolution (e.g. 'example.com'). MAY be empty: terraform-proxmox supports an empty domain (locals.tf falls back to a bare hostname). The ansible-proxmox-apps loader separately requires a non-empty domain at runtime, since per-node ansible_host is derived as {node-role}.{domain}.",
@@ -53,6 +55,17 @@
       "description": "LXC containers managed by terraform-proxmox (community.proxmox.proxmox_pct_remote connection). Map of logical key -> container metadata. May be empty ({}).",
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/container" }
+    },
+    "agents": {
+      "description": "Non-secret agent roster projected from container agent blocks. Map of agent name -> roster metadata. May be empty ({}).",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z]+-[a-z]+$" },
+      "additionalProperties": { "$ref": "#/$defs/agent" }
+    },
+    "hermes_agents": {
+      "description": "OpenAI-compatible Hermes agent endpoints emitted by the producer. Map of agent id -> endpoint metadata. May be empty ({}).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/hermesAgent" }
     },
     "vms": {
       "description": "VMs (SSH connection) managed by terraform-proxmox. Map of logical key -> VM metadata. May be empty ({}).",
@@ -219,6 +232,40 @@
         "properties": {
           "ansible_pct_vmid": { "type": "integer", "minimum": 100, "maximum": 999999999 }
         }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "required": ["container", "hostname", "display", "purpose", "owns", "router_key_class"],
+      "additionalProperties": false,
+      "properties": {
+        "container": { "type": "string", "minLength": 1 },
+        "hostname": { "type": "string", "minLength": 1 },
+        "display": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "owns": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "uniqueItems": true
+        },
+        "router_key_class": { "type": "string", "enum": ["all", "standard", "zdr"] },
+        "slack": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "home_channel": { "type": "string" },
+            "requests_channel": { "type": "string" }
+          }
+        }
+      }
+    },
+    "hermesAgent": {
+      "type": "object",
+      "required": ["api_url", "model_name"],
+      "additionalProperties": false,
+      "properties": {
+        "api_url": { "type": "string" },
+        "model_name": { "type": "string" }
       }
     },
     "vm": {
