@@ -64,14 +64,6 @@
              item.goal_judge_timeout_seconds > 0)
           - item.profiles is not defined or item.profiles is mapping
           - >-
-            item.input_cost_per_token is not defined or
-            (item.input_cost_per_token is number and
-             item.input_cost_per_token >= 0)
-          - >-
-            item.output_cost_per_token is not defined or
-            (item.output_cost_per_token is number and
-             item.output_cost_per_token >= 0)
-          - >-
             item.monthly_budget is not defined or
             (item.monthly_budget is number and item.monthly_budget > 0)
         fail_msg: >-
