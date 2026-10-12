@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.3.0",
+  "schema_version": "2.4.0",
   "domain": "example.com",
   "containers": {
     "example-static": {
@@ -30,6 +30,38 @@
         "ingress"
       ],
       "pool_id": "example"
+    },
+    "agent-example-1": {
+      "vmid": 999999999,
+      "hostname": "agent-example-1.example.test",
+      "ip": "agent-example-1.example.test",
+      "mac": null,
+      "reserved_ip": null,
+      "node": "node-example-1",
+      "ansible_connection": "community.proxmox.proxmox_pct_remote",
+      "ansible_pct_vmid": 999999999,
+      "tags": ["example"],
+      "pool_id": "example"
+    }
+  },
+  "agents": {
+    "splunk-example": {
+      "container": "agent-example-1",
+      "hostname": "agent-example-1.example.test",
+      "display": "Splunk Example",
+      "purpose": "Example observability assistant",
+      "owns": ["splunk-example"],
+      "router_key_class": "standard",
+      "slack": {
+        "home_channel": "example-home",
+        "requests_channel": "example-requests"
+      }
+    }
+  },
+  "hermes_agents": {
+    "splunk-example": {
+      "api_url": "http://agent-example-1.example.test:10002/v1",
+      "model_name": "splunk-example"
     }
   },
   "vms": {
