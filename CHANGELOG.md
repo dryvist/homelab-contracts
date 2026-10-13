@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.7.0](https://github.com/dryvist/homelab-contracts/compare/v5.6.0...v5.7.0) (2026-10-13)
+
+
+### Features
+
+* **llm-model-catalog:** add OpenCode Go flash models ([#173](https://github.com/dryvist/homelab-contracts/issues/173)) ([fe6a936](https://github.com/dryvist/homelab-contracts/commit/fe6a93600198ad44e9c895d3972217f8f9de1f02))
+
 ## [5.6.0](https://github.com/dryvist/homelab-contracts/compare/v5.5.0...v5.6.0) (2026-10-13)
 
 
