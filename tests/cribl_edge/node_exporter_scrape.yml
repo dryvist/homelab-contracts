@@ -27,6 +27,10 @@
     ansible_facts:
       hostname: gpu-node
   tasks:
+    - name: Load the role defaults
+      ansible.builtin.include_vars:
+        file: "{{ role_dir }}/defaults/main/main.yml"
+        name: role_defaults
     - name: Render the inputs with the scrape on, and the filter pipeline
       ansible.builtin.set_fact:
         pipe: "{{ lookup('ansible.builtin.template', role_dir ~ '/templates/pipelines/node_exporter_hwmon/conf.yml.j2') | from_yaml }}"
@@ -43,10 +47,14 @@
         that:
           - "'in_node_exporter' not in inputs_off.inputs"
           - "'in_system_metrics' in inputs_off.inputs"
+          - "'in_cribl_metrics' in inputs_off.inputs"
           - inputs_off.inputs.in_cribl_metrics.type == 'cribl_metrics'
           - >-
             inputs_off.inputs.in_cribl_metrics.connections | map(attribute='output')
-            | list == ['splunk_hec_os_metrics']
+            | sort == ['cribl_stream_s2s_metrics', 'splunk_hec_os_metrics']
+          - >-
+            'nvme\d+.*(timeout|controller is down|probe failure)'
+            in role_defaults.cribl_edge_hardware_match
           - "'in_node_exporter' in inputs_on.inputs"
           - inputs_on.inputs.in_node_exporter.type == 'edge_prometheus'
           - inputs_on.inputs.in_node_exporter.targets | length == 1

@@ -62,12 +62,13 @@ cribl_edge_unifi_fw_match: >-
 # the syslog pipeline; the splunk_hec_os_router (outputs.yml.j2) then ships
 # them to the dedicated splunk_hec_hardware output (hardware HEC token) instead
 # of the os catch-all. `I\/O error` is the superset that catches every kernel
-# ATA/NVMe/SCSI/Buffer/blk disk-I/O error; smartd, medium/failed-command SCSI
-# errors, and ZFS/ZED pool-fault events round it out. Forward slashes are
+# ATA/NVMe/SCSI/Buffer/blk disk-I/O error. The NVMe clauses also match timeout,
+# controller-down, and probe-failure messages; smartd, medium/failed-command
+# SCSI errors, and ZFS/ZED pool-fault events round it out. Forward slashes are
 # escaped (\/) because the pipeline interpolates this between /.../ literals.
 # Single source of truth — tune HERE only; the pipeline just interpolates it.
 cribl_edge_hardware_match: >-
-  smartd|medium error|failed command|I\/O error|nvme.*(timeout|reset|I\/O error)|vdev_state=|\bZED\b|\bZFS\b
+  smartd|medium error|failed command|I\/O error|nvme.*(timeout|reset|I\/O error)|nvme\d+.*(timeout|controller is down|probe failure)|vdev_state=|\bZED\b|\bZFS\b
 
 # os catch-all decomposition, by HOST.
 #
