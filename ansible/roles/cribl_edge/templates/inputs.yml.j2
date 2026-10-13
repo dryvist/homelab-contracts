@@ -44,7 +44,7 @@ inputs:
         value: "'syslog'"
 
 {% endfor %}
-  # Edge internal metrics share the system-metrics HEC destination.
+  # Edge internal metrics use the system-metrics HEC and Stream destinations.
   in_cribl_metrics:
     id: in_cribl_metrics
     type: cribl_metrics
@@ -56,6 +56,7 @@ inputs:
 {% else %}
       - output: splunk_hec
 {% endif %}
+      - output: cribl_stream_s2s_metrics
 
   # Host CPU / memory / disk / network metrics, collected by Edge itself.
   #
