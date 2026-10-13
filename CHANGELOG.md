@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.6.0](https://github.com/dryvist/homelab-contracts/compare/v5.5.0...v5.6.0) (2026-10-13)
+
+
+### Features
+
+* **cribl:** add the MLX, internal telemetry and Edge host metrics Stream packs ([#168](https://github.com/dryvist/homelab-contracts/issues/168)) ([dc116da](https://github.com/dryvist/homelab-contracts/commit/dc116daad40a9796c2164883cd9afaf17a4155bd))
+
 ## [5.5.0](https://github.com/dryvist/homelab-contracts/compare/v5.4.0...v5.5.0) (2026-10-12)
 
 
