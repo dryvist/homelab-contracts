@@ -4,6 +4,11 @@
   "packs": {
     "edge_linux": ["cc-edge-copilot-otel", "cc-edge-vscode-io"],
     "edge_macos": ["cc-edge-the-mac-pack-io", "cc-edge-codex-io", "cc-edge-gemini-antigravity-io"],
-    "stream": ["cc-stream-github-copilot-rest-io"]
+    "stream": [
+      "cc-stream-github-copilot-rest-io",
+      "cc-stream-apple-mlx-metrics",
+      "cc-stream-cribl-internal-telemetry",
+      "cc-stream-cribl-edge-host-metrics"
+    ]
   }
 }

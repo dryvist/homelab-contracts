@@ -44,8 +44,9 @@ In `playbooks/site.yml`, after the `cribl_edge` and `cribl_stream` plays:
 
 Override the pack list per inventory by setting `cribl_packs_for_edge` or
 `cribl_packs_for_stream` in inventory/group_vars. See `defaults/main.yml`
-for the default list (cc-edge-copilot-otel, cc-edge-vscode-io,
-cc-stream-github-copilot-rest-io).
+for the default list (cc-edge-copilot-otel, cc-edge-vscode-io, and the Stream packs
+cc-stream-github-copilot-rest-io, cc-stream-apple-mlx-metrics, cc-stream-cribl-internal-telemetry,
+cc-stream-cribl-edge-host-metrics).
 
 ## Variables
 
