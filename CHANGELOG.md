@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.8.0](https://github.com/dryvist/homelab-contracts/compare/v5.7.0...v5.8.0) (2026-10-13)
+
+
+### Features
+
+* **cribl_edge:** match NVMe controller faults and forward Edge metrics to Stream ([#170](https://github.com/dryvist/homelab-contracts/issues/170)) ([2286c2e](https://github.com/dryvist/homelab-contracts/commit/2286c2ef8ef29860a1f17eec64ba0671000295cd))
+
 ## [5.7.0](https://github.com/dryvist/homelab-contracts/compare/v5.6.0...v5.7.0) (2026-10-13)
 
 
