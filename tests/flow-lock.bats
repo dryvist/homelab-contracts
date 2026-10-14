@@ -112,8 +112,13 @@ case "$path" in
     status=200
     ;;
   auth/approle/role/flow-lock/secret-id-accessor/destroy|auth/approle/role/openbao-reconcile/secret-id-accessor/destroy)
-    response=''
-    status="${FLOW_LOCK_FIXTURE_DESTROY_STATUS:-204}"
+    if [ "${FLOW_LOCK_FIXTURE_DESTROY_ALREADY_GONE:-}" = 1 ]; then
+      response='{"errors":["1 error occurred:\n\t* failed to find accessor entry for secret_id_accessor: \"fixture-accessor\""]}'
+      status=500
+    else
+      response="${FLOW_LOCK_FIXTURE_DESTROY_RESPONSE:-}"
+      status="${FLOW_LOCK_FIXTURE_DESTROY_STATUS:-204}"
+    fi
     ;;
   secret/data/locks/global)
     if [ "$method" = POST ]; then
@@ -288,6 +293,19 @@ DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor
 
   [ "$status" -eq 70 ]
   [[ "$output" == *"revocation failed (HTTP 500)"* ]]
+  [ "$(grep -Fc "$DESTROY_RECONCILE" "$FLOW_LOCK_API_LOG")" -eq 1 ]
+}
+
+@test "approle-token accepts OpenBao's missing accessor response as already revoked" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_NUM_USES=5
+  export FLOW_LOCK_FIXTURE_DESTROY_ALREADY_GONE=1
+
+  run "$FLOW_LOCK" approle-token openbao-reconcile
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "reconcile-token" ]
+  [ "$(grep -Fc "$DESTROY_RECONCILE" "$FLOW_LOCK_API_LOG")" -eq 1 ]
 }
 
 @test "flow-lock status skips the destroy when the secret id is single-use" {
