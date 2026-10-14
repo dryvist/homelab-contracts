@@ -154,9 +154,13 @@ revoke_minted_approle_secret_id() {
     return 1
   }
 
-  local body response status
-  body="$(OPENBAO_SECRET_ID_ACCESSOR="$MINTED_APPROLE_SECRET_ID_ACCESSOR" \
+  local body response status accessor
+  accessor="$MINTED_APPROLE_SECRET_ID_ACCESSOR"
+  body="$(OPENBAO_SECRET_ID_ACCESSOR="$accessor" \
     jq -nc '{secret_id_accessor:env.OPENBAO_SECRET_ID_ACCESSOR}')"
+  # The explicit revoke and EXIT cleanup can both reach this function. Consume
+  # the accessor before attempting the request so cleanup cannot retry it.
+  MINTED_APPROLE_SECRET_ID_ACCESSOR=""
   response="$(bao_api_with_token POST \
     "auth/approle/role/$MINTED_APPROLE_NAME/secret-id-accessor/destroy" \
     "$BAO_ISSUER_TOKEN_CACHED" "$body")" || {
@@ -167,14 +171,20 @@ revoke_minted_approle_secret_id() {
   case "$status" in
     200|204)
       MINTED_APPROLE_NAME=""
-      MINTED_APPROLE_SECRET_ID_ACCESSOR=""
       return 0
       ;;
-    *)
-      log "temporary $MINTED_APPROLE_NAME secret_id revocation failed (HTTP $status)"
-      return 1
+    500)
+      body="${response%$'\n'*}"
+      # OpenBao may wrap the missing-accessor message in a multierror string.
+      if jq -e --arg message 'failed to find accessor entry for secret_id_accessor' \
+        'any(.errors[]?; contains($message))' <<<"$body" >/dev/null 2>&1; then
+        MINTED_APPROLE_NAME=""
+        return 0
+      fi
       ;;
   esac
+  log "temporary $MINTED_APPROLE_NAME secret_id revocation failed (HTTP $status)"
+  return 1
 }
 
 cleanup_minted_approle_secret_id_on_exit() {
