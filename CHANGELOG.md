@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.8.1](https://github.com/dryvist/homelab-contracts/compare/v5.8.0...v5.8.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **flow-lock:** treat revoke of an already-consumed secret_id as success ([#176](https://github.com/dryvist/homelab-contracts/issues/176)) ([bd90d29](https://github.com/dryvist/homelab-contracts/commit/bd90d29473ce07e2892efeffb46eab2fca72ba3c))
+
 ## [5.8.0](https://github.com/dryvist/homelab-contracts/compare/v5.7.0...v5.8.0) (2026-10-13)
 
 
