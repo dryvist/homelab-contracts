@@ -20,8 +20,11 @@ retry, and provider-limit values instead of keeping per-model copies:
 - The router and Hermes presets project the same model fields to their output
   formats; repo CI verifies that projections agree with the catalog.
 
-An MLX entry can also define `profiles.mlx.swap` for its on-demand serving
-limits; static resident and swap profiles are projected separately.
+An MLX entry defines `profiles.mlx.context_window`, `max_output_tokens`,
+`max_parallel_requests`, `queue_size`, `prefill_tokens_per_second`, and
+`decode_tokens_per_second` for resident serving. It can also define
+`profiles.mlx.swap` for on-demand serving limits; static resident and swap
+profiles are projected separately.
 
 Stage 0 evaluation checkpoints use a separate `stage0` object. It records the
 source Hugging Face repository, immutable revision, pipeline tag, and license.

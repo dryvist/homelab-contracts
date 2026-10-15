@@ -20,7 +20,7 @@
     {"name":"mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit","context_window":65536},
     {"name":"mlx-community/Qwen3-Next-80B-A3B-Thinking-4bit","context_window":32768},
     {"name":"mlx-community/Qwen3-Next-80B-A3B-Instruct-4bit","context_window":65536},
-    {"name":"mlx-community/Qwen3.5-9B-OptiQ-4bit","context_window":65536},
+    {"name":"mlx-community/Qwen3.5-9B-OptiQ-4bit","aliases":["qwen35-9b"],"context_window":65536,"max_parallel_requests":4,"goal_judge_timeout_seconds":150,"profiles":{"mlx":{"context_window":40960,"max_output_tokens":4096,"max_parallel_requests":4,"queue_size":25,"prefill_tokens_per_second":600,"decode_tokens_per_second":40}}},
     {"name":"mlx-community/Qwen3.6-27B-mxfp4","context_window":65536},
     {"name":"qwen3-coder-30b","context_window":16384,"max_parallel_requests":1,"profiles":{"llama_cpp_vulkan":{"stream_timeout":4}}},
     {"name":"hermes-local-4080","catalog_model":"qwen3.8-27b"},
