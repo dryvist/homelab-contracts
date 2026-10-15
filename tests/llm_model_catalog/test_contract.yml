@@ -112,6 +112,19 @@
       loop_control:
         label: "{{ item.name }}"
 
+    - name: Qwen3.5 resident profile declares every derived serving field
+      ansible.builtin.assert:
+        that:
+          - item.profiles.mlx.context_window == 40960
+          - item.profiles.mlx.max_output_tokens is integer
+          - item.profiles.mlx.max_parallel_requests is integer
+          - item.profiles.mlx.queue_size is integer
+          - item.profiles.mlx.prefill_tokens_per_second is number
+          - item.profiles.mlx.decode_tokens_per_second is number
+      loop: "{{ llm_model_catalog_models | selectattr('name', 'equalto', 'mlx-community/Qwen3.5-9B-OptiQ-4bit') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
     - name: Llama.cpp Vulkan profile stream timeouts are positive integers
       ansible.builtin.assert:
         that:
