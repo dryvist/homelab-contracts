@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.9.0](https://github.com/dryvist/homelab-contracts/compare/v5.8.1...v5.9.0) (2026-10-15)
+
+
+### Features
+
+* **llm-roles:** serve the workstation small roles from Qwen3.5-9B ([#178](https://github.com/dryvist/homelab-contracts/issues/178)) ([6250146](https://github.com/dryvist/homelab-contracts/commit/6250146d8024c960eebb21a458ad754a15f348ba))
+
 ## [5.8.1](https://github.com/dryvist/homelab-contracts/compare/v5.8.0...v5.8.1) (2026-10-14)
 
 
