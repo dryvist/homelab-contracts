@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.10.0](https://github.com/dryvist/homelab-contracts/compare/v5.9.0...v5.10.0) (2026-10-16)
+
+
+### Features
+
+* **llm-model-catalog:** add OpenCode Go models ([daca57d](https://github.com/dryvist/homelab-contracts/commit/daca57def8ab7a96c62eb8502bc26a8266a0d633))
+* **router-key-catalog:** publish inference-direct-only key ([188a468](https://github.com/dryvist/homelab-contracts/commit/188a46840f24a1b7c63ab9d427822133e3fff981))
+* **router:** add OpenCode models and direct-inference key catalog ([#180](https://github.com/dryvist/homelab-contracts/issues/180)) ([dd317c4](https://github.com/dryvist/homelab-contracts/commit/dd317c48f203303bf226a1478aad2c0e8b8c4021))
+
 ## [5.9.0](https://github.com/dryvist/homelab-contracts/compare/v5.8.1...v5.9.0) (2026-10-15)
 
 
