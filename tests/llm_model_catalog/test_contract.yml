@@ -21,6 +21,27 @@
           - llm_model_catalog_models | length > 0
         fail_msg: llm_model_catalog_models must declare at least one model.
 
+    - name: OpenCode Go models have one catalog entry with serving limits
+      ansible.builtin.assert:
+        that:
+          - >-
+            llm_model_catalog_models
+            | selectattr('name', 'equalto', item)
+            | list | length == 1
+          - >-
+            (llm_model_catalog_models
+             | selectattr('name', 'equalto', item)
+             | first).context_window == 131072
+          - >-
+            (llm_model_catalog_models
+             | selectattr('name', 'equalto', item)
+             | first).max_output_tokens == 8192
+        quiet: true
+      loop:
+        - opencode/longcat-2.5-preview-free
+        - opencode/cat-jam-free
+        - opencode/muse-spark-1.3-contributor
+
     - name: Every entry has a name, complete optional artifacts, and valid numeric limits
       ansible.builtin.assert:
         that:

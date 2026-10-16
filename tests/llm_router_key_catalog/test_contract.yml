@@ -11,17 +11,17 @@
         name: llm_router_key_catalog
         public: true
 
-    - name: The benchmark field is declared
+    - name: The direct-inference field is declared
       ansible.builtin.assert:
         that:
-          - llm_router_key_catalog_facts.llm_router_key_catalog_source.benchmark_field == 'benchmark_llm_router_key'
-          - llm_router_key_catalog_facts.openbao_router_key_catalog.keys() | list == ['benchmark']
-          - llm_router_key_catalog_facts.openbao_router_key_catalog.benchmark == ['benchmark_llm_router_key']
+          - llm_router_key_catalog_facts.llm_router_key_catalog_source.inference_direct_only_field == 'benchmark_llm_router_key'
+          - llm_router_key_catalog_facts.openbao_router_key_catalog.keys() | list == ['inference-direct-only']
+          - llm_router_key_catalog_facts.openbao_router_key_catalog['inference-direct-only'] == ['benchmark_llm_router_key']
           - llm_router_key_catalog_facts.program_key_definitions is not defined
           - llm_router_key_catalog_facts.program_key_catalog is not defined
 
     - name: No program key projections are published
       ansible.builtin.assert:
         that:
-          - llm_router_key_catalog_facts.openbao_router_key_catalog.benchmark | length == 1
-          - llm_router_key_catalog_facts.openbao_router_key_catalog.benchmark[0] == 'benchmark_llm_router_key'
+          - llm_router_key_catalog_facts.openbao_router_key_catalog['inference-direct-only'] | length == 1
+          - llm_router_key_catalog_facts.openbao_router_key_catalog['inference-direct-only'][0] == 'benchmark_llm_router_key'
