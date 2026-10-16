@@ -4,11 +4,11 @@
     file: "{{ role_path }}/files/router-key-catalog.json"
     name: llm_router_key_catalog_facts
 
-- name: Publish the single benchmark field for OpenBao
+- name: Publish the single direct-inference field for OpenBao
   ansible.builtin.set_fact:
     llm_router_key_catalog_facts: >-
       {{ llm_router_key_catalog_facts | combine({
            'openbao_router_key_catalog': {
-             'benchmark': [llm_router_key_catalog_facts.llm_router_key_catalog_source.benchmark_field]
+             'inference-direct-only': [llm_router_key_catalog_facts.llm_router_key_catalog_source.inference_direct_only_field]
            }
          }, recursive=true) }}

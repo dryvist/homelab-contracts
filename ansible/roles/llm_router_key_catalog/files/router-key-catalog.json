@@ -1,5 +1,5 @@
 {
   "llm_router_key_catalog_source": {
-    "benchmark_field": "benchmark_llm_router_key"
+    "inference_direct_only_field": "benchmark_llm_router_key"
   }
 }
