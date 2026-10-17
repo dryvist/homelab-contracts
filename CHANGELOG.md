@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.11.0](https://github.com/dryvist/homelab-contracts/compare/v5.10.0...v5.11.0) (2026-10-17)
+
+
+### Features
+
+* **llm:** allow the llm index in Cribl Edge outputs ([#182](https://github.com/dryvist/homelab-contracts/issues/182)) ([89c2d90](https://github.com/dryvist/homelab-contracts/commit/89c2d90de345b2e2f0c9cafcea6fec3cda8ff7ee))
+
 ## [5.10.0](https://github.com/dryvist/homelab-contracts/compare/v5.9.0...v5.10.0) (2026-10-16)
 
 
