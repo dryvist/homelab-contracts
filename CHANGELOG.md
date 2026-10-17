@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.13.0](https://github.com/dryvist/homelab-contracts/compare/v5.12.0...v5.13.0) (2026-10-17)
+
+
+### Features
+
+* add Qwen3.8 131k catalog profile ([#192](https://github.com/dryvist/homelab-contracts/issues/192)) ([b53c470](https://github.com/dryvist/homelab-contracts/commit/b53c470326843b2eff3cff4e4d0338cca9528639))
+
 ## [5.12.0](https://github.com/dryvist/homelab-contracts/compare/v5.11.1...v5.12.0) (2026-10-17)
 
 
