@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.11.1](https://github.com/dryvist/homelab-contracts/compare/v5.11.0...v5.11.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **llm-roles:** allow ZDR judge egress ([#187](https://github.com/dryvist/homelab-contracts/issues/187)) ([86e3474](https://github.com/dryvist/homelab-contracts/commit/86e3474ed4b5f08b3b73190ee1ed5b2dd3c7f37b))
+
 ## [5.11.0](https://github.com/dryvist/homelab-contracts/compare/v5.10.0...v5.11.0) (2026-10-17)
 
 
