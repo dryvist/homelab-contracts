@@ -46,9 +46,11 @@
       loop_control:
         label: "{{ item.key }}"
 
-    - name: The judge role allows estate egress and no cloud egress
+    - name: The judge roles allow ZDR egress
       ansible.builtin.assert:
-        that: llm_roles.roles.judge.egress == 'estate'
+        that:
+          - llm_roles.roles.judge.egress == 'zdr'
+          - llm_roles.hosts.workstation.roles.judge.egress == 'zdr'
 
     - name: The embedding role stays unbound until consumers route task types
       ansible.builtin.assert:
