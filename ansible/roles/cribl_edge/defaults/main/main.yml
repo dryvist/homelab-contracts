@@ -124,6 +124,7 @@ cribl_edge_per_index_indexes:
   - unifi
   - firewall
   - os
+  - llm
   - netmon
   - unifi_metrics
   # dns (Technitium query-log export, dns_query family), proxy (traefik/haproxy

@@ -27,6 +27,11 @@
     ansible_facts:
       hostname: gpu-node
   tasks:
+    - name: Read the per-index HEC output allowlist
+      ansible.builtin.set_fact:
+        per_index_indexes: >-
+          {{ (lookup('ansible.builtin.file', role_dir ~ '/defaults/main/main.yml')
+              | from_yaml).cribl_edge_per_index_indexes }}
     - name: Read the hardware match default as plain text data
       ansible.builtin.set_fact:
         hardware_match: >-
@@ -45,6 +50,7 @@
     - name: Assert the contract
       ansible.builtin.assert:
         that:
+          - "'llm' in per_index_indexes"
           - "'in_node_exporter' not in inputs_off.inputs"
           - "'in_system_metrics' in inputs_off.inputs"
           - "'in_cribl_metrics' in inputs_off.inputs"
