@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.12.0](https://github.com/dryvist/homelab-contracts/compare/v5.11.1...v5.12.0) (2026-10-17)
+
+
+### Features
+
+* add Nemotron Bolt GGUF profile limits ([14e576b](https://github.com/dryvist/homelab-contracts/commit/14e576b15b2417f1d0bcaab6b557f3753fc72a28))
+* add Nemotron Bolt GGUF profile limits ([#190](https://github.com/dryvist/homelab-contracts/issues/190)) ([bc69e45](https://github.com/dryvist/homelab-contracts/commit/bc69e455462cad378f8117ca21d37bae6cfd8d2d))
+* set Nemotron Bolt catalog admission limits ([d3b8f45](https://github.com/dryvist/homelab-contracts/commit/d3b8f4574490dafd77a5916c1238e206e0818caa))
+
 ## [5.11.1](https://github.com/dryvist/homelab-contracts/compare/v5.11.0...v5.11.1) (2026-10-17)
 
 
