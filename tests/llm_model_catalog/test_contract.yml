@@ -146,6 +146,22 @@
       loop_control:
         label: "{{ item.name }}"
 
+    - name: Qwen3.8 long-context profile declares its input, output, and concurrency limits
+      ansible.builtin.assert:
+        that:
+          - item.profiles['qwen38-27b-131k-1'].context_window == 122880
+          - item.profiles['qwen38-27b-131k-1'].max_output_tokens == 8192
+          - item.profiles['qwen38-27b-131k-1'].max_parallel_requests == 1
+          - >-
+            item.profiles['qwen38-27b-131k-1'].context_window
+            + item.profiles['qwen38-27b-131k-1'].max_output_tokens == 131072
+        fail_msg: >-
+          {{ item.name }} has invalid qwen38-27b-131k-1 serving limits.
+        quiet: true
+      loop: "{{ llm_model_catalog_models | selectattr('name', 'equalto', 'qwen3.8-27b') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
     - name: Llama.cpp Vulkan profile stream timeouts are positive integers
       ansible.builtin.assert:
         that:
