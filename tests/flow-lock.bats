@@ -1,8 +1,7 @@
 #!/usr/bin/env bats
 # CLI-contract tests for bin/flow-lock and bin/deployment-json.
-# No live OpenBao/S3: these pin argument parsing, refusal paths, exit codes,
-# and bootstrap-mode behavior. Lease/CAS behavior is covered by the live
-# verification suite (docs runbook), not unit tests.
+# No live OpenBao/S3: these pin argument parsing, lease/CAS behavior, refusal
+# paths, exit codes, and bootstrap-mode behavior.
 
 setup() {
   FLOW_LOCK="$BATS_TEST_DIRNAME/../bin/flow-lock"
@@ -71,6 +70,22 @@ fixture_secret_id_response() {
     jq -nc --arg s "$1" --arg a "$2" '{data:{secret_id:$s,secret_id_accessor:$a}}'
   fi
 }
+fixture_lease_response() {
+  jq -nc --arg lease_id "$1" --argjson version "$2" --argjson expires_at "$3" \
+    '{data:{metadata:{version:$version},data:{lease_id:$lease_id,holder:{user:"test",host:"fixture",pid:1},flow:"test",repo:"test",expires_at:$expires_at,renewals:0}}}'
+}
+fixture_store_lease() {
+  local version="$1" lease_id
+  lease_id="$(jq -er '.data.lease_id' <<<"$request_data")"
+  printf '%s\n' "$lease_id" > "$FLOW_LOCK_FIXTURE_LEASE_ID"
+  printf '%s\n' "$version" > "$FLOW_LOCK_FIXTURE_VERSION_FILE"
+  response="$(jq -nc --argjson version "$version" '{data:{version:$version}}')"
+  status=200
+}
+fixture_cas_conflict() {
+  response='{"errors":["check-and-set parameter did not match the current version"]}'
+  status=400
+}
 role=-
 response='{"errors":["fixture did not match"]}'
 status=500
@@ -122,17 +137,80 @@ case "$path" in
     ;;
   secret/data/locks/global)
     if [ "$method" = POST ]; then
-      jq -r '.data.lease_id' <<<"$request_data" > "$FLOW_LOCK_FIXTURE_LEASE_ID"
-      response='{"data":{"version":1}}'
-      status=200
-    elif [ "$method" = GET ] && [ -f "$FLOW_LOCK_FIXTURE_LEASE_ID" ]; then
-      lease_id="$(cat "$FLOW_LOCK_FIXTURE_LEASE_ID")"
-      response="$(jq -nc --arg lease_id "$lease_id" '{data:{metadata:{version:1},data:{lease_id:$lease_id,holder:{user:"test",host:"",pid:1},flow:"test",repo:"test",expires_at:(now|floor+600),renewals:0}}}')"
-      status=200
+      cas="$(jq -r '.options.cas' <<<"$request_data")"
+      mode="${FLOW_LOCK_FIXTURE_MODE:-absent}"
+      printf '%s\t%s\t%s\n' "$method" "$path" "$cas" >> "$FLOW_LOCK_FIXTURE_CAS_LOG"
+      case "$mode" in
+        absent)
+          if [ "$cas" = 0 ] && [ ! -f "$FLOW_LOCK_FIXTURE_LEASE_ID" ]; then
+            fixture_store_lease 1
+          else
+            fixture_cas_conflict
+          fi
+          ;;
+        soft-deleted|soft-deleted-stuck|soft-deleted-retry)
+          version="${FLOW_LOCK_FIXTURE_SOFT_DELETED_VERSION:-7}"
+          if [ "$cas" = "$version" ] && [ "$mode" != soft-deleted-stuck ] && \
+            { [ "$mode" != soft-deleted-retry ] || \
+              [ "$(grep -Fc $'POST\tsecret/data/locks/global\t7' "$FLOW_LOCK_FIXTURE_CAS_LOG")" -ge 2 ]; }; then
+            fixture_store_lease "$((version + 1))"
+          else
+            fixture_cas_conflict
+          fi
+          ;;
+        expired|expired-stuck)
+          version="${FLOW_LOCK_FIXTURE_EXPIRED_VERSION:-4}"
+          if [ "$mode" = expired ] && [ "$cas" = "$version" ]; then
+            fixture_store_lease "$((version + 1))"
+          else
+            fixture_cas_conflict
+          fi
+          ;;
+        held|timeout)
+          fixture_cas_conflict
+          ;;
+        *)
+          fixture_cas_conflict
+          ;;
+      esac
+    elif [ "$method" = GET ]; then
+      mode="${FLOW_LOCK_FIXTURE_MODE:-absent}"
+      if [ -f "$FLOW_LOCK_FIXTURE_LEASE_ID" ]; then
+        lease_id="$(cat "$FLOW_LOCK_FIXTURE_LEASE_ID")"
+        version="$(cat "$FLOW_LOCK_FIXTURE_VERSION_FILE")"
+        response="$(fixture_lease_response "$lease_id" "$version" "$(( $(date +%s) + 600 ))")"
+        status=200
+      else
+        case "$mode" in
+          soft-deleted|soft-deleted-stuck|soft-deleted-retry)
+            version="${FLOW_LOCK_FIXTURE_SOFT_DELETED_VERSION:-7}"
+            response="$(jq -nc --argjson version "$version" '{data:{metadata:{version:$version,deletion_time:"2026-10-18T00:00:00Z"}}}')"
+            status=404
+            ;;
+          held|timeout)
+            version="${FLOW_LOCK_FIXTURE_HELD_VERSION:-4}"
+            response="$(fixture_lease_response held-lease "$version" "$(( $(date +%s) + 600 ))")"
+            status=200
+            ;;
+          expired|expired-stuck)
+            version="${FLOW_LOCK_FIXTURE_EXPIRED_VERSION:-4}"
+            response="$(fixture_lease_response expired-lease "$version" "$(( $(date +%s) - 1 ))")"
+            status=200
+            ;;
+          *)
+            response='{"errors":["not found"]}'
+            status=404
+            ;;
+        esac
+      fi
     else
-      response='{"errors":["not found"]}'
-      status=404
+      fixture_cas_conflict
     fi
+    ;;
+  secret/data/locks/audit/*)
+    printf '%s\n' "$request_data" > "$FLOW_LOCK_FIXTURE_AUDIT_BODY"
+    response='{"data":{"version":1}}'
+    status=200
     ;;
   secret/metadata/locks/global)
     response=''
@@ -143,9 +221,23 @@ printf '%s\t%s\t%s\t%s\n' "$method" "$path" "$auth_token" "$role" >> "$FLOW_LOCK
 printf '%s\n%s\n' "$response" "$status"
 SH
   chmod +x "$STUB/curl"
+  cat > "$STUB/sleep" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$FLOW_LOCK_SLEEP_LOG"
+if [ "${FLOW_LOCK_FIXTURE_FAST_SLEEP:-0}" = 1 ]; then exit 0; fi
+exec /bin/sleep "$@"
+SH
+  chmod +x "$STUB/sleep"
   export FLOW_LOCK_API_LOG="$BATS_TEST_TMPDIR/openbao-calls"
   export FLOW_LOCK_FIXTURE_LEASE_ID="$BATS_TEST_TMPDIR/lease-id"
+  export FLOW_LOCK_FIXTURE_VERSION_FILE="$BATS_TEST_TMPDIR/lease-version"
+  export FLOW_LOCK_FIXTURE_CAS_LOG="$BATS_TEST_TMPDIR/cas-calls"
+  export FLOW_LOCK_FIXTURE_AUDIT_BODY="$BATS_TEST_TMPDIR/audit-body.json"
+  export FLOW_LOCK_SLEEP_LOG="$BATS_TEST_TMPDIR/sleep-calls"
   : > "$FLOW_LOCK_API_LOG"
+  : > "$FLOW_LOCK_FIXTURE_CAS_LOG"
+  : > "$FLOW_LOCK_SLEEP_LOG"
   export PATH="$STUB:$PATH"
 }
 
@@ -366,6 +458,104 @@ DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor
   [ "$(grep -c $'POST\tsecret/data/locks/global\tflow-lock-token' "$FLOW_LOCK_API_LOG")" -eq 1 ]
   [ "$(grep -c $'GET\tsecret/data/locks/global\tflow-lock-token' "$FLOW_LOCK_API_LOG")" -eq 1 ]
   grep -Fx $'DELETE\tsecret/metadata/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "flow-lock run acquires an absent key with cas=0" {
+  approle_env
+
+  run "$FLOW_LOCK" run --ttl 3s --timeout 2s -- sh -c '[ "$FLOW_LOCK_VERSION" = 1 ]'
+
+  [ "$status" -eq 0 ]
+  grep -Fx $'POST\tsecret/data/locks/global\t0' "$FLOW_LOCK_FIXTURE_CAS_LOG"
+  grep -Fx $'DELETE\tsecret/metadata/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "flow-lock run takes over a soft-deleted key with the observed CAS version" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_MODE=soft-deleted
+
+  run "$FLOW_LOCK" run --ttl 3s --timeout 2s -- sh -c '[ "$FLOW_LOCK_VERSION" = 8 ]'
+
+  [ "$status" -eq 0 ]
+  grep -Fx $'POST\tsecret/data/locks/global\t0' "$FLOW_LOCK_FIXTURE_CAS_LOG"
+  grep -Fx $'POST\tsecret/data/locks/global\t7' "$FLOW_LOCK_FIXTURE_CAS_LOG"
+  grep -Fx $'DELETE\tsecret/metadata/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+}
+
+@test "flow-lock run sleeps and retries after a soft-deleted CAS conflict" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_MODE=soft-deleted-retry
+  export FLOW_LOCK_FIXTURE_FAST_SLEEP=1
+
+  run "$FLOW_LOCK" run --ttl 3s --timeout 2s -- sh -c '[ "$FLOW_LOCK_VERSION" = 8 ]'
+
+  [ "$status" -eq 0 ]
+  [ "$(grep -Fc $'POST\tsecret/data/locks/global\t7' "$FLOW_LOCK_FIXTURE_CAS_LOG")" -eq 2 ]
+  # the renewer's stubbed sleep also logs here, so assert a retry sleep happened rather than an exact count
+  [ -s "$FLOW_LOCK_SLEEP_LOG" ]
+}
+
+@test "flow-lock run reports a held lease and returns EX_TEMPFAIL at its deadline" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_MODE=held
+  timeout_bin="$(command -v timeout || command -v gtimeout)"
+
+  run "$timeout_bin" 3 "$FLOW_LOCK" run --timeout 0 -- true
+
+  [ "$status" -eq 75 ]
+  [[ "$output" == *"waiting: held by test@fixture"* ]]
+  [[ "$output" == *"timed out after 0s"* ]]
+  [ ! -s "$FLOW_LOCK_SLEEP_LOG" ]
+}
+
+@test "flow-lock run takes over an expired lease with the observed CAS version" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_MODE=expired
+
+  run "$FLOW_LOCK" run --ttl 3s --timeout 2s -- sh -c '[ "$FLOW_LOCK_VERSION" = 5 ]'
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"took over an EXPIRED lease"* ]]
+  grep -Fx $'POST\tsecret/data/locks/global\t4' "$FLOW_LOCK_FIXTURE_CAS_LOG"
+}
+
+@test "flow-lock run bounds retries after an expired-lease CAS conflict" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_MODE=expired-stuck
+  timeout_bin="$(command -v timeout || command -v gtimeout)"
+
+  run "$timeout_bin" 3 "$FLOW_LOCK" run --timeout 0 -- true
+
+  [ "$status" -eq 75 ]
+  grep -Fx $'POST\tsecret/data/locks/global\t4' "$FLOW_LOCK_FIXTURE_CAS_LOG"
+  [[ "$output" == *"timed out after 0s"* ]]
+  [ ! -s "$FLOW_LOCK_SLEEP_LOG" ]
+}
+
+@test "flow-lock run bounds retries after a soft-deleted CAS conflict" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_MODE=soft-deleted-stuck
+  timeout_bin="$(command -v timeout || command -v gtimeout)"
+
+  run "$timeout_bin" 3 "$FLOW_LOCK" run --timeout 0 -- true
+
+  [ "$status" -eq 75 ]
+  grep -Fx $'POST\tsecret/data/locks/global\t7' "$FLOW_LOCK_FIXTURE_CAS_LOG"
+  [[ "$output" == *"timed out after 0s"* ]]
+  [ ! -s "$FLOW_LOCK_SLEEP_LOG" ]
+}
+
+@test "flow-lock break clears and audits a soft-deleted key" {
+  approle_env
+  export FLOW_LOCK_FIXTURE_MODE=soft-deleted
+
+  run "$FLOW_LOCK" break --reason "clear tombstone" --yes
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"FORCE-BREAK soft-deleted lease version 7"* ]]
+  grep -Fx $'DELETE\tsecret/metadata/locks/global\tflow-lock-token\t-' "$FLOW_LOCK_API_LOG"
+  jq -e '.data.action == "force-break" and .data.version == 7 and .data.victim == null' \
+    "$FLOW_LOCK_FIXTURE_AUDIT_BODY"
 }
 
 @test "bootstrap mode runs the child without mint credentials and passes exit code through" {

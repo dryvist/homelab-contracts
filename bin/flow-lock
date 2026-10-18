@@ -328,7 +328,11 @@ read_lease() {
       # a soft-deleted version reads as null data — treat as absent
       if [ "$CUR_DATA" = "null" ]; then CUR_DATA=""; fi
       ;;
-    404) CUR_VERSION=0; CUR_DATA="" ;;
+    404)
+      CUR_VERSION="$(jq -r '.data.metadata.version // 0' <<<"$BAO_BODY" 2>/dev/null)"
+      CUR_VERSION="${CUR_VERSION:-0}"
+      CUR_DATA=""
+      ;;
     *) die "lease read failed (HTTP $BAO_STATUS)" ;;
   esac
 }
@@ -356,7 +360,7 @@ new_lease_id() {
 
 # acquire TTL_S TIMEOUT_S -> sets LEASE_ID + LEASE_VERSION
 acquire() {
-  local ttl_s="$1" timeout_s="$2" deadline=$(( $(date +%s) + $2 ))
+  local ttl_s="$1" timeout_s="$2" deadline=$(( $(date +%s) + $2 )) now sleep_s remaining
   LEASE_ID="$(new_lease_id)"
   while :; do
     if try_put 0 "$(lease_payload "$LEASE_ID" "$ttl_s" 0)"; then
@@ -373,19 +377,23 @@ acquire() {
           log "took over an EXPIRED lease ($(describe_holder "$CUR_DATA"))"
           LEASE_VERSION="$PUT_VERSION"; return 0
         fi
-        continue
+      else
+        log "waiting: $(describe_holder "$CUR_DATA")"
       fi
-      log "waiting: $(describe_holder "$CUR_DATA")"
     else
       # key exists but data soft-deleted/empty: cas=0 will keep failing until a
       # metadata delete; recover by taking over the version we just observed
       if try_put "$CUR_VERSION" "$(lease_payload "$LEASE_ID" "$ttl_s" 0)"; then
         LEASE_VERSION="$PUT_VERSION"; return 0
       fi
-      continue
     fi
+    now="$(date +%s)"
+    [ "$now" -lt "$deadline" ] || { log "timed out after ${timeout_s}s"; exit "$EX_TEMPFAIL"; }
+    sleep_s=$(( 5 + RANDOM % 10 ))
+    remaining=$(( deadline - now ))
+    [ "$sleep_s" -le "$remaining" ] || sleep_s="$remaining"
+    sleep "$sleep_s"
     [ "$(date +%s)" -lt "$deadline" ] || { log "timed out after ${timeout_s}s"; exit "$EX_TEMPFAIL"; }
-    sleep $(( 5 + RANDOM % 10 ))
   done
 }
 
@@ -525,19 +533,23 @@ cmd_break() {
   require_env
   bao_token >/dev/null
   read_lease
-  [ -n "$CUR_DATA" ] || { echo "flow-lock: nothing to break (free)"; exit 0; }
-  echo "flow-lock: about to FORCE-BREAK: $(describe_holder "$CUR_DATA")"
+  if [ -z "$CUR_DATA" ]; then
+    [ "$CUR_VERSION" -gt 0 ] || { echo "flow-lock: nothing to break (free)"; exit 0; }
+    echo "flow-lock: about to FORCE-BREAK soft-deleted lease version $CUR_VERSION"
+  else
+    echo "flow-lock: about to FORCE-BREAK: $(describe_holder "$CUR_DATA")"
+  fi
   if [ -z "$yes" ]; then
     printf 'Type "break" to confirm: '
     read -r confirm
     [ "$confirm" = "break" ] || die "aborted" "$EX_USAGE"
   fi
-  local audit_key
+  local audit_key audit_body
   audit_key="locks/audit/$(date -u +%Y%m%dT%H%M%SZ)"
-  bao_call POST "$(kv_data_path "$audit_key")" \
-    "$(jq -nc --arg reason "$reason" --arg by "${USER:-unknown}@$(hostname -s 2>/dev/null || echo unknown)" \
-        --argjson victim "$CUR_DATA" \
-        '{data:{action:"force-break", reason:$reason, by:$by, at:(now|floor), victim:$victim}}')"
+  audit_body="$(jq -nc --arg reason "$reason" --arg by "${USER:-unknown}@$(hostname -s 2>/dev/null || echo unknown)" \
+      --argjson version "$CUR_VERSION" --argjson victim "${CUR_DATA:-null}" \
+      '{data:{action:"force-break", reason:$reason, by:$by, at:(now|floor), version:$version, victim:$victim}}')"
+  bao_call POST "$(kv_data_path "$audit_key")" "$audit_body"
   [ "$BAO_STATUS" = 200 ] || log "WARNING: audit write failed (HTTP $BAO_STATUS) — breaking anyway"
   meta_delete
   echo "flow-lock: lease broken (audited at $audit_key)"
