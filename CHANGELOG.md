@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.13.1](https://github.com/dryvist/homelab-contracts/compare/v5.13.0...v5.13.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **flow-lock:** take over soft-deleted leases and bound every retry ([#194](https://github.com/dryvist/homelab-contracts/issues/194)) ([6c8bd1d](https://github.com/dryvist/homelab-contracts/commit/6c8bd1d3ae1ca5c7caaccb5cc41c471afcf866eb))
+
 ## [5.13.0](https://github.com/dryvist/homelab-contracts/compare/v5.12.0...v5.13.0) (2026-10-17)
 
 
