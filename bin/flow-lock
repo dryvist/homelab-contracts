@@ -329,7 +329,8 @@ read_lease() {
       if [ "$CUR_DATA" = "null" ]; then CUR_DATA=""; fi
       ;;
     404)
-      CUR_VERSION="$(jq -r '.data.metadata.version // 0' <<<"$BAO_BODY")"
+      CUR_VERSION="$(jq -r '.data.metadata.version // 0' <<<"$BAO_BODY" 2>/dev/null)"
+      CUR_VERSION="${CUR_VERSION:-0}"
       CUR_DATA=""
       ;;
     *) die "lease read failed (HTTP $BAO_STATUS)" ;;
