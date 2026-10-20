@@ -51,7 +51,7 @@ functions:
     # (\b, \/) stay literal for Cribl — YAML would reject/rewrite them in a
     # quoted scalar. Same convention as the unifi index eval's value block.
     filter: >-
-      index == 'os' && /{{ cribl_edge_hardware_match }}/i.test(_raw)
+      index == 'os' && !_raw.includes(' pve-task: ') && /{{ cribl_edge_hardware_match }}/i.test(_raw)
     disabled: false
     conf:
       add:
@@ -66,6 +66,34 @@ functions:
       iterations: 100
       overwrite: false
       regex: /^<\d+>(?:\d+ )?(?:(?<timestamp>\w{3}\s+\d+\s+[\d:]+)|(?<timestamp_iso>\d{4}-\d{2}-\d{2}T[\d:.Z+-]+))\s+(?<log_host>\S+)\s+(?<process>[^\[:\s]+)(?:\[(?<pid>\d+)\])?[:\s]+(?<message>.*)/
+
+  # rsyslog's pve-task input places the source filename and task line in
+  # `message`. UPID components are stable across task types; task_id is the
+  # Proxmox UPID ID and is a VMID for numeric VM tasks.
+  - id: regex_extract
+    filter: "process === 'pve-task'"
+    disabled: false
+    conf:
+      source: message
+      iterations: 100
+      overwrite: false
+      regex: /^(?:\S*\/)?(?<upid>UPID:(?<node>[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?):[0-9A-Fa-f]{8}:[0-9A-Fa-f]{8,9}:[0-9A-Fa-f]{8}:(?<task_type>[^:\s/]+):(?<task_id>[^:\s/]*):(?<user>[^:\s/]+):)\s(?<task_message>.*)$/
+
+  - id: eval
+    filter: "process === 'pve-task' && upid != null"
+    disabled: false
+    conf:
+      add:
+        - name: sourcetype
+          value: "'pve:task'"
+        - name: vmid
+          value: "task_id && /^\\d+$/.test(task_id) ? parseInt(task_id, 10) : null"
+        - name: status
+          value: >-
+            task_message === 'TASK OK' ? 'ok'
+            : /^TASK ERROR:/.test(task_message) ? 'error'
+            : /^TASK WARNINGS:/.test(task_message) ? 'warning'
+            : 'running'
 
 {% if 'proxy' in cribl_edge_syslog_routing %}
   # The proxy family carries BOTH traefik and haproxy program routes on one
@@ -90,7 +118,7 @@ functions:
     conf:
       add:
         - name: host
-          value: log_host
+          value: node || log_host
 
 {% if cribl_edge_os_host_routing | default({}, true) %}
   # os catch-all decomposition by host.
