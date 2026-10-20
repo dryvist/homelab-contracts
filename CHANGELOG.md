@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.14.0](https://github.com/dryvist/homelab-contracts/compare/v5.13.1...v5.14.0) (2026-10-20)
+
+
+### Features
+
+* **cribl-edge:** parse Proxmox task UPIDs ([#196](https://github.com/dryvist/homelab-contracts/issues/196)) ([803d454](https://github.com/dryvist/homelab-contracts/commit/803d4547657f6b6cebd3d61fd0a7d86c6f75662d))
+
 ## [5.13.1](https://github.com/dryvist/homelab-contracts/compare/v5.13.0...v5.13.1) (2026-10-18)
 
 
