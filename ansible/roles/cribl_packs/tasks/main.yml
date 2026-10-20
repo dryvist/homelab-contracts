@@ -37,6 +37,8 @@
     return_content: true
     status_code: 200
   register: cribl_packs_manifest_response
+  # uri has no check mode; this read changes nothing, so --check runs it.
+  check_mode: false
   delegate_to: localhost
   become: false
   vars:
@@ -87,6 +89,7 @@
   loop_control:
     label: "{{ item }}"
   register: cribl_packs_latest_releases
+  check_mode: false
   delegate_to: localhost
   become: false
   vars:
