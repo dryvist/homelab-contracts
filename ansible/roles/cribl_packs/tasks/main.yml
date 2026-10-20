@@ -118,7 +118,8 @@
       ] }}
   loop: "{{ cribl_packs_latest_releases.results | default([]) }}"
   loop_control:
-    label: "{{ item.item }} {{ item.json.tag_name }}"
+    # Skipped release reads carry no json, and Ansible templates the label anyway.
+    label: "{{ item.item }} {{ item.json.tag_name | default('') }}"
   when: cribl_packs_object_storage_base_url is not defined
 
 - name: Ensure packs directory exists
