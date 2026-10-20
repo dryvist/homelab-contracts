@@ -1,0 +1,43 @@
+---
+# Render the production syslog pipeline and verify Proxmox UPID fields retain
+# the existing syslog input and Splunk output path.
+- name: Render the syslog pipeline for Proxmox task logs
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    role_dir: "{{ playbook_dir }}/../../ansible/roles/cribl_edge"
+    cribl_edge_syslog_routing:
+      linux:
+        high: 517
+        index: os
+        sourcetype: syslog
+    cribl_edge_unifi_fw_match: "NEVER_MATCH"
+    cribl_edge_hardware_match: "ZFS|SMART"
+    cribl_edge_os_host_routing:
+      os_proxmox: '^pve(\d+|-[a-z0-9]+)$'
+  tasks:
+    - name: Render the syslog pipeline
+      ansible.builtin.set_fact:
+        pipeline: >-
+          {{ lookup('ansible.builtin.template', role_dir ~
+             '/templates/pipelines/syslog/conf.yml.j2') | from_yaml }}
+    - name: Assert UPID parsing uses the existing event route
+      ansible.builtin.assert:
+        that:
+          - pipeline.output == 'splunk_hec'
+          - pipeline.functions[1].filter is search('pve-task')
+          - "'pve-task' in pipeline.functions[3].filter"
+          - pipeline.functions[3].conf.source == 'message'
+          - "'upid>UPID:' in pipeline.functions[3].conf.regex"
+          - "'node>' in pipeline.functions[3].conf.regex"
+          - "'task_type>' in pipeline.functions[3].conf.regex"
+          - "'user>' in pipeline.functions[3].conf.regex"
+          - "'pve-task' in pipeline.functions[4].filter"
+          - pipeline.functions[4].conf.add | selectattr('name', 'equalto', 'sourcetype') | map(attribute='value') | first == "'pve:task'"
+          - pipeline.functions[4].conf.add | selectattr('name', 'equalto', 'vmid') | map(attribute='value') | first is search('parseInt')
+          - pipeline.functions[4].conf.add | selectattr('name', 'equalto', 'status') | map(attribute='value') | first is search('TASK OK')
+          - pipeline.functions[4].conf.add | selectattr('name', 'equalto', 'status') | map(attribute='value') | first is search('TASK ERROR')
+          - pipeline.functions[4].conf.add | selectattr('name', 'equalto', 'status') | map(attribute='value') | first is search('TASK WARNINGS')
+          - pipeline.functions[5].conf.add[0].value is search('node || log_host')
+          - pipeline.functions[6].filter is search('index')
