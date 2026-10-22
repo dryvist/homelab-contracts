@@ -136,13 +136,90 @@
     - name: Qwen3.5 resident profile declares every derived serving field
       ansible.builtin.assert:
         that:
-          - item.profiles.mlx.context_window == 40960
+          - item.profiles.mlx.context_window == 65536
+          - item.profiles.mlx.max_output_tokens == 32768
           - item.profiles.mlx.max_output_tokens is integer
           - item.profiles.mlx.max_parallel_requests is integer
           - item.profiles.mlx.queue_size is integer
           - item.profiles.mlx.prefill_tokens_per_second is number
           - item.profiles.mlx.decode_tokens_per_second is number
       loop: "{{ llm_model_catalog_models | selectattr('name', 'equalto', 'mlx-community/Qwen3.5-9B-OptiQ-4bit') | list }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: K2 Horizon profiles keep the 64k context and 32k output limits
+      ansible.builtin.assert:
+        that:
+          - item.context_window == 65536
+          - item.max_output_tokens == 32768
+          - item.max_parallel_requests == 4
+      loop: >-
+        {{ llm_model_catalog_models
+           | selectattr('name', 'in', [
+               'IFM/K2-Horizon-7B-GGUF',
+               'mlx-community/K2-Horizon-7B-4bit',
+               'mlx-community/K2-Horizon-7B-oQ6e'
+             ]) | list }}
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: The catalog contains one entry for each K2 serving format
+      ansible.builtin.assert:
+        that:
+          - >-
+            llm_model_catalog_models
+            | selectattr('name', 'in', [
+                'IFM/K2-Horizon-7B-GGUF',
+                'mlx-community/K2-Horizon-7B-4bit',
+                'mlx-community/K2-Horizon-7B-oQ6e'
+              ]) | list | length == 3
+
+    - name: GPU trial profiles reserve 32k tokens for input and output
+      ansible.builtin.assert:
+        that:
+          - model.profiles[profile].context_window == 32768
+          - model.profiles[profile].max_output_tokens == 32768
+          - model.profiles[profile].max_parallel_requests == 4
+      loop:
+        - {name: 'qwen3.5-9b', profile: 'small-c4-64k'}
+        - {name: 'IFM/K2-Horizon-7B-GGUF', profile: 'small-k2-horizon'}
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        model: >-
+          {{ llm_model_catalog_models
+             | selectattr('name', 'equalto', item.name) | first }}
+        profile: "{{ item.profile }}"
+
+    - name: MLX K2 Horizon retains the same serving limits
+      ansible.builtin.assert:
+        that:
+          - item.profiles.mlx.context_window == 65536
+          - item.profiles.mlx.max_output_tokens == 32768
+          - item.profiles.mlx.max_parallel_requests == 4
+          - item.profiles['small-trial-mlx'].context_window == 32768
+          - item.profiles['small-trial-mlx'].max_output_tokens == 32768
+          - item.profiles['small-trial-mlx'].max_parallel_requests == 4
+      loop: >-
+        {{ llm_model_catalog_models
+           | selectattr('name', 'equalto', 'mlx-community/K2-Horizon-7B-4bit')
+           | list }}
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: MLX K2 oQ6e retains the same serving limits
+      ansible.builtin.assert:
+        that:
+          - item.profiles.mlx.context_window == 65536
+          - item.profiles.mlx.max_output_tokens == 32768
+          - item.profiles.mlx.max_parallel_requests == 4
+          - item.profiles['small-trial-mlx-q6'].context_window == 32768
+          - item.profiles['small-trial-mlx-q6'].max_output_tokens == 32768
+          - item.profiles['small-trial-mlx-q6'].max_parallel_requests == 4
+      loop: >-
+        {{ llm_model_catalog_models
+           | selectattr('name', 'equalto', 'mlx-community/K2-Horizon-7B-oQ6e')
+           | list }}
       loop_control:
         label: "{{ item.name }}"
 
