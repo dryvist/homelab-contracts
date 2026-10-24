@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.17.0](https://github.com/dryvist/homelab-contracts/compare/v5.16.0...v5.17.0) (2026-10-24)
+
+
+### Features
+
+* **llm_roles:** publish the router lane vocabulary from lanes.json ([#206](https://github.com/dryvist/homelab-contracts/issues/206)) ([e20cf86](https://github.com/dryvist/homelab-contracts/commit/e20cf86c081e3007d4d1a752a526f61e0bbcd8ac))
+
 ## [5.16.0](https://github.com/dryvist/homelab-contracts/compare/v5.15.0...v5.16.0) (2026-10-24)
 
 
