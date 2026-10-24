@@ -1,5 +1,37 @@
 ---
 # Cross-reference assertions for a model-role map passed as `map`.
+- name: Every router-routed role name is a lane or legacy name
+  ansible.builtin.assert:
+    that: item in lane_vocabulary
+    fail_msg: >-
+      role {{ item }} is not in the lane vocabulary. Keep this list identical to
+      ansible-proxmox-ai tests/llm_router/test_alias_sources.py LANE_VOCABULARY
+      and nix-ai lib/checks/litellm-local-aliases.nix.
+    quiet: true
+  vars:
+    lane_vocabulary:
+      - auto
+      - light
+      - standard
+      - critical
+      - long
+      - embed
+      - rerank
+      - ocr
+      - classify
+      - judge
+      - small
+      - fast
+      - cheap
+      - medium
+      - default
+      - large
+      - best
+      - coding
+      - recorder
+  # stage0_* roles name Stage 0 service models, not router names; the router never routes them.
+  loop: "{{ map.roles.keys() | reject('match', '^stage0_') | list }}"
+
 - name: Every role names a declared model (or null)
   ansible.builtin.assert:
     that: item.value.model is none or item.value.model in map.models

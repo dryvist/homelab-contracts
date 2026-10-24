@@ -14,6 +14,8 @@
     "default": { "model": "qwen38-27b", "egress": "zdr" },
     "coding": { "model": "qwen38-27b", "egress": "zdr" },
     "long": { "model": "qwen38-27b", "egress": "zdr" },
+    "standard": { "model": "qwen38-27b", "egress": "zdr" },
+    "critical": { "model": "qwen38-27b", "egress": "zdr" },
     "fast": { "model": "mimo-9b", "egress": "zdr" },
     "cheap": { "model": "mimo-9b", "egress": "zdr" },
     "small": { "model": "mimo-9b", "egress": "estate" },
