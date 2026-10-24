@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.18.0](https://github.com/dryvist/homelab-contracts/compare/v5.17.0...v5.18.0) (2026-10-24)
+
+
+### Features
+
+* **agent_callers:** add the harness caller and trust tier registry ([#208](https://github.com/dryvist/homelab-contracts/issues/208)) ([4648b28](https://github.com/dryvist/homelab-contracts/commit/4648b28bc046c1f5eb0ff8f0720716df5bed88e9))
+
 ## [5.17.0](https://github.com/dryvist/homelab-contracts/compare/v5.16.0...v5.17.0) (2026-10-24)
 
 
