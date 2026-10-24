@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.16.0](https://github.com/dryvist/homelab-contracts/compare/v5.15.0...v5.16.0) (2026-10-24)
+
+
+### Features
+
+* **llm_roles:** add the standard and critical lanes and check role names ([#204](https://github.com/dryvist/homelab-contracts/issues/204)) ([8c90698](https://github.com/dryvist/homelab-contracts/commit/8c90698355059e5176c8659f2c0b80470060892d))
+
 ## [5.15.0](https://github.com/dryvist/homelab-contracts/compare/v5.14.2...v5.15.0) (2026-10-22)
 
 
