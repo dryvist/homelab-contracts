@@ -28,6 +28,8 @@ jobs:
         run: check-jsonschema --schemafile schemas/nautobot-export-v1.json examples/nautobot_export.json
       - name: Validate the llm_roles model map against its schema
         run: check-jsonschema --schemafile schemas/model-roles-v1.json ansible/roles/llm_roles/files/model-roles.json
+      - name: Validate the llm_roles lane vocabulary against its schema
+        run: check-jsonschema --schemafile schemas/lanes-v1.json ansible/roles/llm_roles/files/lanes.json
       - name: Negative - a dense model with concurrency above 1 must fail the schema
         run: |
           if check-jsonschema --schemafile schemas/model-roles-v1.json tests/llm_roles/bad-dense-concurrency.json; then
