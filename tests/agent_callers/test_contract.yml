@@ -22,8 +22,8 @@
           - (agent_callers_tiers | unique | list | length) == (agent_callers_tiers | length)
           - agent_callers_default_tier in agent_callers_tiers
           - >-
-            (agent_callers | dict2items | map(attribute='key') | unique | list | length)
-            == (agent_callers | length)
+            (agent_callers_registry | dict2items | map(attribute='key') | unique | list | length)
+            == (agent_callers_registry | length)
         fail_msg: >-
           callers.json must have schema version 1, unique caller ids and tiers,
           and a default tier declared in tiers.
@@ -31,5 +31,5 @@
     - name: The shipped caller tiers resolve
       ansible.builtin.include_tasks: check_refs.yml
       vars:
-        callers: "{{ agent_callers }}"
+        callers: "{{ agent_callers_registry }}"
         tiers: "{{ agent_callers_tiers }}"

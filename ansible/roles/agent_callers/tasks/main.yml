@@ -10,7 +10,7 @@
     agent_callers_schema_version: "{{ _agent_callers_source.schema_version }}"
     agent_callers_tiers: "{{ _agent_callers_source.tiers }}"
     agent_callers_default_tier: "{{ _agent_callers_source.default_tier }}"
-    agent_callers: "{{ _agent_callers_source.callers }}"
+    agent_callers_registry: "{{ _agent_callers_source.callers }}"
 
 - name: Assert the caller registry schema version
   ansible.builtin.assert:
@@ -29,6 +29,6 @@
     quiet: true
     that: item.value.trust_tier in agent_callers_tiers
     fail_msg: Caller {{ item.key }} has an undeclared trust tier.
-  loop: "{{ agent_callers | dict2items }}"
+  loop: "{{ agent_callers_registry | dict2items }}"
   loop_control:
     label: "{{ item.key }}"
