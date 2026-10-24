@@ -30,6 +30,8 @@ jobs:
         run: check-jsonschema --schemafile schemas/model-roles-v1.json ansible/roles/llm_roles/files/model-roles.json
       - name: Validate the llm_roles lane vocabulary against its schema
         run: check-jsonschema --schemafile schemas/lanes-v1.json ansible/roles/llm_roles/files/lanes.json
+      - name: Validate the agent_callers registry against its schema
+        run: check-jsonschema --schemafile schemas/callers-v1.json ansible/roles/agent_callers/files/callers.json
       - name: Negative - a dense model with concurrency above 1 must fail the schema
         run: |
           if check-jsonschema --schemafile schemas/model-roles-v1.json tests/llm_roles/bad-dense-concurrency.json; then
@@ -110,6 +112,10 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/llm_roles/test_contract.yml
+      - name: Verify the agent_callers contract
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/agent_callers/test_contract.yml
       # converge_gate contract: the cap this role enforces must always sit
       # strictly below whatever ceiling fed it (the Semaphore-forwarded env
       # var, or the one fallback default), and a CONVERGE_WALL_CLOCK_CAP

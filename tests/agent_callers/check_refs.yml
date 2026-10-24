@@ -1,0 +1,10 @@
+---
+# Cross-reference assertions for a caller map passed as `callers` and `tiers`.
+- name: Every caller names a declared trust tier
+  ansible.builtin.assert:
+    that: item.value.trust_tier in tiers
+    fail_msg: Caller {{ item.key }} has an undeclared trust tier.
+    quiet: true
+  loop: "{{ callers | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"

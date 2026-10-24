@@ -1,0 +1,34 @@
+---
+# Load the canonical harness caller registry and publish its shared values.
+- name: Load the harness caller registry
+  ansible.builtin.include_vars:
+    file: "{{ role_path }}/files/callers.json"
+    name: _agent_callers_source
+
+- name: Publish the harness caller registry
+  ansible.builtin.set_fact:
+    agent_callers_schema_version: "{{ _agent_callers_source.schema_version }}"
+    agent_callers_tiers: "{{ _agent_callers_source.tiers }}"
+    agent_callers_default_tier: "{{ _agent_callers_source.default_tier }}"
+    agent_callers: "{{ _agent_callers_source.callers }}"
+
+- name: Assert the caller registry schema version
+  ansible.builtin.assert:
+    quiet: true
+    that: agent_callers_schema_version == 1
+    fail_msg: The harness caller registry schema version must be 1.
+
+- name: Assert the default caller tier is declared
+  ansible.builtin.assert:
+    quiet: true
+    that: agent_callers_default_tier in agent_callers_tiers
+    fail_msg: The default caller tier must be declared in tiers.
+
+- name: Assert every caller tier is declared
+  ansible.builtin.assert:
+    quiet: true
+    that: item.value.trust_tier in agent_callers_tiers
+    fail_msg: Caller {{ item.key }} has an undeclared trust tier.
+  loop: "{{ agent_callers | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
