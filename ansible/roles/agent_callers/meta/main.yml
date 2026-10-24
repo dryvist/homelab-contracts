@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: agent_callers
+  author: JacobPEvans
+  description: >-
+    Canonical harness gateway identities and memory trust tiers, loaded as
+    the agent_callers variable from files/callers.json.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - ansible
+dependencies: []

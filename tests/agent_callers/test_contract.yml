@@ -1,0 +1,35 @@
+---
+# Contract for the agent_callers role: the shipped ids and trust tiers resolve.
+# Shape rules are exercised by the check-jsonschema step in .github/workflows/ci.yml.
+#
+# Run: ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
+#        tests/agent_callers/test_contract.yml
+
+- name: AI harness caller registry contract
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Load the shipped caller registry
+      ansible.builtin.include_role:
+        name: agent_callers
+        public: true
+
+    - name: The caller registry source satisfies its contract
+      ansible.builtin.assert:
+        that:
+          - agent_callers_schema_version == 1
+          - (agent_callers_tiers | unique | list | length) == (agent_callers_tiers | length)
+          - agent_callers_default_tier in agent_callers_tiers
+          - >-
+            (agent_callers_registry | dict2items | map(attribute='key') | unique | list | length)
+            == (agent_callers_registry | length)
+        fail_msg: >-
+          callers.json must have schema version 1, unique caller ids and tiers,
+          and a default tier declared in tiers.
+
+    - name: The shipped caller tiers resolve
+      ansible.builtin.include_tasks: check_refs.yml
+      vars:
+        callers: "{{ agent_callers_registry }}"
+        tiers: "{{ agent_callers_tiers }}"
