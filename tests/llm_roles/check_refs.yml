@@ -4,31 +4,11 @@
   ansible.builtin.assert:
     that: item in lane_vocabulary
     fail_msg: >-
-      role {{ item }} is not in the lane vocabulary. Keep this list identical to
-      ansible-proxmox-ai tests/llm_router/test_alias_sources.py LANE_VOCABULARY
-      and nix-ai lib/checks/litellm-local-aliases.nix.
+      role {{ item }} is not in the lane vocabulary. The list lives in
+      ansible/roles/llm_roles/files/lanes.json.
     quiet: true
   vars:
-    lane_vocabulary:
-      - auto
-      - light
-      - standard
-      - critical
-      - long
-      - embed
-      - rerank
-      - ocr
-      - classify
-      - judge
-      - small
-      - fast
-      - cheap
-      - medium
-      - default
-      - large
-      - best
-      - coding
-      - recorder
+    lane_vocabulary: "{{ llm_roles_lane_vocabulary }}"
   # stage0_* roles name Stage 0 service models, not router names; the router never routes them.
   loop: "{{ map.roles.keys() | reject('match', '^stage0_') | list }}"
 

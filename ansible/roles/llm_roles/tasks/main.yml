@@ -7,6 +7,18 @@
     file: "{{ role_path }}/files/model-roles.json"
     name: _llm_roles_source
 
+- name: Load the router lane vocabulary
+  ansible.builtin.include_vars:
+    file: "{{ role_path }}/files/lanes.json"
+    name: _llm_roles_lanes
+
+- name: Publish the router lane vocabulary
+  ansible.builtin.set_fact:
+    llm_roles_lane_vocabulary: "{{ _llm_roles_lanes.vocabulary }}"
+    llm_roles_lane_pending: "{{ _llm_roles_lanes.pending }}"
+    llm_roles_harness_aliases: "{{ _llm_roles_lanes.harness_aliases }}"
+    llm_roles_lane_schema_version: "{{ _llm_roles_lanes.schema_version }}"
+
 - name: Load the shared model catalog
   ansible.builtin.include_role:
     name: llm_model_catalog

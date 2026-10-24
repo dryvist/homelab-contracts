@@ -17,6 +17,23 @@
         name: llm_roles
         public: true
 
+    - name: The lane vocabulary source satisfies its contract
+      ansible.builtin.assert:
+        that:
+          - llm_roles_lane_schema_version == 1
+          - >-
+            (llm_roles_lane_vocabulary | unique | list | length)
+            == (llm_roles_lane_vocabulary | length)
+          - >-
+            llm_roles_lane_pending
+            | difference(llm_roles_lane_vocabulary) | length == 0
+          - >-
+            llm_roles_harness_aliases
+            | difference(llm_roles_lane_vocabulary) | length == 0
+        fail_msg: >-
+          lanes.json must have schema version 1, a unique vocabulary, and
+          pending and harness aliases contained in that vocabulary.
+
     - name: Load the shared model catalog
       ansible.builtin.include_role:
         name: llm_model_catalog

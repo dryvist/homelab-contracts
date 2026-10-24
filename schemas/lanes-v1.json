@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dryvist/homelab-contracts/schemas/lanes-v1.json",
+  "title": "dryvist LLM router lane vocabulary contract",
+  "description": "schema_version 1. Shape of ansible/roles/llm_roles/files/lanes.json, the one source for router lane and alias names. Subset rules (pending and harness_aliases inside vocabulary) are asserted by tests/llm_roles/test_contract.yml.",
+  "type": "object",
+  "required": ["schema_version", "vocabulary", "pending", "harness_aliases"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "description": { "type": "string" },
+    "vocabulary": { "$ref": "#/$defs/names", "minItems": 1 },
+    "pending": { "$ref": "#/$defs/names" },
+    "harness_aliases": { "$ref": "#/$defs/names", "minItems": 1 }
+  },
+  "$defs": {
+    "names": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" }
+    }
+  }
+}
