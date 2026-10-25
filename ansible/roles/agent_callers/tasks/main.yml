@@ -15,7 +15,7 @@
 - name: Assert the caller registry schema version
   ansible.builtin.assert:
     quiet: true
-    that: agent_callers_schema_version == 1
+    that: (agent_callers_schema_version | int) == 1
     fail_msg: The harness caller registry schema version must be 1.
 
 - name: Assert the default caller tier is declared

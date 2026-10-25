@@ -39,4 +39,6 @@ jobs:
         python3 -m venv "$RUNNER_TEMP/contracts-gate"
         "$RUNNER_TEMP/contracts-gate/bin/python" -m pip install 'ansible-core==2.18.*'
         bash .github/scripts/diff-against-latest-version.sh
-        ANSIBLE_ROLES_PATH=ansible/roles "$RUNNER_TEMP/contracts-gate/bin/ansible-playbook" -i localhost, tests/llm_roles/test_contract.yml
+        for contract in llm_model_catalog llm_router_key_catalog llm_roles agent_callers; do
+          ANSIBLE_ROLES_PATH=ansible/roles "$RUNNER_TEMP/contracts-gate/bin/ansible-playbook" -i localhost, "tests/$contract/test_contract.yml"
+        done
