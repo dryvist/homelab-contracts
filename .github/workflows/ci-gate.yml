@@ -66,8 +66,20 @@ jobs:
         names = sorted(name for name in roles if not name.startswith("stage0_"))
         print(json.dumps({"source": "homelab-contracts non-Stage-0 role keys", "names": names}))
         PY
+        router_contract_ref=v2.7.0
+        router_names_dir="$RUNNER_TEMP/router-names"
+        mkdir -p "$router_names_dir"
+        release_url="https://github.com/dryvist/ansible-proxmox-ai/releases/download/$router_contract_ref"
+        curl --fail --silent --show-error --location --retry 3 \
+          "$release_url/servable-aliases.json" \
+          --output "$router_names_dir/servable-aliases.json"
+        curl --fail --silent --show-error --location --retry 3 \
+          "$release_url/servable-aliases.json.sha256" \
+          --output "$router_names_dir/servable-aliases.json.sha256"
+        (cd "$router_names_dir" && sha256sum --check servable-aliases.json.sha256)
         python3 .github/scripts/lane-alias-parity.py \
           --lanes ansible/roles/llm_roles/files/lanes.json \
+          --router-names "$router_names_dir/servable-aliases.json" \
           --names "$RUNNER_TEMP/lane-alias-contracts.json"
         for contract in llm_model_catalog llm_router_key_catalog llm_roles agent_callers; do
           ANSIBLE_ROLES_PATH=ansible/roles "$RUNNER_TEMP/contracts-gate/bin/ansible-playbook" -i localhost, "tests/$contract/test_contract.yml"
