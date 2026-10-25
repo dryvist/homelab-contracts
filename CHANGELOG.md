@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.20.0](https://github.com/dryvist/homelab-contracts/compare/v5.19.2...v5.20.0) (2026-10-25)
+
+
+### Features
+
+* **contracts:** add a shared lane-alias parity check ([#218](https://github.com/dryvist/homelab-contracts/issues/218)) ([1141e88](https://github.com/dryvist/homelab-contracts/commit/1141e88e9c2aa6f85844789330f1798bafa28590))
+
 ## [5.19.2](https://github.com/dryvist/homelab-contracts/compare/v5.19.1...v5.19.2) (2026-10-25)
 
 
