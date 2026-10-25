@@ -38,6 +38,8 @@ jobs:
         set -euo pipefail
         python3 -m venv "$RUNNER_TEMP/contracts-gate"
         "$RUNNER_TEMP/contracts-gate/bin/python" -m pip install 'ansible-core==2.18.*'
+        # Consumers constrain dryvist.homelab by this version, so it must track the release.
+        "$RUNNER_TEMP/contracts-gate/bin/python" -c 'import json, sys, yaml; g = yaml.safe_load(open("ansible/galaxy.yml"))["version"]; m = json.load(open(".release-please-manifest.json"))["."]; sys.exit(0 if g == m else f"ansible/galaxy.yml version {g} != release manifest {m}")'
         bash .github/scripts/diff-against-latest-version.sh
         python3 .github/scripts/lane-alias-parity.py \
           --lanes ansible/roles/llm_roles/files/lanes.json \
