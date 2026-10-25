@@ -1,0 +1,57 @@
+name: Lane Alias Parity
+
+on:
+  workflow_call:
+    inputs:
+      names-files:
+        description: Newline-separated JSON names files in the caller checkout.
+        required: true
+        type: string
+      contracts-ref:
+        description: homelab-contracts ref; defaults to the resolved reusable workflow ref.
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+jobs:
+  check:
+    name: Check lane aliases
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Sparse-checkout the shared lane contract and checker
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: dryvist/homelab-contracts
+          ref: ${{ inputs.contracts-ref || job.workflow_sha }}
+          path: .homelab-contracts
+          sparse-checkout: |
+            ansible/roles/llm_roles/files/lanes.json
+            .github/scripts/lane-alias-parity.py
+          sparse-checkout-cone-mode: false
+
+      - name: Check caller lane-class names
+        shell: bash
+        env:
+          NAMES_FILES: ${{ inputs.names-files }}
+        run: |
+          set -euo pipefail
+          names_args=()
+          while IFS= read -r names_file; do
+            names_file=${names_file%$'\r'}
+            [[ -n "$names_file" ]] || continue
+            names_args+=(--names "$names_file")
+          done <<< "$NAMES_FILES"
+          if [[ ${#names_args[@]} -eq 0 ]]; then
+            echo "names-files must contain at least one path" >&2
+            exit 2
+          fi
+          python3 .homelab-contracts/.github/scripts/lane-alias-parity.py \
+            --lanes .homelab-contracts/ansible/roles/llm_roles/files/lanes.json \
+            "${names_args[@]}"
