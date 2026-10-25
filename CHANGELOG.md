@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.18.1](https://github.com/dryvist/homelab-contracts/compare/v5.18.0...v5.18.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **agent-callers:** trust the Antigravity caller ([#210](https://github.com/dryvist/homelab-contracts/issues/210)) ([5a67972](https://github.com/dryvist/homelab-contracts/commit/5a679720f8ebe48098939c90efefa017b54effa7))
+
 ## [5.18.0](https://github.com/dryvist/homelab-contracts/compare/v5.17.0...v5.18.0) (2026-10-24)
 
 
