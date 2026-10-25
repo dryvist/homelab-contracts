@@ -1,0 +1,73 @@
+name: Lane Alias Parity
+
+on:
+  workflow_call:
+    inputs:
+      names-files:
+        description: >-
+          Newline-separated JSON names files, relative to the caller checkout
+          (or to the downloaded artifact when names-artifact is set).
+        required: true
+        type: string
+      names-artifact:
+        description: >-
+          Optional artifact, uploaded by an earlier caller job, holding generated
+          names files; it is downloaded into the workspace before the check.
+        required: false
+        type: string
+        default: ""
+      contracts-ref:
+        description: homelab-contracts ref; defaults to the resolved reusable workflow ref.
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+jobs:
+  check:
+    name: Check lane aliases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Download generated names files
+        if: inputs.names-artifact != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.names-artifact }}
+
+      - name: Sparse-checkout the shared lane contract and checker
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: dryvist/homelab-contracts
+          ref: ${{ inputs.contracts-ref || job.workflow_sha }}
+          path: .homelab-contracts
+          sparse-checkout: |
+            ansible/roles/llm_roles/files/lanes.json
+            .github/scripts/lane-alias-parity.py
+          sparse-checkout-cone-mode: false
+
+      - name: Check caller lane-class names
+        shell: bash
+        env:
+          NAMES_FILES: ${{ inputs.names-files }}
+        run: |
+          set -euo pipefail
+          names_args=()
+          while IFS= read -r names_file; do
+            names_file=${names_file%$'\r'}
+            [[ -n "$names_file" ]] || continue
+            names_args+=(--names "$names_file")
+          done <<< "$NAMES_FILES"
+          if [[ ${#names_args[@]} -eq 0 ]]; then
+            echo "names-files must contain at least one path" >&2
+            exit 2
+          fi
+          python3 .homelab-contracts/.github/scripts/lane-alias-parity.py \
+            --lanes .homelab-contracts/ansible/roles/llm_roles/files/lanes.json \
+            "${names_args[@]}"
