@@ -13,6 +13,6 @@
     "opencode-untrusted": {"trust_tier": "untrusted"},
     "claude-zai": {"trust_tier": "untrusted"},
     "zcode": {"trust_tier": "untrusted"},
-    "antigravity-cli": {"trust_tier": "untrusted"}
+    "antigravity-cli": {"trust_tier": "trusted"}
   }
 }
