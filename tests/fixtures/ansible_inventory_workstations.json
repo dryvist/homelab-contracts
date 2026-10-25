@@ -1,0 +1,41 @@
+{
+  "schema_version": "2.5.0",
+  "domain": "example.com",
+  "containers": {},
+  "agents": {},
+  "hermes_agents": {},
+  "vms": {},
+  "docker_vms": {},
+  "splunk_vm": {
+    "splunk": {
+      "vmid": 200,
+      "hostname": "splunk-example",
+      "ip": "splunk.example.com",
+      "node": "node-example",
+      "ansible_connection": "ssh"
+    }
+  },
+  "constants": {
+    "service_ports": {"example_port": 1},
+    "syslog_ports": {"example_port": 2},
+    "netflow_ports": {"example_port": 3},
+    "notification_ports": {"example_port": 4},
+    "vector_db_ports": {"example_port": 5}
+  },
+  "ingress": [],
+  "ingress_vip": "",
+  "ingress_hosts": [],
+  "host_services": {},
+  "nodes": {},
+  "node_storage": {},
+  "workstations": {
+    "mac-primary": {
+      "host": "mac-primary.example.com",
+      "roles": ["mac-primary-serving"]
+    },
+    "mac-secondary": {
+      "host": "mac-secondary.example.com",
+      "roles": ["mac-secondary-serving"]
+    }
+  }
+}
