@@ -51,8 +51,14 @@ jobs:
           fixture_status=$?
           [[ "$fixture_status" -eq 1 ]] || exit "$fixture_status"
         fi
-        python3 -c 'import json; from pathlib import Path; roles=json.loads(Path("ansible/roles/llm_roles/files/model-roles.json").read_text())["roles"]; print(json.dumps({"source":"homelab-contracts non-Stage-0 role keys","names":sorted(name for name in roles if not name.startswith("stage0_"))}))' \
-          > "$RUNNER_TEMP/lane-alias-contracts.json"
+        python3 - > "$RUNNER_TEMP/lane-alias-contracts.json" <<'PY'
+        import json
+        from pathlib import Path
+
+        roles = json.loads(Path("ansible/roles/llm_roles/files/model-roles.json").read_text())["roles"]
+        names = sorted(name for name in roles if not name.startswith("stage0_"))
+        print(json.dumps({"source": "homelab-contracts non-Stage-0 role keys", "names": names}))
+        PY
         python3 .github/scripts/lane-alias-parity.py \
           --lanes ansible/roles/llm_roles/files/lanes.json \
           --names "$RUNNER_TEMP/lane-alias-contracts.json"
