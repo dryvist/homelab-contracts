@@ -33,3 +33,10 @@ jobs:
     uses: JacobPEvans/.github/.github/workflows/_ci-gate.yml@v1
     with:
       profile: ansible
+      # Keep the two contract checks in the shared Merge Gate's repo-tests job.
+      test_command: |
+        set -euo pipefail
+        python3 -m venv "$RUNNER_TEMP/contracts-gate"
+        "$RUNNER_TEMP/contracts-gate/bin/python" -m pip install 'ansible-core==2.18.*'
+        bash .github/scripts/diff-against-latest-version.sh
+        ANSIBLE_ROLES_PATH=ansible/roles "$RUNNER_TEMP/contracts-gate/bin/ansible-playbook" -i localhost, tests/llm_roles/test_contract.yml

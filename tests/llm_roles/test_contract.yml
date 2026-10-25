@@ -20,7 +20,7 @@
     - name: The lane vocabulary source satisfies its contract
       ansible.builtin.assert:
         that:
-          - llm_roles_lane_schema_version == 1
+          - (llm_roles_lane_schema_version | int) == 1
           - >-
             (llm_roles_lane_vocabulary | unique | list | length)
             == (llm_roles_lane_vocabulary | length)
