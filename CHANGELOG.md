@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.21.1](https://github.com/dryvist/homelab-contracts/compare/v5.21.0...v5.21.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **ansible:** release-manage the dryvist.homelab collection version ([#222](https://github.com/dryvist/homelab-contracts/issues/222)) ([8ac3e9a](https://github.com/dryvist/homelab-contracts/commit/8ac3e9a76545c6702a18b53c8becf1c4d2eed444))
+
 ## [5.21.0](https://github.com/dryvist/homelab-contracts/compare/v5.20.0...v5.21.0) (2026-10-25)
 
 
