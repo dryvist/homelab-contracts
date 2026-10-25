@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.19.1](https://github.com/dryvist/homelab-contracts/compare/v5.19.0...v5.19.1) (2026-10-25)
+
+
+### Bug Fixes
+
+* **contracts:** restore the snapshot and lanes contract checks ([#214](https://github.com/dryvist/homelab-contracts/issues/214)) ([bcafc54](https://github.com/dryvist/homelab-contracts/commit/bcafc543f4a75c87dab5f84f2117954574db6246))
+
 ## [5.19.0](https://github.com/dryvist/homelab-contracts/compare/v5.18.1...v5.19.0) (2026-10-25)
 
 
