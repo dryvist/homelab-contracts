@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.23.0](https://github.com/dryvist/homelab-contracts/compare/v5.22.0...v5.23.0) (2026-10-25)
+
+
+### Features
+
+* **agent_callers:** classify each caller by consumer class ([#226](https://github.com/dryvist/homelab-contracts/issues/226)) ([8653a26](https://github.com/dryvist/homelab-contracts/commit/8653a26ca81a4ed315c1dc27b43f787468c6ad0f))
+
 ## [5.22.0](https://github.com/dryvist/homelab-contracts/compare/v5.21.1...v5.22.0) (2026-10-25)
 
 
