@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.19.2](https://github.com/dryvist/homelab-contracts/compare/v5.19.1...v5.19.2) (2026-10-25)
+
+
+### Bug Fixes
+
+* **agent_callers:** compare the registry schema version as an integer ([#216](https://github.com/dryvist/homelab-contracts/issues/216)) ([2a3e73e](https://github.com/dryvist/homelab-contracts/commit/2a3e73eea22ed54a29414e56c91dc973483f0ea8))
+
 ## [5.19.1](https://github.com/dryvist/homelab-contracts/compare/v5.19.0...v5.19.1) (2026-10-25)
 
 
