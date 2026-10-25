@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "description": "Router lane vocabulary. The one source for every lane and legacy alias name; consumers read this file and never copy the list.",
-  "vocabulary": ["auto", "light", "standard", "critical", "long", "embed", "rerank", "ocr", "classify", "judge", "small", "fast", "cheap", "medium", "default", "large", "best", "coding", "recorder"],
+  "vocabulary": ["auto", "light", "standard", "critical", "long", "embed", "rerank", "ocr", "classify", "judge", "small", "fast", "cheap", "medium", "default", "large", "best", "coding", "recorder", "embeddings", "goal-judge", "hermes-default", "review-local", "review-oss", "review-private", "subagent"],
   "pending": ["rerank", "classify"],
   "harness_aliases": ["auto", "light", "standard", "critical", "long", "small", "medium"]
 }
