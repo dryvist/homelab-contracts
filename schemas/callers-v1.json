@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/dryvist/homelab-contracts/schemas/callers-v1.json",
   "title": "dryvist AI harness caller registry contract",
-  "description": "schema_version 1. Shape of ansible/roles/agent_callers/files/callers.json. Tier membership is asserted by tests/agent_callers/test_contract.yml.",
+  "description": "schema_version 1. Shape of ansible/roles/agent_callers/files/callers.json. Tier membership and the untrusted consumer-class invariant are asserted by tests/agent_callers/test_contract.yml.",
   "type": "object",
   "required": ["schema_version", "description", "tiers", "default_tier", "callers"],
   "additionalProperties": false,
@@ -16,10 +16,14 @@
       "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
       "additionalProperties": {
         "type": "object",
-        "required": ["trust_tier"],
+        "required": ["trust_tier", "consumer_class"],
         "additionalProperties": false,
         "properties": {
-          "trust_tier": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" }
+          "trust_tier": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+          "consumer_class": {
+            "type": "string",
+            "enum": ["interactive", "hermes", "ci", "batch", "untrusted"]
+          }
         }
       }
     }
