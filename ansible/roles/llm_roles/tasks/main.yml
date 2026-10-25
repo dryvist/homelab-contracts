@@ -17,7 +17,7 @@
     llm_roles_lane_vocabulary: "{{ _llm_roles_lanes.vocabulary }}"
     llm_roles_lane_pending: "{{ _llm_roles_lanes.pending }}"
     llm_roles_harness_aliases: "{{ _llm_roles_lanes.harness_aliases }}"
-    llm_roles_lane_schema_version: "{{ _llm_roles_lanes.schema_version }}"
+    llm_roles_lane_schema_version: "{{ _llm_roles_lanes.schema_version | int }}"
 
 - name: Load the shared model catalog
   ansible.builtin.include_role:
