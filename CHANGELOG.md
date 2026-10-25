@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.21.0](https://github.com/dryvist/homelab-contracts/compare/v5.20.0...v5.21.0) (2026-10-25)
+
+
+### Features
+
+* **lanes:** record the router's legacy consumer aliases in the vocabulary ([#220](https://github.com/dryvist/homelab-contracts/issues/220)) ([ea458de](https://github.com/dryvist/homelab-contracts/commit/ea458de91f1a3f02f7360b242f137057d637f314))
+
 ## [5.20.0](https://github.com/dryvist/homelab-contracts/compare/v5.19.2...v5.20.0) (2026-10-25)
 
 
