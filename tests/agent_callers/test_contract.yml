@@ -1,5 +1,5 @@
 ---
-# Contract for the agent_callers role: the shipped ids and trust tiers resolve.
+# Contract for the agent_callers role: shipped ids, trust tiers, and consumer classes resolve.
 # Shape rules are exercised by the check-jsonschema step in .github/workflows/ci.yml.
 #
 # Run: ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, \
@@ -28,6 +28,26 @@
         fail_msg: >-
           callers.json must have schema version 1, unique caller ids and tiers,
           a default tier declared in tiers, and antigravity-cli assigned to trusted.
+
+    - name: Every caller has a valid consumer class
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - item.value.consumer_class is defined
+          - item.value.consumer_class in ['interactive', 'hermes', 'ci', 'batch', 'untrusted']
+        fail_msg: Caller {{ item.key }} has a missing or invalid consumer class.
+      loop: "{{ agent_callers_registry | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Every untrusted caller uses the untrusted consumer class
+      ansible.builtin.assert:
+        quiet: true
+        that: item.value.trust_tier != 'untrusted' or item.value.consumer_class == 'untrusted'
+        fail_msg: Caller {{ item.key }} is untrusted but has a different consumer class.
+      loop: "{{ agent_callers_registry | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
 
     - name: The shipped caller tiers resolve
       ansible.builtin.include_tasks: check_refs.yml

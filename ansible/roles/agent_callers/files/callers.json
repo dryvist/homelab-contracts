@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
-  "description": "Harness gateway identities and memory trust tiers; consumers read this file, and deployment JSON may override trust_tier per id.",
+  "description": "Harness gateway identities, trust tiers, and consumer classes; consumers read this file, and deployment JSON may override trust_tier per id.",
   "tiers": ["trusted", "untrusted"],
   "default_tier": "untrusted",
   "callers": {
-    "claude-code": {"trust_tier": "trusted"},
-    "codex": {"trust_tier": "trusted"},
-    "opencode-trusted": {"trust_tier": "trusted"},
-    "hermes": {"trust_tier": "trusted"},
-    "hermes-private": {"trust_tier": "trusted"},
-    "donna": {"trust_tier": "trusted"},
-    "opencode-untrusted": {"trust_tier": "untrusted"},
-    "claude-zai": {"trust_tier": "untrusted"},
-    "zcode": {"trust_tier": "untrusted"},
-    "antigravity-cli": {"trust_tier": "trusted"}
+    "claude-code": {"trust_tier": "trusted", "consumer_class": "interactive"},
+    "codex": {"trust_tier": "trusted", "consumer_class": "interactive"},
+    "opencode-trusted": {"trust_tier": "trusted", "consumer_class": "interactive"},
+    "hermes": {"trust_tier": "trusted", "consumer_class": "hermes"},
+    "hermes-private": {"trust_tier": "trusted", "consumer_class": "hermes"},
+    "donna": {"trust_tier": "trusted", "consumer_class": "hermes"},
+    "opencode-untrusted": {"trust_tier": "untrusted", "consumer_class": "untrusted"},
+    "claude-zai": {"trust_tier": "untrusted", "consumer_class": "untrusted"},
+    "zcode": {"trust_tier": "untrusted", "consumer_class": "untrusted"},
+    "antigravity-cli": {"trust_tier": "trusted", "consumer_class": "interactive"}
   }
 }
