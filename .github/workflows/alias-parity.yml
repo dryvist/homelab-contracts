@@ -21,6 +21,13 @@ on:
         required: false
         type: string
         default: ""
+      router-contract-ref:
+        description: >-
+          Optional dryvist/ansible-proxmox-ai release tag containing
+          servable-aliases.json and its checksum; empty skips router validation.
+        required: false
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -52,10 +59,32 @@ jobs:
             .github/scripts/lane-alias-parity.py
           sparse-checkout-cone-mode: false
 
+      - name: Download router names contract
+        if: inputs.router-contract-ref != ''
+        env:
+          ROUTER_CONTRACT_REF: ${{ inputs.router-contract-ref }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$ROUTER_CONTRACT_REF" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            echo "router-contract-ref must be a release tag without slashes or whitespace" >&2
+            exit 2
+          fi
+          router_names_dir="$RUNNER_TEMP/router-names"
+          mkdir -p "$router_names_dir"
+          release_url="https://github.com/dryvist/ansible-proxmox-ai/releases/download/$ROUTER_CONTRACT_REF"
+          curl --fail --silent --show-error --location --retry 3 \
+            "$release_url/servable-aliases.json" \
+            --output "$router_names_dir/servable-aliases.json"
+          curl --fail --silent --show-error --location --retry 3 \
+            "$release_url/servable-aliases.json.sha256" \
+            --output "$router_names_dir/servable-aliases.json.sha256"
+          (cd "$router_names_dir" && sha256sum --check servable-aliases.json.sha256)
+
       - name: Check caller lane-class names
         shell: bash
         env:
           NAMES_FILES: ${{ inputs.names-files }}
+          ROUTER_CONTRACT_REF: ${{ inputs.router-contract-ref }}
         run: |
           set -euo pipefail
           names_args=()
@@ -68,6 +97,11 @@ jobs:
             echo "names-files must contain at least one path" >&2
             exit 2
           fi
+          router_names_args=()
+          if [[ -n "$ROUTER_CONTRACT_REF" ]]; then
+            router_names_args+=(--router-names "$RUNNER_TEMP/router-names/servable-aliases.json")
+          fi
           python3 .homelab-contracts/.github/scripts/lane-alias-parity.py \
             --lanes .homelab-contracts/ansible/roles/llm_roles/files/lanes.json \
+            "${router_names_args[@]}" \
             "${names_args[@]}"
