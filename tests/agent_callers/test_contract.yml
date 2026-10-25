@@ -18,7 +18,7 @@
     - name: The caller registry source satisfies its contract
       ansible.builtin.assert:
         that:
-          - agent_callers_schema_version == 1
+          - (agent_callers_schema_version | int) == 1
           - (agent_callers_tiers | unique | list | length) == (agent_callers_tiers | length)
           - agent_callers_default_tier in agent_callers_tiers
           - agent_callers_registry['antigravity-cli']['trust_tier'] == 'trusted'
