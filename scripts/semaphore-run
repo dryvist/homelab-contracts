@@ -312,8 +312,9 @@ cmd_wait() {
 }
 
 cmd_log() {
-  [ "${#POSITIONAL[@]}" -ge 1 ] && [ "${#POSITIONAL[@]}" -le 2 ] \
-    || die "log needs ID [N]" "$EX_USAGE"
+  if [ "${#POSITIONAL[@]}" -lt 1 ] || [ "${#POSITIONAL[@]}" -gt 2 ]; then
+    die "log needs ID [N]" "$EX_USAGE"
+  fi
   require_task_id log
   local lines="$DEFAULT_LOG_LINES"
   if [ "${#POSITIONAL[@]}" -eq 2 ]; then
