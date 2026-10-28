@@ -1,0 +1,47 @@
+---
+# Provisions one Langfuse project API key pair into an OpenBao KV v2 secret, once.
+#
+# The OpenBao state is planned first: seed_generated runs with openbao_secrets_seed_plan_only, which reads the secret
+# and sends no write. Langfuse is called only when both key fields are absent. A secret that holds exactly one of them
+# stops the run, because a new key written beside a stored one would not form a pair that Langfuse accepts.
+#
+# Every task that handles the admin password, a cookie, the CSRF token or a key is no_log.
+
+- name: Plan the OpenBao write without writing (seed_generated, plan only)
+  ansible.builtin.include_role:
+    name: openbao_secrets
+    tasks_from: seed_generated
+  vars:
+    openbao_secrets_seed_plan_only: true
+    openbao_secrets_seed_addr: "{{ langfuse_project_keys_openbao_addr }}"
+    openbao_secrets_seed_token: "{{ langfuse_project_keys_openbao_token }}"
+    openbao_secrets_seed_mount: "{{ langfuse_project_keys_openbao_mount }}"
+    openbao_secrets_seed_path: "{{ langfuse_project_keys_openbao_path }}"
+    openbao_secrets_seed_fields:
+      - name: "{{ langfuse_project_keys_public_key_field }}"
+      - name: "{{ langfuse_project_keys_secret_key_field }}"
+  no_log: true
+
+- name: Record the key fields that the OpenBao secret lacks
+  ansible.builtin.set_fact:
+    langfuse_project_keys_missing_fields: "{{ (openbao_secrets_seed_desired | default({}, true)).keys() | list }}"
+  no_log: true
+
+- name: Stop when exactly one key field is stored
+  ansible.builtin.assert:
+    that:
+      - langfuse_project_keys_missing_fields | length != 1
+    fail_msg: >-
+      The OpenBao secret at {{ langfuse_project_keys_openbao_path }} holds one of the two key fields. Nothing was
+      created in Langfuse. Clear or complete the secret by hand, then rerun.
+
+- name: Report that the OpenBao secret already holds the key pair
+  ansible.builtin.debug:
+    msg: >-
+      {{ langfuse_project_keys_openbao_path }} already holds both key fields. No Langfuse call was made and no key
+      was created.
+  when: langfuse_project_keys_missing_fields | length == 0
+
+- name: Provision a project key pair
+  ansible.builtin.include_tasks: provision.yml
+  when: langfuse_project_keys_missing_fields | length == 2
