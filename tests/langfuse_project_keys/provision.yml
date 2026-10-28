@@ -88,7 +88,9 @@
             that:
               - case_a_refused | default(false) | bool
               - case_a_states.results[0].json.log | selectattr('path', 'search', '/api/trpc/') | list | length == 0
-              - case_a_states.results[1].json.log | selectattr('method', 'equalto', 'GET') | selectattr('path', 'equalto', 'secret/data/lpk/wrong-password') | list | length == 1
+              - >-
+                case_a_states.results[1].json.log | selectattr('method', 'equalto', 'GET')
+                | selectattr('path', 'equalto', 'secret/data/lpk/wrong-password') | list | length == 1
               - case_a_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
               - "'secret/data/lpk/wrong-password' not in case_a_states.results[1].json.state"
 
@@ -294,8 +296,12 @@
         - name: E - assert one project, one key pair, and one check-and-set write of exactly the two fields
           ansible.builtin.assert:
             that:
-              - case_e_states.results[0].json.log | selectattr('procedure', 'defined') | selectattr('procedure', 'equalto', 'projects.create') | list | length == 1
-              - case_e_states.results[0].json.log | selectattr('procedure', 'defined') | selectattr('procedure', 'equalto', 'projectApiKeys.create') | list | length == 1
+              - >-
+                case_e_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projects.create') | list | length == 1
+              - >-
+                case_e_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projectApiKeys.create') | list | length == 1
               - case_e_states.results[0].json.state['keys'] | length == 1
               - case_e_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list == [0]
               - case_e_states.results[1].json.state['secret/data/lpk/fresh'].version == 1
@@ -343,8 +349,12 @@
         - name: F - assert no project create, one key create against proj-1, and one write
           ansible.builtin.assert:
             that:
-              - case_f_states.results[0].json.log | selectattr('procedure', 'defined') | selectattr('procedure', 'equalto', 'projects.create') | list | length == 0
-              - case_f_states.results[0].json.log | selectattr('procedure', 'defined') | selectattr('procedure', 'equalto', 'projectApiKeys.create') | map(attribute='input.projectId') | list == ['proj-1']
+              - >-
+                case_f_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projects.create') | list | length == 0
+              - >-
+                case_f_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projectApiKeys.create') | map(attribute='input.projectId') | list == ['proj-1']
               - case_f_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list == [0]
               - case_f_states.results[1].json.state['secret/data/lpk/existing-project'].data.LANGFUSE_PUBLIC_KEY == 'pk-lf-fake-2'
 
