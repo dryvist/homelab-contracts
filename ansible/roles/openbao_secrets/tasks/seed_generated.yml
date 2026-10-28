@@ -252,10 +252,11 @@
         headers:
           X-Vault-Token: "{{ openbao_secrets_seed_token }}"
         body_format: json
-        body:
-          options:
-            cas: "{{ openbao_secrets_seed_version | int }}"
-          data: "{{ openbao_secrets_seed_stored | combine(openbao_secrets_seed_desired) }}"
+        body: >-
+          {{ {
+            'options': {'cas': openbao_secrets_seed_version | int},
+            'data': openbao_secrets_seed_stored | combine(openbao_secrets_seed_desired)
+          } | to_json }}
         status_code: [200]
         validate_certs: "{{ openbao_secrets_validate_certs }}"
       when:
