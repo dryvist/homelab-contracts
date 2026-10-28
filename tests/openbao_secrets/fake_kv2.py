@@ -15,6 +15,7 @@ import argparse
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
 
 STATE = {}  # data path -> {"version": int, "data": dict or None}
 LOG = []  # one entry per request, oldest first
@@ -63,8 +64,10 @@ def capabilities_for(token, path):
 class Handler(BaseHTTPRequestHandler):
     server_version = "fake-kv2"
 
-    def log_message(self, fmt, *args):
-        return
+    def log_message(self, format: str, *args: Any) -> None:
+        # The base class writes one stderr line per request. The playbook asserts on
+        # /_test/state instead, so the line is dropped.
+        del format, args
 
     def _send(self, status, body=None):
         raw = b"" if body is None else json.dumps(body).encode()
@@ -168,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description="Local stand-in for the OpenBao calls made by seed_generated.")
     parser.add_argument("--port", type=int, required=True)
     args = parser.parse_args()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
