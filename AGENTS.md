@@ -23,8 +23,11 @@ This repo owns:
 - `examples/ansible_inventory.json` — reference fixture used by CI
 - `versions/<vX.Y.Z>/` — frozen historical schemas for breaking-change detection
 - `tests/validate.sh` — one-line `check-jsonschema` invocation
+- `scripts/semaphore-run` — managed Semaphore task dispatch (list, start, wait, log, stop);
+  one OpenBao token per call, minted through `flow-lock approle-token`, revoked before any Semaphore request
 - `tests/flow-lock.bats` — CLI-contract tests for `bin/`
-- `flake.nix` — `packages.flow-lock` + dev shell; consumers pin by release tag
+- `tests/semaphore-run.bats` — CLI-contract tests for `scripts/semaphore-run`
+- `flake.nix` — `packages.flow-lock`, `packages.semaphore-run` + dev shell; consumers pin by release tag
 
 This repo does **not** own:
 
@@ -54,10 +57,10 @@ This repo does **not** own:
 5. **Mermaid round-trip CI gate**: every `.mmd` change must include a
    re-rendered `.svg`. The `mermaid-render-check.yml` workflow fails the PR if
    `.svg` doesn't match.
-6. **`bin/` tools stay dependency-light and shellcheck-clean.** bash + curl +
+6. **`bin/` and `scripts/` tools stay dependency-light and shellcheck-clean.** bash + curl +
    jq (+ aws CLI / check-jsonschema for `deployment-json`) only — no Python,
-   no per-flow logic. Every behavior change needs a matching
-   `tests/flow-lock.bats` case.
+   no per-flow logic. Every behavior change needs a matching case in the
+   `tests/*.bats` file for that tool.
 
 ## Conventional commits
 
