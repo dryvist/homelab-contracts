@@ -165,7 +165,11 @@ openbao_secrets_operator_domains:
 
 # seed_generated (tasks/seed_generated.yml): every value here can be overridden per call.
 openbao_secrets_seed_mount: "{{ openbao_secrets_kv_mount }}"
+openbao_secrets_seed_addr: "{{ openbao_secrets_bao_addr | default('', true) }}"
+openbao_secrets_seed_token: ""
 openbao_secrets_seed_rotate_fields: []
+openbao_secrets_seed_register: openbao_secrets_seed_result
+openbao_secrets_seed_local_values: {}
 openbao_secrets_seed_revoke_token: false
 openbao_secrets_seed_check_capabilities: false
 openbao_secrets_seed_expected_writer_policy: ""
@@ -175,4 +179,5 @@ openbao_secrets_seed_writer_max_ttl: 600
 openbao_secrets_seed_alphabets:
   alnum: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
   lower: "abcdefghijklmnopqrstuvwxyz0123456789"
+  lower_alpha: "abcdefghijklmnopqrstuvwxyz"
   hex: "0123456789abcdef"

@@ -10,24 +10,95 @@
 # writer that changed the secret in between makes the write fail, so nothing is
 # overwritten silently.
 #
-# Every task that handles a token or a value is no_log. Check mode reports field
-# names only, and writes nothing.
+# Every task that handles a token or a value is no_log. Check mode reads existing
+# values, returns a marked placeholder for generated values, and writes nothing.
+
+- name: Require a valid name for the caller-visible result fact
+  ansible.builtin.assert:
+    that:
+      - openbao_secrets_seed_register is match('^[A-Za-z_][A-Za-z0-9_]*$')
+    fail_msg: "openbao_secrets_seed_register must be a valid Ansible fact name"
+  no_log: true
+
+- name: Require every rotate field to be a declared field
+  ansible.builtin.assert:
+    that:
+      - >-
+        (openbao_secrets_seed_rotate_fields
+         | difference(openbao_secrets_seed_fields | map(attribute='name') | list)
+         | length) == 0
+    fail_msg: "openbao_secrets_seed_rotate_fields names a field that is not in openbao_secrets_seed_fields"
+  no_log: true
+
+- name: Probe OpenBao health when an endpoint is configured
+  ansible.builtin.uri:
+    url: "{{ openbao_secrets_seed_addr }}/v1/sys/health?standbyok=true&perfstandbyok=true"
+    method: GET
+    validate_certs: "{{ openbao_secrets_validate_certs }}"
+    timeout: 5
+  register: openbao_secrets_seed_health
+  failed_when: false
+  changed_when: false
+  check_mode: false
+  when: openbao_secrets_seed_addr | default('', true) | length > 0
+
+- name: Decide whether OpenBao is configured, reachable and unsealed for this run
+  ansible.builtin.set_fact:
+    openbao_secrets_seed_available: >-
+      {{ (openbao_secrets_seed_addr | default('', true) | length > 0)
+         and ((openbao_secrets_seed_health.status | default(0) | int) == 200) }}
+  no_log: true
+
+- name: Return local values when OpenBao is unavailable
+  when: not (openbao_secrets_seed_available | bool)
+  block:
+    - name: Start the local fallback result accumulator
+      ansible.builtin.set_fact:
+        openbao_secrets_seed_result_values: {}
+      no_log: true
+
+    - name: Collect declared, nonempty local fallback values
+      ansible.builtin.set_fact:
+        openbao_secrets_seed_result_values: >-
+          {{ openbao_secrets_seed_result_values | combine({
+               item.name: openbao_secrets_seed_local_values.get(item.name, '')
+             }) }}
+      loop: "{{ openbao_secrets_seed_fields }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - openbao_secrets_seed_local_values.get(item.name, '') is string
+        - openbao_secrets_seed_local_values.get(item.name, '') | trim | length > 0
+      no_log: true
+
+    - name: Require usable local values when OpenBao is unavailable
+      ansible.builtin.assert:
+        that:
+          - openbao_secrets_seed_result_values | length > 0
+        fail_msg: >-
+          OpenBao is not configured or did not return health status 200, and no usable
+          openbao_secrets_seed_local_values were supplied.
+      no_log: true
+
+    - name: Publish the local fallback result to the caller
+      ansible.builtin.set_fact:
+        "{{ openbao_secrets_seed_register }}": "{{ openbao_secrets_seed_result_values }}"
+      no_log: true
+
+- name: Require a writer token when OpenBao is available
+  ansible.builtin.assert:
+    that:
+      - openbao_secrets_seed_token | length > 0
+    fail_msg: "OpenBao is reachable but no seed writer token was supplied"
+  when: openbao_secrets_seed_available | bool
+  no_log: true
 
 - name: Seed generated fields (the writer token is revoked on every exit path when asked)
   vars:
     openbao_secrets_seed_data_path: "{{ openbao_secrets_seed_mount }}/data/{{ openbao_secrets_seed_path }}"
     openbao_secrets_seed_metadata_path: "{{ openbao_secrets_seed_mount }}/metadata/{{ openbao_secrets_seed_path }}"
+  when: openbao_secrets_seed_available | bool
   block:
-    - name: Require every rotate field to be a declared field
-      ansible.builtin.assert:
-        that:
-          - >-
-            (openbao_secrets_seed_rotate_fields
-             | difference(openbao_secrets_seed_fields | map(attribute='name') | list)
-             | length) == 0
-        fail_msg: "openbao_secrets_seed_rotate_fields names a field that is not in openbao_secrets_seed_fields"
-      no_log: true
-
     - name: Check the writer token's exact identity
       when: openbao_secrets_seed_expected_writer_policy | length > 0
       block:
@@ -65,15 +136,17 @@
       when: openbao_secrets_seed_check_capabilities | bool
       block:
         - name: Read the writer token's capabilities on the data and metadata paths
-          community.hashi_vault.vault_write:
-            url: "{{ openbao_secrets_seed_addr }}"
-            auth_method: token
-            token: "{{ openbao_secrets_seed_token }}"
-            path: sys/capabilities-self
-            data:
+          ansible.builtin.uri:
+            url: "{{ openbao_secrets_seed_addr }}/v1/sys/capabilities-self"
+            method: POST
+            headers:
+              X-Vault-Token: "{{ openbao_secrets_seed_token }}"
+            body_format: json
+            body:
               paths:
                 - "{{ openbao_secrets_seed_data_path }}"
                 - "{{ openbao_secrets_seed_metadata_path }}"
+            status_code: [200]
             validate_certs: "{{ openbao_secrets_validate_certs }}"
           register: openbao_secrets_seed_capabilities
           changed_when: false
@@ -84,10 +157,10 @@
           ansible.builtin.assert:
             that:
               - >-
-                (openbao_secrets_seed_capabilities.data.data.get(openbao_secrets_seed_data_path, [])
+                (openbao_secrets_seed_capabilities.json.data.get(openbao_secrets_seed_data_path, [])
                  | sort) == ['create', 'read', 'update']
               - >-
-                (openbao_secrets_seed_capabilities.data.data.get(openbao_secrets_seed_metadata_path, [])
+                (openbao_secrets_seed_capabilities.json.data.get(openbao_secrets_seed_metadata_path, [])
                  | sort) == ['read']
             fail_msg: >-
               The writer token must have exactly create, read and update on {{ openbao_secrets_seed_data_path }}
@@ -120,6 +193,19 @@
                | default({}, true)).version | default(0, true) | int) }}
       no_log: true
 
+    # ansible_check_mode only reflects the --check flag, not a check_mode keyword on an enclosing
+    # include. A command task inherits that keyword and reports skipped while it is in effect.
+    - name: Detect whether this run is in check mode
+      ansible.builtin.command:
+        argv: ["true"]
+      changed_when: false
+      register: openbao_secrets_seed_check_probe
+
+    - name: Record whether this run is in check mode
+      ansible.builtin.set_fact:
+        openbao_secrets_seed_in_check_mode: "{{ openbao_secrets_seed_check_probe.skipped | default(false) | bool }}"
+      no_log: true
+
     - name: Start the desired-field accumulator
       ansible.builtin.set_fact:
         openbao_secrets_seed_desired: {}
@@ -133,10 +219,12 @@
           {{ openbao_secrets_seed_desired | combine({
                item.name: (item.value
                             if (item.value | default('', true) | length > 0)
-                            else ((item.prefix | default('', true))
-                                  ~ lookup('community.general.random_string',
-                                           length=(item.length | default(32)),
-                                           override_all=openbao_secrets_seed_alphabets[item.charset | default('alnum')])))
+                            else ('(placeholder in check mode)'
+                                  if openbao_secrets_seed_in_check_mode
+                                  else ((item.prefix | default('', true))
+                                        ~ lookup('community.general.random_string',
+                                                 length=(item.length | default(32)),
+                                                 override_all=openbao_secrets_seed_alphabets[item.charset | default('alnum')]))))
              }) }}
       loop: "{{ openbao_secrets_seed_fields }}"
       loop_control:
@@ -154,31 +242,59 @@
           Would write {{ openbao_secrets_seed_desired.keys() | list | sort | join(', ') }}
           to {{ openbao_secrets_seed_data_path }}
       when:
-        - ansible_check_mode
+        - openbao_secrets_seed_in_check_mode | bool
         - openbao_secrets_seed_desired | length > 0
 
     - name: Write the merged secret (check-and-set on the version read above)
-      community.hashi_vault.vault_kv2_write:
-        url: "{{ openbao_secrets_seed_addr }}"
-        auth_method: token
-        token: "{{ openbao_secrets_seed_token }}"
-        engine_mount_point: "{{ openbao_secrets_seed_mount }}"
-        path: "{{ openbao_secrets_seed_path }}"
-        cas: "{{ openbao_secrets_seed_version | int }}"
-        data: "{{ openbao_secrets_seed_stored | combine(openbao_secrets_seed_desired) }}"
+      ansible.builtin.uri:
+        url: "{{ openbao_secrets_seed_addr }}/v1/{{ openbao_secrets_seed_data_path }}"
+        method: POST
+        headers:
+          X-Vault-Token: "{{ openbao_secrets_seed_token }}"
+        body_format: json
+        body:
+          options:
+            cas: "{{ openbao_secrets_seed_version | int }}"
+          data: "{{ openbao_secrets_seed_stored | combine(openbao_secrets_seed_desired) }}"
+        status_code: [200]
         validate_certs: "{{ openbao_secrets_validate_certs }}"
       when:
         - openbao_secrets_seed_desired | length > 0
-        - not ansible_check_mode
+        - not (openbao_secrets_seed_in_check_mode | bool)
+      no_log: true
+
+    - name: Start the caller-visible result accumulator
+      ansible.builtin.set_fact:
+        openbao_secrets_seed_result_values: {}
+      no_log: true
+
+    - name: Collect each declared field's final value
+      ansible.builtin.set_fact:
+        openbao_secrets_seed_result_values: >-
+          {{ openbao_secrets_seed_result_values | combine({
+               item.name: openbao_secrets_seed_desired.get(
+                 item.name, openbao_secrets_seed_stored.get(item.name, ''))
+             }) }}
+      loop: "{{ openbao_secrets_seed_fields }}"
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+
+    - name: Publish the final field values to the caller
+      ansible.builtin.set_fact:
+        "{{ openbao_secrets_seed_register }}": "{{ openbao_secrets_seed_result_values }}"
       no_log: true
 
   always:
     - name: Self-revoke the writer token
-      community.hashi_vault.vault_write:
-        url: "{{ openbao_secrets_seed_addr }}"
-        auth_method: token
-        token: "{{ openbao_secrets_seed_token }}"
-        path: auth/token/revoke-self
+      ansible.builtin.uri:
+        url: "{{ openbao_secrets_seed_addr }}/v1/auth/token/revoke-self"
+        method: POST
+        headers:
+          X-Vault-Token: "{{ openbao_secrets_seed_token }}"
+        status_code: [200, 204]
         validate_certs: "{{ openbao_secrets_validate_certs }}"
-      when: openbao_secrets_seed_revoke_token | bool
+      when:
+        - openbao_secrets_seed_available | bool
+        - openbao_secrets_seed_revoke_token | bool
       no_log: true
