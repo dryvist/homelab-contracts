@@ -1,18 +1,21 @@
 ---
 # Provisions one Langfuse project API key pair into an OpenBao KV v2 secret, once.
 #
-# The OpenBao state is planned first: seed_generated runs with openbao_secrets_seed_plan_only, which reads the secret
-# and sends no write. Langfuse is called only when both key fields are absent. A secret that holds exactly one of them
-# stops the run, because a new key written beside a stored one would not form a pair that Langfuse accepts.
+# The OpenBao state is planned first, in check mode: seed_generated reads the secret and sends no write, and the fields it
+# would write are the absent ones. Langfuse is called only when both key fields are absent. A secret that holds exactly
+# one of them stops the run, because a new key written beside a stored one would not form a pair that Langfuse accepts.
+# OpenBao must answer its health probe before a key is created: seed_generated falls back to local values without
+# writing when it does not, and a key created then would never be stored.
 #
 # Every task that handles the admin password, a cookie, the CSRF token or a key is no_log.
 
-- name: Plan the OpenBao write without writing (seed_generated, plan only)
-  ansible.builtin.include_role:
+- name: Plan the OpenBao write in check mode (seed_generated reads and writes nothing)
+  ansible.builtin.import_role:
     name: openbao_secrets
     tasks_from: seed_generated
+  check_mode: true
   vars:
-    openbao_secrets_seed_plan_only: true
+    openbao_secrets_seed_register: langfuse_project_keys_planned
     openbao_secrets_seed_addr: "{{ langfuse_project_keys_openbao_addr }}"
     openbao_secrets_seed_token: "{{ langfuse_project_keys_openbao_token }}"
     openbao_secrets_seed_mount: "{{ langfuse_project_keys_openbao_mount }}"
@@ -22,9 +25,16 @@
       - name: "{{ langfuse_project_keys_secret_key_field }}"
   no_log: true
 
+- name: Require OpenBao to be reachable before any Langfuse call
+  ansible.builtin.assert:
+    that:
+      - openbao_secrets_seed_available | bool
+    fail_msg: OpenBao is not configured or did not return health status 200. Nothing was created in Langfuse.
+  no_log: true
+
 - name: Record the key fields that the OpenBao secret lacks
   ansible.builtin.set_fact:
-    langfuse_project_keys_missing_fields: "{{ (openbao_secrets_seed_desired | default({}, true)).keys() | list }}"
+    langfuse_project_keys_missing_fields: "{{ openbao_secrets_seed_desired.keys() | list }}"
   no_log: true
 
 - name: Stop when exactly one key field is stored
@@ -42,6 +52,9 @@
       was created.
   when: langfuse_project_keys_missing_fields | length == 0
 
+# Check mode is a dry run: the planning above is the whole of it, and no Langfuse call or write is made.
 - name: Provision a project key pair
   ansible.builtin.include_tasks: provision.yml
-  when: langfuse_project_keys_missing_fields | length == 2
+  when:
+    - langfuse_project_keys_missing_fields | length == 2
+    - not ansible_check_mode

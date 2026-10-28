@@ -144,6 +144,7 @@
     name: openbao_secrets
     tasks_from: seed_generated
   vars:
+    openbao_secrets_seed_register: langfuse_project_keys_written
     openbao_secrets_seed_addr: "{{ langfuse_project_keys_openbao_addr }}"
     openbao_secrets_seed_token: "{{ langfuse_project_keys_openbao_token }}"
     openbao_secrets_seed_mount: "{{ langfuse_project_keys_openbao_mount }}"

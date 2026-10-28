@@ -4,8 +4,7 @@
 # tests/openbao_secrets/fake_kv2.py (the KV v2 routes that seed_generated uses). Each case uses its own secret path,
 # and each case resets the Langfuse stand-in, so the request logs describe one case at a time.
 #
-# Cases A-D and G run without the hvac library, because they never reach the OpenBao write. Cases E and F write
-# through community.hashi_vault and need hvac, as the seed_generated test does.
+# Every OpenBao read and write goes through ansible.builtin.uri, so no hvac library is needed.
 #
 # Run from the repository root:
 #   ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, tests/langfuse_project_keys/provision.yml
@@ -16,6 +15,7 @@
   vars:
     langfuse_port: 18241
     kv_port: 18242
+    closed_port: 18243  # nothing listens here
     lpk_base: "http://127.0.0.1:{{ langfuse_port }}"
     kv_addr: "http://127.0.0.1:{{ kv_port }}"
   tasks:
@@ -401,6 +401,49 @@
               - case_g_states.results[0].json.log | length == 0
               - case_g_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
               - case_g_states.results[1].json.state['secret/data/lpk/fresh'].version == 1
+
+    # ---- H: OpenBao unreachable ---------------------------------------------------------------------------------
+
+    - name: Case H - an unreachable OpenBao stops before any Langfuse call, so no key is created
+      block:
+        - name: H - reset Langfuse
+          ansible.builtin.uri:
+            url: "{{ lpk_base }}/_test/reset"
+            method: POST
+            body_format: json
+            body: {org_name: homelab, projects: []}
+            status_code: [200]
+
+        - name: H - run against an OpenBao address that answers nothing (expected to fail)
+          block:
+            - name: H - run the role against the closed address
+              ansible.builtin.include_role:
+                name: langfuse_project_keys
+              vars:
+                langfuse_project_keys_base_url: "{{ lpk_base }}/"
+                langfuse_project_keys_admin_email: admin@example.test
+                langfuse_project_keys_admin_password: admin-test-password
+                langfuse_project_keys_org_name: homelab
+                langfuse_project_keys_project_name: hermes
+                langfuse_project_keys_openbao_addr: "http://127.0.0.1:{{ closed_port }}"
+                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_path: lpk/unreachable
+          rescue:
+            - name: H - record the stop
+              ansible.builtin.set_fact:
+                case_h_stopped: true
+
+        - name: H - read the Langfuse stand-in state
+          ansible.builtin.uri:
+            url: "{{ lpk_base }}/_test/state"
+            return_content: true
+          register: case_h_state
+
+        - name: H - assert the run stopped with no Langfuse call
+          ansible.builtin.assert:
+            that:
+              - case_h_stopped | default(false) | bool
+              - case_h_state.json.log | length == 0
 
     - name: Shut both stand-ins down
       ansible.builtin.uri:
