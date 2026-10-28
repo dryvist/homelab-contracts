@@ -14,14 +14,16 @@ argument_specs:
     options:
       openbao_secrets_seed_addr:
         type: str
-        required: true
-        description: OpenBao base URL, for example C(https://openbao.example.test:8200).
+        description:
+          - OpenBao base URL, for example C(https://openbao.example.test:8200). Defaults to C(openbao_secrets_bao_addr).
+          - When unset or not reachable and C(openbao_secrets_seed_local_values) has usable values, the task returns
+            those values without contacting the KV paths or writing anything.
       openbao_secrets_seed_token:
         type: str
-        required: true
         no_log: true
         description:
-          - Writer token. It needs create, read and update on the data path and read on the metadata path.
+          - Writer token. Required when the health endpoint returns C(200); it needs create, read and update on the
+            data path and read on the metadata path.
           - It is revoked at the end of the run only when C(openbao_secrets_seed_revoke_token) is true.
       openbao_secrets_seed_path:
         type: str
@@ -47,8 +49,10 @@ argument_specs:
           charset:
             type: str
             default: alnum
-            choices: [alnum, lower, hex]
-            description: Alphabet for the random part. C(hex) gives lowercase hexadecimal.
+            choices: [alnum, lower, lower_alpha, hex]
+            description: >-
+              Alphabet for the random part. C(lower_alpha) gives lowercase letters only; C(hex) gives lowercase
+              hexadecimal.
           prefix:
             type: str
             default: ""
@@ -68,6 +72,17 @@ argument_specs:
         type: list
         elements: str
         description: Field names whose stored value is regenerated on this run. Each must be listed in C(openbao_secrets_seed_fields).
+      openbao_secrets_seed_register:
+        type: str
+        description:
+          - Name of the no-log fact that receives a dict of declared field names to their final values.
+          - Defaults to C(openbao_secrets_seed_result).
+      openbao_secrets_seed_local_values:
+        type: dict
+        description:
+          - Caller-provided field values to return without writing when no endpoint is configured or its health response is not C(200).
+          - Only declared fields with nonempty string values are returned.
+          - An empty mapping preserves the OpenBao-required behavior.
       openbao_secrets_seed_revoke_token:
         type: bool
         description: Revoke the writer token (self-revoke) when the run ends, on success or failure.

@@ -172,6 +172,17 @@ Adds missing fields to one KV v2 secret. The interface is in `meta/argument_spec
   A concurrent writer makes the run fail; nothing is overwritten.
 - `openbao_secrets_seed_rotate_fields` regenerates the named fields. A field's `valid_pattern` regenerates a stored
   value that does not match it.
+- The no-log fact named by `openbao_secrets_seed_register` receives a dictionary of declared field names to their
+  final values (stored, caller-supplied, or generated). Its default name is `openbao_secrets_seed_result`.
+- Generated fields accept `charset: lower_alpha` for lowercase letters only, in addition to `alnum`, `lower`, and
+  `hex`.
+- In check mode, the task reads existing values, returns `(placeholder in check mode)` for fields that would be
+  generated, and sends no KV write. Caller-supplied values and existing stored values remain available to templates.
+- When the seed endpoint is unset or its
+  `/v1/sys/health?standbyok=true&perfstandbyok=true` response is not `200`, nonempty string values in
+  `openbao_secrets_seed_local_values` are returned for their declared fields without a KV read or write. An empty
+  mapping preserves the OpenBao-required behavior. A KV authorization denial after a healthy response fails the
+  task and does not select local values.
 - Opt-ins: `openbao_secrets_seed_expected_writer_policy` (asserts the writer token's exact identity through
   `auth/token/lookup-self`), `openbao_secrets_seed_check_capabilities` (asserts the exact capabilities through
   `sys/capabilities-self`), and `openbao_secrets_seed_revoke_token` (self-revokes the writer token on exit).
@@ -183,6 +194,8 @@ stand-in for the KV v2 and token endpoints. It is not an OpenBao implementation.
 
 ## Dependencies
 
+- `seed_generated` uses `ansible.builtin.uri` for OpenBao HTTP requests, so it does not need Python `hvac` on the
+  delegated host.
 - `community.hashi_vault` (added to `requirements.yml`) and its Python `hvac`
   dependency in the controller environment (provided by the Nix dev shell —
   `nix-devenv#ansible-apps`).
