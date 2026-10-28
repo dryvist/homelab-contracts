@@ -1,0 +1,615 @@
+---
+# Behavioural checks for tasks/seed_generated.yml against the local KV v2 stand-in
+# (tests/openbao_secrets/fake_kv2.py). Each case uses its own secret path, so the
+# stand-in keeps state across cases without a reset.
+#
+# Run from the repository root:
+#   ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, tests/openbao_secrets/seed_generated.yml
+- name: Verify seed_generated create, merge, rotate, provided-value and guard behaviour
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    fake_port: 18231
+    fake_addr: "http://127.0.0.1:{{ fake_port }}"
+    openbao_secrets_seed_addr: "{{ fake_addr }}"
+    openbao_secrets_seed_token: writer-ok
+    openbao_secrets_seed_mount: secret
+  tasks:
+    - name: Start the KV v2 stand-in
+      ansible.builtin.command: "python3 {{ playbook_dir }}/fake_kv2.py --port {{ fake_port }}"
+      async: 900
+      poll: 0
+      changed_when: false
+
+    - name: Wait for the stand-in to listen
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ fake_port }}"
+        timeout: 30
+
+    # ---- create-only and merge ------------------------------------------------
+
+    - name: Case A - an absent secret is created with cas=0 and both fields
+      block:
+        - name: A - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: A - seed generated fields into an absent secret
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/absent
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 16
+              - name: api_key
+                length: 32
+                charset: hex
+                prefix: "sk-"
+
+        - name: A - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_a
+
+        - name: A - assert the secret was created at version 1 with generated values
+          ansible.builtin.assert:
+            that:
+              - state_a.json.state['secret/data/seed/absent'].version == 1
+              - state_a.json.state['secret/data/seed/absent'].data.password | length == 16
+              - state_a.json.state['secret/data/seed/absent'].data.api_key is match('^sk-[0-9a-f]{32}$')
+              - (state_a.json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list) == [0]
+
+    - name: Case B - a complete secret is left alone and no write is sent
+      block:
+        - name: B - seed a complete secret
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/seed/complete, version: 1, data: {password: keep-me-123, api_key: "sk-existing"}}
+            status_code: [200]
+
+        - name: B - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: B - run over the complete secret
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/complete
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 16
+              - name: api_key
+                length: 32
+                prefix: "sk-"
+
+        - name: B - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_b
+
+        - name: B - assert the stored values and version are untouched and no write was sent
+          ansible.builtin.assert:
+            that:
+              - state_b.json.state['secret/data/seed/complete'].version == 1
+              - state_b.json.state['secret/data/seed/complete'].data.password == 'keep-me-123'
+              - state_b.json.state['secret/data/seed/complete'].data.api_key == 'sk-existing'
+              - state_b.json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+
+    - name: Case C - a missing field is added, the stored field is untouched, cas is the observed version
+      block:
+        - name: C - seed a secret that lacks one field
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/seed/partial, version: 1, data: {password: keep-me}}
+            status_code: [200]
+
+        - name: C - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: C - run over the partial secret
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/partial
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 16
+              - name: api_key
+                length: 32
+                charset: hex
+
+        - name: C - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_c
+
+        - name: C - assert the field was added at version 2 and the stored field kept its value
+          ansible.builtin.assert:
+            that:
+              - state_c.json.state['secret/data/seed/partial'].version == 2
+              - state_c.json.state['secret/data/seed/partial'].data.password == 'keep-me'
+              - state_c.json.state['secret/data/seed/partial'].data.api_key is match('^[0-9a-f]{32}$')
+              - (state_c.json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list) == [1]
+
+    # ---- rotation ---------------------------------------------------------------
+
+    - name: Case D - rotate_fields replaces the named field and keeps the others
+      block:
+        - name: D - seed a secret with two fields
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/seed/rotate, version: 1, data: {password: old-value, other: stay}}
+            status_code: [200]
+
+        - name: D - run with password named in rotate_fields
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/rotate
+            openbao_secrets_seed_rotate_fields: [password]
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 20
+              - name: other
+                length: 10
+
+        - name: D - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_d
+
+        - name: D - assert the rotated field changed and the other field did not
+          ansible.builtin.assert:
+            that:
+              - state_d.json.state['secret/data/seed/rotate'].version == 2
+              - state_d.json.state['secret/data/seed/rotate'].data.password != 'old-value'
+              - state_d.json.state['secret/data/seed/rotate'].data.password | length == 20
+              - state_d.json.state['secret/data/seed/rotate'].data.other == 'stay'
+
+    # ---- provided value ----------------------------------------------------------
+
+    - name: Case E - a provided value is written only when the field is absent
+      block:
+        - name: E - provide a value for an absent secret
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/provided
+            openbao_secrets_seed_fields:
+              - name: admin_password
+                value: provided-secret-value
+
+        - name: E - provide a different value for an existing field
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/seed/provided-existing, version: 1, data: {admin_password: stored-first}}
+            status_code: [200]
+
+        - name: E - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: E - run with a different provided value over the existing field
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/provided-existing
+            openbao_secrets_seed_fields:
+              - name: admin_password
+                value: caller-value
+
+        - name: E - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_e
+
+        - name: E - assert the absent secret took the provided value and the existing one did not change
+          ansible.builtin.assert:
+            that:
+              - state_e.json.state['secret/data/seed/provided'].data.admin_password == 'provided-secret-value'
+              - state_e.json.state['secret/data/seed/provided-existing'].data.admin_password == 'stored-first'
+              - state_e.json.state['secret/data/seed/provided-existing'].version == 1
+              - state_e.json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+
+    # ---- valid_pattern ----------------------------------------------------------
+
+    - name: Case F - a stored value that fails valid_pattern is regenerated, a matching one is kept
+      block:
+        - name: F - seed an unprefixed router key and a prefixed one
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: "secret/data/seed/{{ item.path }}", version: 1, data: {router_key: "{{ item.key }}"}}
+            status_code: [200]
+          loop:
+            - {path: router, key: unprefixed-key}
+            - {path: router-ok, key: sk-keep}
+
+        - name: F - run both over the router secrets
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: "seed/{{ item }}"
+            openbao_secrets_seed_fields:
+              - name: router_key
+                length: 24
+                prefix: "sk-"
+                valid_pattern: '^sk-'
+          loop: [router, router-ok]
+
+        - name: F - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_f
+
+        - name: F - assert the unprefixed key was regenerated and the prefixed key was kept
+          ansible.builtin.assert:
+            that:
+              - state_f.json.state['secret/data/seed/router'].data.router_key is match('^sk-.{24}$')
+              - state_f.json.state['secret/data/seed/router'].version == 2
+              - state_f.json.state['secret/data/seed/router-ok'].data.router_key == 'sk-keep'
+              - state_f.json.state['secret/data/seed/router-ok'].version == 1
+
+    # ---- soft-deleted secret ----------------------------------------------------
+
+    - name: Case G - a soft-deleted secret is written with its observed version, not cas=0
+      block:
+        - name: G - seed a soft-deleted secret at version 3
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/seed/soft, version: 3, data: null}
+            status_code: [200]
+
+        - name: G - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: G - run over the soft-deleted secret
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/soft
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 12
+
+        - name: G - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_g
+
+        - name: G - assert the write used cas=3 and produced version 4
+          ansible.builtin.assert:
+            that:
+              - state_g.json.state['secret/data/seed/soft'].version == 4
+              - state_g.json.state['secret/data/seed/soft'].data.password | length == 12
+              - (state_g.json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list) == [3]
+
+    # ---- guards -------------------------------------------------------------------
+
+    - name: Case H - a check-and-set conflict fails the run and leaves the secret unchanged
+      block:
+        - name: H - seed a secret that lacks one field
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/seed/cas, version: 1, data: {password: live}}
+            status_code: [200]
+
+        - name: H - arm one write failure
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/arm-write-failure"
+            method: POST
+            status_code: [200]
+
+        - name: H - run, expecting the write to be refused
+          block:
+            - name: H - seeded run
+              ansible.builtin.include_role:
+                name: openbao_secrets
+                tasks_from: seed_generated
+              vars:
+                openbao_secrets_seed_path: seed/cas
+                openbao_secrets_seed_fields:
+                  - name: password
+                    length: 16
+                  - name: api_key
+                    length: 32
+          rescue:
+            - name: H - record that the run failed
+              ansible.builtin.set_fact:
+                case_h_failed: true
+
+        - name: H - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_h
+
+        - name: H - assert the run failed and the stored value and version are unchanged
+          ansible.builtin.assert:
+            that:
+              - case_h_failed | default(false) | bool
+              - state_h.json.state['secret/data/seed/cas'].version == 1
+              - state_h.json.state['secret/data/seed/cas'].data.password == 'live'
+              - state_h.json.state['secret/data/seed/cas'].data | length == 1
+
+    - name: Case I - invalid arguments are refused before any request
+      block:
+        - name: I - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: I - a missing path is refused by the argument spec
+          block:
+            - name: I1 - run without a path
+              ansible.builtin.include_role:
+                name: openbao_secrets
+                tasks_from: seed_generated
+              vars:
+                openbao_secrets_seed_fields:
+                  - name: password
+          rescue:
+            - name: I1 - record the refusal
+              ansible.builtin.set_fact:
+                case_i1_failed: true
+
+        - name: I - an unknown charset is refused by the argument spec
+          block:
+            - name: I2 - run with an unknown charset
+              ansible.builtin.include_role:
+                name: openbao_secrets
+                tasks_from: seed_generated
+              vars:
+                openbao_secrets_seed_path: seed/invalid
+                openbao_secrets_seed_fields:
+                  - name: password
+                    charset: base64
+          rescue:
+            - name: I2 - record the refusal
+              ansible.builtin.set_fact:
+                case_i2_failed: true
+
+        - name: I - a rotate field that is not declared is refused before any request
+          block:
+            - name: I3 - run with an undeclared rotate field
+              ansible.builtin.include_role:
+                name: openbao_secrets
+                tasks_from: seed_generated
+              vars:
+                openbao_secrets_seed_path: seed/invalid
+                openbao_secrets_seed_rotate_fields: [other]
+                openbao_secrets_seed_fields:
+                  - name: password
+          rescue:
+            - name: I3 - record the refusal
+              ansible.builtin.set_fact:
+                case_i3_failed: true
+
+        - name: I - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_i
+
+        - name: I - assert all three were refused and nothing was sent
+          ansible.builtin.assert:
+            that:
+              - case_i1_failed | default(false) | bool
+              - case_i2_failed | default(false) | bool
+              - case_i3_failed | default(false) | bool
+              - state_i.json.log | length == 0
+
+    # ---- writer identity and capabilities --------------------------------------
+
+    - name: Case J - the writer identity check passes for the exact token and refuses extra policies
+      block:
+        - name: J - exact identity writes the field
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/identity-ok
+            openbao_secrets_seed_expected_writer_policy: test-write
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 10
+
+        - name: J - a token with an extra policy is refused before any request
+          block:
+            - name: J - run with the extra-policy token
+              ansible.builtin.include_role:
+                name: openbao_secrets
+                tasks_from: seed_generated
+              vars:
+                openbao_secrets_seed_token: writer-extra-policy
+                openbao_secrets_seed_path: seed/identity-bad
+                openbao_secrets_seed_expected_writer_policy: test-write
+                openbao_secrets_seed_fields:
+                  - name: password
+                    length: 10
+          rescue:
+            - name: J - record the refusal
+              ansible.builtin.set_fact:
+                case_j_failed: true
+
+        - name: J - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_j
+
+        - name: J - assert the exact identity seeded and the extra-policy token did not
+          ansible.builtin.assert:
+            that:
+              - state_j.json.state['secret/data/seed/identity-ok'].version == 1
+              - "'secret/data/seed/identity-bad' not in state_j.json.state"
+              - case_j_failed | default(false) | bool
+
+    - name: Case K - the capability check passes for the exact capabilities and refuses others
+      block:
+        - name: K - exact capabilities write the field
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/caps-ok
+            openbao_secrets_seed_check_capabilities: true
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 10
+
+        - name: K - wrong capabilities are refused before any request
+          block:
+            - name: K - run with the read-only token
+              ansible.builtin.include_role:
+                name: openbao_secrets
+                tasks_from: seed_generated
+              vars:
+                openbao_secrets_seed_token: writer-caps-bad
+                openbao_secrets_seed_path: seed/caps-bad
+                openbao_secrets_seed_check_capabilities: true
+                openbao_secrets_seed_fields:
+                  - name: password
+                    length: 10
+          rescue:
+            - name: K - record the refusal
+              ansible.builtin.set_fact:
+                case_k_failed: true
+
+        - name: K - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_k
+
+        - name: K - assert the exact-capability run seeded and the other did not
+          ansible.builtin.assert:
+            that:
+              - state_k.json.state['secret/data/seed/caps-ok'].version == 1
+              - "'secret/data/seed/caps-bad' not in state_k.json.state"
+              - case_k_failed | default(false) | bool
+
+    # ---- revocation and check mode ----------------------------------------------
+
+    - name: Case L - the writer token is revoked only when asked
+      block:
+        - name: L - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: L - run with the default (no revocation)
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/revoke-default
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 8
+
+        - name: L - run with revocation requested
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/revoke-on
+            openbao_secrets_seed_revoke_token: true
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 8
+
+        - name: L - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_l
+
+        - name: L - assert exactly one revocation, from the revoking run
+          ansible.builtin.assert:
+            that:
+              - state_l.json.log | selectattr('path', 'equalto', '/v1/auth/token/revoke-self') | list | length == 1
+              - state_l.json.state['secret/data/seed/revoke-on'].version == 1
+
+    - name: Case M - check mode reports and writes nothing
+      block:
+        - name: M - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: M - run in check mode over an absent secret
+          ansible.builtin.import_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          check_mode: true
+          vars:
+            openbao_secrets_seed_path: seed/checkmode
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 8
+
+        - name: M - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_m
+
+        - name: M - assert nothing was created and no write was sent
+          ansible.builtin.assert:
+            that:
+              - "'secret/data/seed/checkmode' not in state_m.json.state"
+              - state_m.json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+
+    - name: Stop the KV v2 stand-in
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/shutdown"
+        method: POST
+        status_code: [200]

@@ -145,11 +145,48 @@ defaults. One execution fetches ALL configured domains (regardless of which
 specific groups are in the play's host list) — cheap and avoids redundant
 logins from being split across multiple domain-scoped plays.
 
+## Generate-if-absent seeding (`tasks_from: seed_generated`)
+
+Adds missing fields to one KV v2 secret. The interface is in `meta/argument_specs.yml` (entry point
+`seed_generated`); the defaults are in `defaults/main.yml`.
+
+```yaml
+- ansible.builtin.include_role:
+    name: openbao_secrets
+    tasks_from: seed_generated
+  vars:
+    openbao_secrets_seed_addr: "{{ openbao_secrets_bao_addr }}"
+    openbao_secrets_seed_token: "{{ writer_token }}"
+    openbao_secrets_seed_path: apps/example
+    openbao_secrets_seed_fields:
+      - name: password
+        length: 32
+      - name: api_key
+        length: 32
+        charset: hex
+        prefix: "sk-"
+```
+
+- A stored field keeps its value. A missing field gets a generated value, or the field's `value` when given.
+- One check-and-set write: `cas=0` creates the secret, and `cas=<observed version>` merges into an existing one.
+  A concurrent writer makes the run fail; nothing is overwritten.
+- `openbao_secrets_seed_rotate_fields` regenerates the named fields. A field's `valid_pattern` regenerates a stored
+  value that does not match it.
+- Opt-ins: `openbao_secrets_seed_expected_writer_policy` (asserts the writer token's exact identity through
+  `auth/token/lookup-self`), `openbao_secrets_seed_check_capabilities` (asserts the exact capabilities through
+  `sys/capabilities-self`), and `openbao_secrets_seed_revoke_token` (self-revokes the writer token on exit).
+- The role does not delegate. A caller that must run the writes from another host wraps the include in a `block`
+  with `delegate_to`.
+
+`tests/openbao_secrets/seed_generated.yml` runs these paths against `tests/openbao_secrets/fake_kv2.py`, a local
+stand-in for the KV v2 and token endpoints. It is not an OpenBao implementation.
+
 ## Dependencies
 
 - `community.hashi_vault` (added to `requirements.yml`) and its Python `hvac`
   dependency in the controller environment (provided by the Nix dev shell —
   `nix-devenv#ansible-apps`).
+- `community.general` for the `random_string` lookup used by `seed_generated`.
 
 ## Not yet live-validated
 
