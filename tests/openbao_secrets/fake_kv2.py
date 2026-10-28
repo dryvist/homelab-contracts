@@ -20,6 +20,7 @@ from typing import Any
 STATE = {}  # data path -> {"version": int, "data": dict or None}
 LOG = []  # one entry per request, oldest first
 ARMED = {"fail_next_write": False}
+HEALTH = {"status": 200}
 
 TOKENS = {
     "writer-ok": {
@@ -95,6 +96,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/_test/"):
             return self._test_get()
         path = self.path.split("?")[0]
+        if path == "/v1/sys/health":
+            self._record("GET", path)
+            return self._send(HEALTH["status"], {"sealed": HEALTH["status"] != 200})
         token = self._token()
         if token not in TOKENS:
             self._record("GET", path)
@@ -162,6 +166,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {})
         if self.path == "/_test/arm-write-failure":
             ARMED["fail_next_write"] = True
+            return self._send(200, {})
+        if self.path == "/_test/health-status":
+            HEALTH["status"] = int(body["status"])
             return self._send(200, {})
         if self.path == "/_test/shutdown":
             self._send(200, {})
