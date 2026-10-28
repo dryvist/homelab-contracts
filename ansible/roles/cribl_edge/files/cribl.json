@@ -13,7 +13,8 @@
       "cc-edge-ai-transcript-shared-io",
       "cc-edge-mlx-serving-io",
       "cc-edge-macos-process-telemetry-io",
-      "cc-edge-macos-firewall-io"
+      "cc-edge-macos-firewall-io",
+      "cc-edge-macos-unified-logs-io"
     ],
     "stream": [
       "cc-stream-github-copilot-rest-io",
