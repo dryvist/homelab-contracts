@@ -11,7 +11,9 @@
 # overwritten silently.
 #
 # Every task that handles a token or a value is no_log. Check mode reports field
-# names only, and writes nothing.
+# names only, and writes nothing. Plan-only (openbao_secrets_seed_plan_only) also
+# writes nothing; it leaves the planned field names in openbao_secrets_seed_desired
+# for the caller to read. Use it when a caller must be sure that no write is sent.
 
 - name: Seed generated fields (the writer token is revoked on every exit path when asked)
   vars:
@@ -170,6 +172,7 @@
       when:
         - openbao_secrets_seed_desired | length > 0
         - not ansible_check_mode
+        - not (openbao_secrets_seed_plan_only | bool)
       no_log: true
 
   always:

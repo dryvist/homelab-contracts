@@ -175,6 +175,8 @@ Adds missing fields to one KV v2 secret. The interface is in `meta/argument_spec
 - Opt-ins: `openbao_secrets_seed_expected_writer_policy` (asserts the writer token's exact identity through
   `auth/token/lookup-self`), `openbao_secrets_seed_check_capabilities` (asserts the exact capabilities through
   `sys/capabilities-self`), and `openbao_secrets_seed_revoke_token` (self-revokes the writer token on exit).
+- `openbao_secrets_seed_plan_only: true` reads the secret and plans the write without sending one. The planned field
+  names are left in `openbao_secrets_seed_desired` (a dict keyed by name) for the caller to read after the include.
 - The role does not delegate. A caller that must run the writes from another host wraps the include in a `block`
   with `delegate_to`.
 

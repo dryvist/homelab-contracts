@@ -84,3 +84,9 @@ argument_specs:
       openbao_secrets_seed_writer_max_ttl:
         type: int
         description: Largest remaining TTL, in seconds, that the identity check accepts.
+      openbao_secrets_seed_plan_only:
+        type: bool
+        description:
+          - Read the secret and plan the write, but send no write. The planned field names are left in
+            C(openbao_secrets_seed_desired) (a dict keyed by name) for the caller to read after the include.
+          - Use it when a caller must be sure that no write is sent, instead of relying on check mode.

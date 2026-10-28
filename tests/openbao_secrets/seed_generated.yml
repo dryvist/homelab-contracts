@@ -608,6 +608,50 @@
               - "'secret/data/seed/checkmode' not in state_m.json.state"
               - state_m.json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
 
+    - name: Case N - plan-only lists the absent fields in openbao_secrets_seed_desired and writes nothing
+      block:
+        - name: N - seed a secret that lacks one of the two fields
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/seed/planonly, version: 1, data: {password: keep-me-456}}
+            status_code: [200]
+
+        - name: N - reset the request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/log-reset"
+            method: POST
+            status_code: [200]
+
+        - name: N - plan over the secret without writing
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_plan_only: true
+            openbao_secrets_seed_path: seed/planonly
+            openbao_secrets_seed_fields:
+              - name: password
+              - name: api_key
+                prefix: "sk-"
+
+        - name: N - read the stand-in state
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            return_content: true
+          register: state_n
+
+        - name: N - assert only the absent field is planned, the stored field is kept, and no write was sent
+          ansible.builtin.assert:
+            that:
+              - openbao_secrets_seed_desired.keys() | list == ['api_key']
+              - state_n.json.state['secret/data/seed/planonly'].version == 1
+              - state_n.json.state['secret/data/seed/planonly'].data.password == 'keep-me-456'
+              - state_n.json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+            fail_msg: plan-only must plan the absent field and write nothing
+          no_log: true
+
     - name: Stop the KV v2 stand-in
       ansible.builtin.uri:
         url: "{{ fake_addr }}/_test/shutdown"
