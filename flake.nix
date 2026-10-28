@@ -44,10 +44,29 @@
           '';
           meta.description = "Global homelab flow lease + gated credential injection (and the locked deployment.json helper)";
         };
+
+        semaphore-run = pkgs.stdenvNoCC.mkDerivation {
+          pname = "semaphore-run";
+          inherit version;
+          src = ./scripts;
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          installPhase = ''
+            install -Dm755 semaphore-run $out/bin/semaphore-run
+            wrapProgram $out/bin/semaphore-run \
+              --prefix PATH : ${
+                pkgs.lib.makeBinPath [
+                  flow-lock
+                  pkgs.curl
+                  pkgs.jq
+                ]
+              }
+          '';
+          meta.description = "Managed Semaphore task dispatch (list, start, wait, log, stop) with the API token read from OpenBao";
+        };
       in
       {
         packages = {
-          inherit flow-lock;
+          inherit flow-lock semaphore-run;
           default = flow-lock;
         };
 

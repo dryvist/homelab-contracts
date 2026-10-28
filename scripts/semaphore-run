@@ -1,0 +1,367 @@
+#!/usr/bin/env bash
+# semaphore-run — list, start, wait on, read and stop Semaphore tasks.
+#
+# Each invocation takes one short-lived OpenBao token, reads the Semaphore API
+# token from KV v2 once, and revokes the minted token before any Semaphore call.
+# The token comes from `flow-lock approle-token openbao-reconcile`, which needs
+# the approle-issuer pair in the environment (see flow-lock). A BAO_TOKEN already
+# in the environment is used as-is and never revoked by this script.
+#
+#   semaphore-run list [--project NAME|ID]
+#   semaphore-run start --project NAME|ID TEMPLATE [-- ANSIBLE_ARGS...]
+#   semaphore-run wait ID [--project NAME|ID] [--timeout 30m]
+#   semaphore-run log ID [N] [--project NAME|ID]
+#   semaphore-run stop ID [--project NAME|ID]
+#
+# TEMPLATE is an exact template name or its numeric id. ANSIBLE_ARGS become the
+# task's `arguments` field: a JSON array encoded once as a string. A `--limit`
+# belongs there, because Semaphore ignores a task-level limit field.
+# Without --project, wait, log and stop search every project for the task ID.
+#
+# Environment:
+#   BAO_ADDR            OpenBao URL (required)
+#   BAO_TOKEN           optional pre-issued token; skips the mint
+#   SEMAPHORE_ADDR      Semaphore base URL, e.g. https://semaphore.example.test
+#   PROXMOX_SUBDOMAIN   used when SEMAPHORE_ADDR is unset: https://semaphore.$PROXMOX_SUBDOMAIN
+#
+# Exit codes: 0 ok; 1 task finished in error, stopped or rejected; 64 usage, or a
+# project, template or task that does not resolve; 70 OpenBao, Semaphore or
+# internal error; 75 wait timed out (EX_TEMPFAIL, scriptable retry).
+
+set -euo pipefail
+
+EX_USAGE=64
+EX_SOFTWARE=70
+EX_TEMPFAIL=75
+
+SEMAPHORE_SECRET_PATH="secret/data/apps/semaphore"
+RECONCILE_ROLE="openbao-reconcile"
+POLL_SECONDS=10
+DEFAULT_TIMEOUT="30m"
+DEFAULT_LOG_LINES=40
+
+PROJECT_KEY=""
+TIMEOUT="$DEFAULT_TIMEOUT"
+TIMEOUT_GIVEN=""
+POSITIONAL=()
+ANSIBLE_ARGS=()
+
+SEMAPHORE_API=""
+SEM_TOKEN=""
+MINTED_BAO_TOKEN=""
+HTTP_STATUS=""
+HTTP_BODY=""
+PROJECT_ID=""
+TEMPLATE_ID=""
+TASK_ID=""
+
+log() { printf 'semaphore-run: %s\n' "$*" >&2; }
+die() { log "$1"; exit "${2:-$EX_SOFTWARE}"; }
+
+usage() {
+  cat <<'EOF'
+Usage:
+  semaphore-run list [--project NAME|ID]
+  semaphore-run start --project NAME|ID TEMPLATE [-- ANSIBLE_ARGS...]
+  semaphore-run wait ID [--project NAME|ID] [--timeout 30m]
+  semaphore-run log ID [N] [--project NAME|ID]
+  semaphore-run stop ID [--project NAME|ID]
+  semaphore-run help
+
+list     Projects, or the templates of --project.
+start    Queue TEMPLATE in --project and print the task ID.
+wait     Poll until the task succeeds (exit 0), or errors, stops or is rejected (exit 1).
+log      Print the last N output lines of a task (default 40).
+stop     Ask a running task to stop.
+EOF
+}
+
+# "30m" / "2h" / "90s" / bare seconds -> seconds
+duration_to_seconds() {
+  local v="$1" n unit
+  case "$v" in
+    *[hms]) n="${v%?}"; unit="${v#"${v%?}"}" ;;
+    *) n="$v"; unit="s" ;;
+  esac
+  case "$n" in
+    ''|*[!0-9]*) die "invalid duration: $v" "$EX_USAGE" ;;
+  esac
+  case "$unit" in
+    h) printf '%d' "$(( n * 3600 ))" ;;
+    m) printf '%d' "$(( n * 60 ))" ;;
+    s) printf '%d' "$n" ;;
+  esac
+}
+
+# ---- HTTP -------------------------------------------------------------------
+
+# One request. The credential header reaches curl as a config line on stdin, so
+# it never appears in argv. Sets HTTP_STATUS and HTTP_BODY.
+api_call() { # HEADER_NAME HEADER_VALUE METHOD URL [BODY]
+  local name="$1" value="$2" method="$3" url="$4" body="${5:-}" out
+  local args=(--config - -sS --max-time 30 -X "$method"
+    -H 'Content-Type: application/json' -w '\n%{http_code}')
+  [ -z "$body" ] || args+=(--data-binary "$body")
+  out="$(printf 'header = "%s: %s"\n' "$name" "$value" | curl "${args[@]}" "$url")" \
+    || die "request failed before an HTTP status was returned" "$EX_SOFTWARE"
+  HTTP_STATUS="${out##*$'\n'}"
+  HTTP_BODY="${out%$'\n'*}"
+}
+
+expect_2xx() { # LABEL
+  case "$HTTP_STATUS" in
+    2??) return 0 ;;
+    *) die "$1 failed (HTTP $HTTP_STATUS)" "$EX_SOFTWARE" ;;
+  esac
+}
+
+# ---- credentials ------------------------------------------------------------
+
+revoke_minted_token() {
+  [ -n "$MINTED_BAO_TOKEN" ] || return 0
+  local token="$MINTED_BAO_TOKEN"
+  # Consume the token before the call so the EXIT trap cannot retry it.
+  MINTED_BAO_TOKEN=""
+  api_call "X-Vault-Token" "$token" POST "$BAO_ADDR/v1/auth/token/revoke-self"
+  case "$HTTP_STATUS" in
+    200|204) return 0 ;;
+    *) log "revoking the minted OpenBao token failed (HTTP $HTTP_STATUS)"; return 1 ;;
+  esac
+}
+
+cleanup() {
+  local rc=$?
+  trap - EXIT
+  if ! revoke_minted_token && [ "$rc" -eq 0 ]; then
+    rc="$EX_SOFTWARE"
+  fi
+  exit "$rc"
+}
+
+# Reads the Semaphore API token into SEM_TOKEN with one OpenBao token, then
+# revokes the minted token before any Semaphore call.
+load_semaphore_token() {
+  local bao_token="${BAO_TOKEN:-}"
+  [ -n "${BAO_ADDR:-}" ] || die "BAO_ADDR is not set" "$EX_USAGE"
+  if [ -z "$bao_token" ]; then
+    MINTED_BAO_TOKEN="$(flow-lock approle-token "$RECONCILE_ROLE")" \
+      || die "could not mint an $RECONCILE_ROLE token (see flow-lock)" "$EX_SOFTWARE"
+    [ -n "$MINTED_BAO_TOKEN" ] || die "flow-lock returned no token" "$EX_SOFTWARE"
+    bao_token="$MINTED_BAO_TOKEN"
+  fi
+  api_call "X-Vault-Token" "$bao_token" GET "$BAO_ADDR/v1/$SEMAPHORE_SECRET_PATH"
+  expect_2xx "reading $SEMAPHORE_SECRET_PATH"
+  SEM_TOKEN="$(jq -er '.data.data.semaphore_api_token // empty' <<<"$HTTP_BODY" 2>/dev/null)" \
+    || die "$SEMAPHORE_SECRET_PATH has no semaphore_api_token field" "$EX_SOFTWARE"
+  HTTP_BODY=""
+  bao_token=""
+  revoke_minted_token || die "could not revoke the minted OpenBao token" "$EX_SOFTWARE"
+}
+
+resolve_semaphore_api() {
+  if [ -n "${SEMAPHORE_ADDR:-}" ]; then
+    SEMAPHORE_API="${SEMAPHORE_ADDR%/}/api"
+  elif [ -n "${PROXMOX_SUBDOMAIN:-}" ]; then
+    SEMAPHORE_API="https://semaphore.${PROXMOX_SUBDOMAIN}/api"
+  else
+    die "set SEMAPHORE_ADDR (or PROXMOX_SUBDOMAIN for the default host)" "$EX_USAGE"
+  fi
+}
+
+sem_call() { # METHOD PATH [BODY]
+  api_call "Authorization" "Bearer $SEM_TOKEN" "$1" "$SEMAPHORE_API/$2" "${3:-}"
+}
+
+# ---- resolution -------------------------------------------------------------
+
+# Reads a JSON array of ids and prints its single element, or exits 64.
+single_id() { # JSON_IDS LABEL
+  case "$(jq 'length' <<<"$1")" in
+    1) jq -r '.[0]' <<<"$1" ;;
+    0) die "no $2" "$EX_USAGE" ;;
+    *) die "more than one $2" "$EX_USAGE" ;;
+  esac
+}
+
+resolve_project() { # NAME_OR_ID -> PROJECT_ID
+  local ids
+  sem_call GET projects
+  expect_2xx "listing projects"
+  ids="$(jq -c --arg key "$1" \
+    '[.[] | select(.name == $key or (.id | tostring) == $key) | .id]' <<<"$HTTP_BODY")"
+  PROJECT_ID="$(single_id "$ids" "project named $1")"
+}
+
+resolve_template() { # NAME_OR_ID, within PROJECT_ID -> TEMPLATE_ID
+  local ids
+  sem_call GET "project/$PROJECT_ID/templates"
+  expect_2xx "listing templates"
+  ids="$(jq -c --arg key "$1" \
+    '[.[] | select(.name == $key or (.id | tostring) == $key) | .id]' <<<"$HTTP_BODY")"
+  TEMPLATE_ID="$(single_id "$ids" "template named $1 in project $PROJECT_ID")"
+}
+
+# Sets PROJECT_ID from --project when given, else from the first project that
+# holds TASK_ID.
+locate_task() {
+  if [ -n "$PROJECT_KEY" ]; then
+    resolve_project "$PROJECT_KEY"
+    return 0
+  fi
+  local pid
+  sem_call GET projects
+  expect_2xx "listing projects"
+  while read -r pid; do
+    sem_call GET "project/$pid/tasks/$TASK_ID"
+    case "$HTTP_STATUS" in
+      2??) PROJECT_ID="$pid"; return 0 ;;
+      404) ;;
+      *) die "looking up task $TASK_ID failed (HTTP $HTTP_STATUS)" "$EX_SOFTWARE" ;;
+    esac
+  done < <(jq -r '.[].id' <<<"$HTTP_BODY")
+  die "task $TASK_ID is not in any project" "$EX_USAGE"
+}
+
+# ---- argument handling ------------------------------------------------------
+
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --project)
+        [ "$#" -ge 2 ] || die "--project needs a value" "$EX_USAGE"
+        PROJECT_KEY="$2"; shift 2 ;;
+      --timeout)
+        [ "$#" -ge 2 ] || die "--timeout needs a value" "$EX_USAGE"
+        TIMEOUT="$2"; TIMEOUT_GIVEN=1; shift 2 ;;
+      --)
+        shift
+        ANSIBLE_ARGS=("$@")
+        return 0 ;;
+      -*) die "unknown option: $1" "$EX_USAGE" ;;
+      *) POSITIONAL+=("$1"); shift ;;
+    esac
+  done
+}
+
+require_task_id() { # SUBCOMMAND
+  [[ "${POSITIONAL[0]:-}" =~ ^[0-9]+$ ]] || die "$1 needs a numeric task ID" "$EX_USAGE"
+  TASK_ID="${POSITIONAL[0]}"
+}
+
+# The start body. ANSIBLE_ARGS are encoded once: a JSON array, held as a string.
+start_body() {
+  if [ "${#ANSIBLE_ARGS[@]}" -eq 0 ]; then
+    jq -nc --argjson t "$TEMPLATE_ID" --argjson p "$PROJECT_ID" \
+      '{template_id: $t, project_id: $p}'
+  else
+    local encoded
+    encoded="$(jq -nc '$ARGS.positional' --args -- "${ANSIBLE_ARGS[@]}")"
+    jq -nc --argjson t "$TEMPLATE_ID" --argjson p "$PROJECT_ID" --arg a "$encoded" \
+      '{template_id: $t, project_id: $p, arguments: $a}'
+  fi
+}
+
+# ---- subcommands ------------------------------------------------------------
+
+cmd_list() {
+  [ "${#POSITIONAL[@]}" -eq 0 ] || die "list takes no positional arguments" "$EX_USAGE"
+  load_semaphore_token
+  if [ -n "$PROJECT_KEY" ]; then
+    resolve_project "$PROJECT_KEY"
+    sem_call GET "project/$PROJECT_ID/templates"
+  else
+    sem_call GET projects
+  fi
+  expect_2xx "listing"
+  jq -r '.[] | "\(.id)\t\(.name)"' <<<"$HTTP_BODY" | sort -t $'\t' -k2,2
+}
+
+cmd_start() {
+  [ -n "$PROJECT_KEY" ] || die "start needs --project NAME|ID" "$EX_USAGE"
+  [ "${#POSITIONAL[@]}" -eq 1 ] || die "start needs exactly one TEMPLATE (ANSIBLE_ARGS go after --)" "$EX_USAGE"
+  load_semaphore_token
+  resolve_project "$PROJECT_KEY"
+  resolve_template "${POSITIONAL[0]}"
+  sem_call POST "project/$PROJECT_ID/tasks" "$(start_body)"
+  expect_2xx "starting template $TEMPLATE_ID"
+  TASK_ID="$(jq -er '.id' <<<"$HTTP_BODY")" || die "start response had no task id" "$EX_SOFTWARE"
+  printf '%s\n' "$TASK_ID"
+}
+
+cmd_wait() {
+  [ "${#POSITIONAL[@]}" -eq 1 ] || die "wait needs exactly one task ID" "$EX_USAGE"
+  require_task_id wait
+  local timeout_s deadline status
+  timeout_s="$(duration_to_seconds "$TIMEOUT")"
+  load_semaphore_token
+  locate_task
+  deadline=$(( $(date +%s) + timeout_s ))
+  while :; do
+    sem_call GET "project/$PROJECT_ID/tasks/$TASK_ID"
+    expect_2xx "reading task $TASK_ID"
+    status="$(jq -r '.status // ""' <<<"$HTTP_BODY")"
+    case "$status" in
+      success) printf 'task %s %s\n' "$TASK_ID" "$status"; exit 0 ;;
+      error|stopped|rejected) printf 'task %s %s\n' "$TASK_ID" "$status"; exit 1 ;;
+    esac
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      die "timed out after $TIMEOUT with task $TASK_ID $status" "$EX_TEMPFAIL"
+    fi
+    sleep "$POLL_SECONDS"
+  done
+}
+
+cmd_log() {
+  if [ "${#POSITIONAL[@]}" -lt 1 ] || [ "${#POSITIONAL[@]}" -gt 2 ]; then
+    die "log needs ID [N]" "$EX_USAGE"
+  fi
+  require_task_id log
+  local lines="$DEFAULT_LOG_LINES"
+  if [ "${#POSITIONAL[@]}" -eq 2 ]; then
+    lines="${POSITIONAL[1]}"
+    [[ "$lines" =~ ^[0-9]+$ ]] || die "log: N must be a number" "$EX_USAGE"
+  fi
+  load_semaphore_token
+  locate_task
+  sem_call GET "project/$PROJECT_ID/tasks/$TASK_ID/output"
+  expect_2xx "reading output of task $TASK_ID"
+  jq -r '.[] | .output // empty' <<<"$HTTP_BODY" | tail -n "$lines"
+}
+
+cmd_stop() {
+  [ "${#POSITIONAL[@]}" -eq 1 ] || die "stop needs exactly one task ID" "$EX_USAGE"
+  require_task_id stop
+  load_semaphore_token
+  locate_task
+  sem_call POST "project/$PROJECT_ID/tasks/$TASK_ID/stop" '{}'
+  expect_2xx "stopping task $TASK_ID"
+  printf 'task %s stop requested\n' "$TASK_ID"
+}
+
+main() {
+  local cmd="${1:-}"
+  case "$cmd" in
+    list|start|wait|log|stop) shift ;;
+    help|--help|-h) usage; exit 0 ;;
+    '') usage >&2; exit "$EX_USAGE" ;;
+    *) log "unknown subcommand: $cmd"; usage >&2; exit "$EX_USAGE" ;;
+  esac
+  parse_args "$@"
+  if [ -n "$TIMEOUT_GIVEN" ] && [ "$cmd" != wait ]; then
+    die "--timeout only applies to wait" "$EX_USAGE"
+  fi
+  if [ "${#ANSIBLE_ARGS[@]}" -gt 0 ] && [ "$cmd" != start ]; then
+    die "only start takes ANSIBLE_ARGS after --" "$EX_USAGE"
+  fi
+  resolve_semaphore_api
+  trap cleanup EXIT
+  case "$cmd" in
+    list) cmd_list ;;
+    start) cmd_start ;;
+    wait) cmd_wait ;;
+    log) cmd_log ;;
+    stop) cmd_stop ;;
+  esac
+}
+
+main "$@"
