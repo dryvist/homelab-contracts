@@ -143,10 +143,12 @@ jobs:
       - name: Verify seed_generated create, merge, rotate, provided-value and guard behaviour
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
+          ANSIBLE_PYTHON_INTERPRETER: ${{ env.pythonLocation }}/bin/python
         run: ansible-playbook -i localhost, tests/openbao_secrets/seed_generated.yml
       - name: Verify langfuse_project_keys planning, refusals, reuse and the single write
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
+          ANSIBLE_PYTHON_INTERPRETER: ${{ env.pythonLocation }}/bin/python
         run: ansible-playbook -i localhost, tests/langfuse_project_keys/provision.yml
       - name: Verify the wall-clock cap derives from the Semaphore-forwarded ceiling
         env:
