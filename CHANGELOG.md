@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.25.0](https://github.com/dryvist/homelab-contracts/compare/v5.24.0...v5.25.0) (2026-10-28)
+
+
+### Features
+
+* **openbao_secrets:** add seed_generated for generate-if-absent fields ([#231](https://github.com/dryvist/homelab-contracts/issues/231)) ([ef4145b](https://github.com/dryvist/homelab-contracts/commit/ef4145b2ce31d984bf119fefdc47b4004a57c8c7))
+
 ## [5.24.0](https://github.com/dryvist/homelab-contracts/compare/v5.23.0...v5.24.0) (2026-10-28)
 
 
