@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.24.0](https://github.com/dryvist/homelab-contracts/compare/v5.23.0...v5.24.0) (2026-10-28)
+
+
+### Features
+
+* **semaphore-run:** add managed Semaphore dispatch CLI ([#229](https://github.com/dryvist/homelab-contracts/issues/229)) ([ae6d14a](https://github.com/dryvist/homelab-contracts/commit/ae6d14a9a0ceb2363b6c4ef66b98e7f15f7460fd))
+
 ## [5.23.0](https://github.com/dryvist/homelab-contracts/compare/v5.22.0...v5.23.0) (2026-10-25)
 
 
