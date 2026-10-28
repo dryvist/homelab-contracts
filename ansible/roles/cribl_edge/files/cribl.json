@@ -3,7 +3,19 @@
   "version": "4.20.1-590ec085",
   "packs": {
     "edge_linux": ["cc-edge-copilot-otel", "cc-edge-vscode-io"],
-    "edge_macos": ["cc-edge-the-mac-pack-io", "cc-edge-codex-io", "cc-edge-gemini-antigravity-io"],
+    "edge_macos": [
+      "cc-edge-the-mac-pack-io",
+      "cc-edge-codex-io",
+      "cc-edge-gemini-antigravity-io",
+      "cc-edge-macos-diagnostic-reports-io",
+      "cc-edge-macos-power-thermal-io",
+      "cc-edge-macos-ws-monitor-io",
+      "cc-edge-ai-transcript-shared-io",
+      "cc-edge-mlx-serving-io",
+      "cc-edge-macos-process-telemetry-io",
+      "cc-edge-macos-firewall-io",
+      "cc-edge-macos-unified-logs-io"
+    ],
     "stream": [
       "cc-stream-github-copilot-rest-io",
       "cc-stream-apple-mlx-metrics",
