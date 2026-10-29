@@ -87,8 +87,8 @@ doppler run -- ansible-playbook playbooks/site.yml --tags openbao_secrets
 ```
 
 Any domain whose credentials aren't set simply falls back to env/SOPS for its
-consumer roles — see [Wiring](#wiring) for how the pre-fetch play publishes
-each domain's fact.
+consumer roles — see [Installation](#installation) for how the pre-fetch play
+publishes each domain's fact.
 
 ## Client failover
 
@@ -131,12 +131,6 @@ All readable path keys for a domain are merged flat into that domain's
 | `SECRET_STORE_PUBLISH_ROLE_ID` / `_SECRET_ID` (fallback `OPENBAO_APPROLE_ANSIBLE_*`) | Identity for the one publish path. |
 | `SECRET_STORE_KV_MOUNT` | KV mount name; the role default applies when unset. |
 
-On macOS these are sourced from the operator's dedicated `openbao.keychain-db`
-keychain (72h auto-lock — the keychain's lock state is the access boundary,
-not the AppRole's own TTL) via a resolver script; on Linux guests, from a
-root-only systemd credential / `0600` EnvironmentFile. See
-`tofu-proxmox` `docs/SECRETS_HIERARCHY.md`.
-
 ## Read-path switches
 
 Each input defaults to the behaviour the role already had. `meta/argument_specs.yml` documents them.
@@ -154,14 +148,6 @@ Each input defaults to the behaviour the role already had. `meta/argument_specs.
 
 A path is a string or a mapping with `path`, `mount`, `optional` and `enabled`. `enabled: false` skips it before any read.
 `tasks_from: assert_nonempty.yml` fails when a variable named in `openbao_secrets_required_vars` resolves empty.
-
-## Wiring
-
-Runs as a pre-fetch play in `playbooks/site.yml`, against the union of every
-domain's consumer groups, before any of those roles evaluate their secret
-defaults. One execution fetches ALL configured domains (regardless of which
-specific groups are in the play's host list) — cheap and avoids redundant
-logins from being split across multiple domain-scoped plays.
 
 ## Generate-if-absent seeding (`tasks_from: seed_generated`)
 
