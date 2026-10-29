@@ -37,6 +37,12 @@
 #   RUN_ANSIBLE_LIMIT_LOCALHOST=1      append localhost to --limit (for callers that append task arguments)
 #   RUN_ANSIBLE_RECAP_CHECK=1          fail on failed or unreachable hosts, and on a non-localhost --limit that matched none
 #   RUN_ANSIBLE_LOG_DIR=DIR            keep the run log in DIR
+#   RUN_ANSIBLE_FALLBACK_ON_ERROR=1    a ?-marked identity also falls through on any login or signing failure
+#   RUN_ANSIBLE_REQUIRE_RECAP=1        with RUN_ANSIBLE_RECAP_CHECK, fail any run that printed no play recap
+#   RUN_ANSIBLE_RETIRING_IDENTITIES    comma list; warn when one of these identities mints the certificate
+#   RUN_ANSIBLE_WARN_NO_ISSUER=1       warn when BAO_ADDR is set but no AppRole issuer pair is present
+#
+# With SSH_KNOWN_HOSTS set, SSH_KNOWN_HOSTS_FILE is exported as the path of the per-run pin file.
 #
 # Exit status: the playbook's, 1 for a refusal or failed setup step, 64 for usage.
 
@@ -152,7 +158,12 @@ mint_from_identities() {
     rc=0
     mint_ssh_cert || rc=$?
     case $rc in
-      0) return 0 ;;
+      0)
+        if [[ ,${RUN_ANSIBLE_RETIRING_IDENTITIES:-}, == *",$name,"* ]]; then
+          echo "WARNING: converging as the $name AppRole, which is being retired." >&2
+        fi
+        return 0
+        ;;
       2)
         if [[ $entry == *\? ]]; then
           echo "WARNING: AppRole login refused for identity: $name; trying the next identity." >&2
@@ -161,7 +172,13 @@ mint_from_identities() {
         echo "ERROR: AppRole login refused for identity: $name." >&2
         return 2
         ;;
-      *) return 1 ;;
+      *)
+        if [[ -n ${RUN_ANSIBLE_FALLBACK_ON_ERROR:-} && $entry == *\? ]]; then
+          echo "WARNING: certificate mint failed for identity: $name; trying the next identity." >&2
+          continue
+        fi
+        return 1
+        ;;
     esac
   done
   if [[ -z $tried ]]; then
@@ -282,16 +299,16 @@ checkout_pin() {
 }
 
 # Returns 1 when a non-localhost --limit matched no host, a host failed or was unreachable, or (for a non-localhost
-# --limit) the run printed no play recap.
+# --limit, or always with RUN_ANSIBLE_REQUIRE_RECAP) the run printed no play recap.
 recap_check() {
   local non_localhost_limit recap_hosts failed
   non_localhost_limit=$(tr ',:' '\n' <<<"$LIMIT_VAL" | grep -vx 'localhost' | grep -v '^$' || true)
+  if [[ -n $non_localhost_limit || -n ${RUN_ANSIBLE_REQUIRE_RECAP:-} ]] && ! grep -q '^PLAY RECAP' "$LOG_FILE"; then
+    echo "ERROR: the run ended before Ansible printed a play recap; it was interrupted or crashed." >&2
+    echo "This says nothing about how much work it completed; read the log before concluding it did nothing." >&2
+    return 1
+  fi
   if [[ -n $non_localhost_limit ]]; then
-    if ! grep -q '^PLAY RECAP' "$LOG_FILE"; then
-      echo "ERROR: the run ended before Ansible printed a play recap; it was interrupted or crashed." >&2
-      echo "This says nothing about how much work it completed; read the log before concluding it did nothing." >&2
-      return 1
-    fi
     recap_hosts=$(awk '/^PLAY RECAP/{f=1;next} f && / ok=[0-9]/{print $1}' "$LOG_FILE")
     if [[ -z $(grep -vx 'localhost' <<<"$recap_hosts" || true) ]]; then
       echo "ERROR: --limit ($LIMIT_VAL) asked for hosts beyond localhost, but the play recap shows only localhost; this run did nothing." >&2
@@ -348,6 +365,12 @@ main() {
     export BAO_ADDR=$SECRET_STORE_ADDR
   fi
 
+  if [[ -n ${RUN_ANSIBLE_WARN_NO_ISSUER:-} && -n ${BAO_ADDR:-} && -z ${OPENBAO_PROVISIONING_TOKEN:-} ]] &&
+    [[ -z ${OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID:-} || -z ${OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID:-} ]]; then
+    echo "run-ansible: no AppRole issuer credentials in this environment;" >&2
+    echo "  OpenBao reconciliation on an initialized cluster will fail." >&2
+  fi
+
   REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
   WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/run-ansible.XXXXXX")
   chmod 700 "$WORK_DIR"
@@ -396,6 +419,8 @@ main() {
     export ANSIBLE_SSH_COMMON_ARGS="$pin_args${ANSIBLE_SSH_COMMON_ARGS:+ $ANSIBLE_SSH_COMMON_ARGS}"
     # Ansible adds StrictHostKeyChecking=no ahead of the common args when checking is off; force it on.
     export ANSIBLE_HOST_KEY_CHECKING=True
+    # Playbooks that write or verify the pin read the same per-run file.
+    export SSH_KNOWN_HOSTS_FILE="$WORK_DIR/known_hosts"
     if [[ -n ${RUN_ANSIBLE_MERGE_KNOWN_HOSTS:-} ]]; then
       merge_known_hosts
     fi
