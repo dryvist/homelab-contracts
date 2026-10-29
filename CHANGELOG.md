@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.33.1](https://github.com/dryvist/homelab-contracts/compare/v5.33.0...v5.33.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **openbao_secrets:** fail publish on a refused read and write under check-and-set ([#258](https://github.com/dryvist/homelab-contracts/issues/258)) ([547adab](https://github.com/dryvist/homelab-contracts/commit/547adab58de54f0a8b60dbf3a070a0ded4497911))
+
 ## [5.33.0](https://github.com/dryvist/homelab-contracts/compare/v5.32.0...v5.33.0) (2026-10-29)
 
 
