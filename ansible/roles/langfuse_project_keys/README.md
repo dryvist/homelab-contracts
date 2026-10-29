@@ -33,12 +33,14 @@ routes the web UI uses, then calls two tRPC procedures:
     langfuse_project_keys_org_name: homelab
     langfuse_project_keys_project_name: hermes
     langfuse_project_keys_openbao_addr: "{{ openbao_addr }}"
-    langfuse_project_keys_openbao_token: "{{ writer_token }}"
+    langfuse_project_keys_openbao_token: "{{ lookup('env', 'BAO_TOKEN') }}"
     langfuse_project_keys_openbao_path: ai/hermes
 ```
 
 The caller supplies the admin password and the writer token from its own secret store. The role reads neither. The
-inputs are in `meta/argument_specs.yml`; the field names default to `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`.
+writer token is the converge identity: its policies must be exactly `default` and `ansible-converge`. The role checks
+that with `auth/token/lookup-self` before any OpenBao read or Langfuse call. The inputs are in
+`meta/argument_specs.yml`; the field names default to `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`.
 
 ## Order and idempotency
 
