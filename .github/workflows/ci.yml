@@ -144,6 +144,10 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/openbao_secrets/seed_generated.yml
+      - name: Verify langfuse_project_keys planning, refusals, reuse and the single write
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/langfuse_project_keys/provision.yml
       - name: Verify the wall-clock cap derives from the Semaphore-forwarded ceiling
         env:
           ANSIBLE_ROLES_PATH: ansible/roles

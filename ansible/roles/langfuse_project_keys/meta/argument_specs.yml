@@ -1,0 +1,67 @@
+---
+argument_specs:
+  main:
+    short_description: Provision one Langfuse project API key pair into an OpenBao KV v2 secret
+    description:
+      - Signs in to Langfuse as an existing admin through the web sign-in endpoint, finds the organization by name,
+        creates the project when it is absent, creates one project API key pair and writes it to OpenBao.
+      - Nothing is created when both key fields already exist in the OpenBao secret. A secret that holds only one
+        of the two fields stops the run before any Langfuse call.
+      - The OpenBao state is checked first, through C(openbao_secrets) C(seed_generated) in check mode, so a run that
+        stops early creates nothing in Langfuse.
+      - Uses the session routes that the Langfuse web UI calls, not the public admin API, which needs an enterprise
+        licence.
+      - Requires the C(openbao_secrets) role on the role path. Every task that handles a password, a cookie or a key is
+        C(no_log).
+    options:
+      langfuse_project_keys_base_url:
+        type: str
+        required: true
+        description: Langfuse web base URL, for example C(https://langfuse.example.test). A trailing slash is removed.
+      langfuse_project_keys_admin_email:
+        type: str
+        required: true
+        description: Email of an existing Langfuse user that is an owner of the organization.
+      langfuse_project_keys_admin_password:
+        type: str
+        required: true
+        no_log: true
+        description: Password of the admin user. The caller reads it from its secret store.
+      langfuse_project_keys_org_name:
+        type: str
+        required: true
+        description: Name of the organization the admin belongs to. Exactly one organization must match.
+      langfuse_project_keys_project_name:
+        type: str
+        required: true
+        description: Project to create when the organization has no project with this name. An existing one is reused.
+      langfuse_project_keys_key_label:
+        type: str
+        description: Label stored with the new key. Defaults to the value in C(defaults/main.yml).
+      langfuse_project_keys_validate_certs:
+        type: bool
+        description: Verify the Langfuse and OpenBao certificates.
+      langfuse_project_keys_openbao_addr:
+        type: str
+        required: true
+        description: OpenBao base URL, for example C(https://openbao.example.test:8200).
+      langfuse_project_keys_openbao_token:
+        type: str
+        required: true
+        no_log: true
+        description:
+          - Writer token for the target path. It needs create, read and update on the data path and read on the
+            metadata path.
+      langfuse_project_keys_openbao_mount:
+        type: str
+        description: KV v2 mount that holds the target secret.
+      langfuse_project_keys_openbao_path:
+        type: str
+        required: true
+        description: Secret path under the mount, without the C(data/) segment.
+      langfuse_project_keys_public_key_field:
+        type: str
+        description: Name of the field that receives the public key.
+      langfuse_project_keys_secret_key_field:
+        type: str
+        description: Name of the field that receives the secret key.

@@ -14,4 +14,5 @@ exec ansible-lint \
   ansible/roles/llm_model_catalog \
   ansible/roles/llm_router_key_catalog \
   ansible/roles/llm_roles \
+  ansible/roles/langfuse_project_keys \
   ansible/playbooks/converge_gate.yml
