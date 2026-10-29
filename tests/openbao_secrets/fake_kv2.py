@@ -44,6 +44,13 @@ TOKENS = {
         "orphan": True,
         "ttl": 300,
     },
+    "writer-revoke-fails": {
+        "policies": ["default", "test-write"],
+        "identity_policies": [],
+        "renewable": False,
+        "orphan": True,
+        "ttl": 300,
+    },
     "writer-caps-bad": {
         "policies": ["default", "test-write"],
         "identity_policies": [],
@@ -129,7 +136,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(403, {"errors": ["permission denied"]})
         if path == "/v1/auth/token/revoke-self":
             self._record("POST", path)
-            return self._send(204)
+            return self._send(500 if token == "writer-revoke-fails" else 204)
         if path == "/v1/sys/capabilities-self":
             self._record("POST", path)
             caps = {p: capabilities_for(token, p) for p in body.get("paths", [])}

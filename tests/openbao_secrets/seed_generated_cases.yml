@@ -800,3 +800,37 @@
         that:
           - case_q_failed | default(false) | bool
           - state_q.json.log | length == 0
+
+- name: Case R - a failed revocation is reported without the token, after the write
+  block:
+    - name: R - run with a token whose revocation fails
+      block:
+        - name: R - seed with revocation requested
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/revoke-fails
+            openbao_secrets_seed_token: writer-revoke-fails
+            openbao_secrets_seed_revoke_token: true
+            openbao_secrets_seed_fields:
+              - name: password
+                length: 8
+      rescue:
+        - name: R - record the reported failure
+          ansible.builtin.set_fact:
+            case_r_msg: "{{ ansible_failed_result.msg | default('') }}"
+
+    - name: R - read the stand-in state
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/state"
+        return_content: true
+      register: state_r
+
+    - name: R - assert the write landed and the message names the TTL, not the token
+      ansible.builtin.assert:
+        that:
+          - case_r_msg is search('self-revocation failed \\(HTTP 500\\)')
+          - case_r_msg is search('until its TTL expires')
+          - "'writer-revoke-fails' not in case_r_msg"
+          - state_r.json.state['secret/data/seed/revoke-fails'].version == 1
