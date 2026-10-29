@@ -178,8 +178,8 @@ Adds missing fields to one KV v2 secret. The interface is in `meta/argument_spec
   value that does not match it.
 - The no-log fact named by `openbao_secrets_seed_register` receives a dictionary of declared field names to their
   final values (stored, caller-supplied, or generated). Its default name is `openbao_secrets_seed_result`.
-- Generated fields accept `charset: lower_alpha` for lowercase letters only, in addition to `alnum`, `lower`, and
-  `hex`.
+- Generated fields accept `charset: lower_alpha` for lowercase letters only, `charset: upper_numeric` for uppercase
+  letters and digits only, in addition to `alnum`, `lower`, and `hex`.
 - In check mode, the task reads existing values, returns `(placeholder in check mode)` for fields that would be
   generated, and sends no KV write. Caller-supplied values and existing stored values remain available to templates.
 - When the seed endpoint is unset or its
