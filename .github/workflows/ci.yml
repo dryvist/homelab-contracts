@@ -144,6 +144,19 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/openbao_secrets/seed_generated.yml
+      - name: Verify the openbao_secrets read path (domain switches, login paths, read classification)
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+          FAKE_READER_ROLE_ID: reader
+          FAKE_READER_SECRET_ID: reader-secret
+          FAKE_CIDR_ROLE_ID: cidr
+          FAKE_CIDR_SECRET_ID: cidr-secret
+          FAKE_REFUSED_ROLE_ID: refused
+          FAKE_REFUSED_SECRET_ID: refused-secret
+          OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID: issuer-role
+          OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID: issuer-secret
+        # The flow-lock stand-in comes first on PATH, so the issuer path runs without the real CLI.
+        run: PATH="$PWD/tests/openbao_secrets/stub-bin:$PATH" ansible-playbook -i localhost, tests/openbao_secrets/read_path.yml
       - name: Verify langfuse_project_keys planning, refusals, reuse and the single write
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
