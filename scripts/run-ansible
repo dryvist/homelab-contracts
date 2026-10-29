@@ -41,6 +41,8 @@
 # Exit status: the playbook's, 1 for a refusal or failed setup step, 64 for usage.
 
 set -euo pipefail
+# Never trace: identities, secret_ids and keys pass through variables below.
+{ set +x; } 2>/dev/null
 
 die() {
   echo "ERROR: $*" >&2
@@ -55,10 +57,6 @@ revoke_runner_token() {
   if [[ -z $RUNNER_BAO_TOKEN ]]; then
     return 0
   fi
-  if [[ ! $max =~ ^[1-9][0-9]*$ ]]; then
-    die "RUN_ANSIBLE_REVOKE_ATTEMPTS must be a positive integer"
-  fi
-  { set +x; } 2>/dev/null
   for ((attempt = 1; attempt <= max; attempt++)); do
     if curl -fsSL --max-time 30 -X POST -H @<(printf 'X-Vault-Token: %s\n' "$RUNNER_BAO_TOKEN") \
       --output /dev/null "$BAO_ADDR/v1/auth/token/revoke-self"; then
@@ -329,6 +327,11 @@ main() {
   PLAYBOOK="$1"
   shift
 
+  # Validated before the EXIT trap exists, so a bad value can never abort cleanup.
+  if [[ ! ${RUN_ANSIBLE_REVOKE_ATTEMPTS:-1} =~ ^[1-9][0-9]*$ ]]; then
+    die "RUN_ANSIBLE_REVOKE_ATTEMPTS must be a positive integer"
+  fi
+
   IDENTITY_ENTRIES=()
   IFS=',' read -ra IDENTITY_ENTRIES <<<"${RUN_ANSIBLE_IDENTITIES:-signer,semaphore,ansible}"
   for entry in "${IDENTITY_ENTRIES[@]}"; do
@@ -391,6 +394,8 @@ main() {
     # Prepended options win: OpenSSH uses the first value per option, so caller extras cannot weaken the pin.
     pin_args="-o UserKnownHostsFile=$WORK_DIR/known_hosts -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes"
     export ANSIBLE_SSH_COMMON_ARGS="$pin_args${ANSIBLE_SSH_COMMON_ARGS:+ $ANSIBLE_SSH_COMMON_ARGS}"
+    # Ansible adds StrictHostKeyChecking=no ahead of the common args when checking is off; force it on.
+    export ANSIBLE_HOST_KEY_CHECKING=True
     if [[ -n ${RUN_ANSIBLE_MERGE_KNOWN_HOSTS:-} ]]; then
       merge_known_hosts
     fi
