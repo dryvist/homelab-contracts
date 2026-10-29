@@ -14,7 +14,9 @@ setup() {
   unset RUN_ANSIBLE_IDENTITIES RUN_ANSIBLE_STATIC_KEY_FALLBACK RUN_ANSIBLE_SSH_AGENT RUN_ANSIBLE_MERGE_KNOWN_HOSTS
   unset RUN_ANSIBLE_REVOKE_ATTEMPTS RUN_ANSIBLE_CHECKOUT_GUARD RUN_ANSIBLE_PIN_FILE RUN_ANSIBLE_PIN_DIR
   unset RUN_ANSIBLE_PIN_URL RUN_ANSIBLE_PIN_OPTIONAL RUN_ANSIBLE_LIMIT_LOCALHOST RUN_ANSIBLE_RECAP_CHECK
-  unset RUN_ANSIBLE_LOG_DIR FIXTURE_REFUSED_ROLE FIXTURE_SIGN_FAIL FIXTURE_REVOKE_FAILS FIXTURE_RECAP
+  unset RUN_ANSIBLE_LOG_DIR FIXTURE_REFUSED_ROLE FIXTURE_SIGN_FAIL FIXTURE_SIGN_FAIL_ROLE FIXTURE_REVOKE_FAILS FIXTURE_RECAP
+  unset RUN_ANSIBLE_FALLBACK_ON_ERROR RUN_ANSIBLE_REQUIRE_RECAP RUN_ANSIBLE_RETIRING_IDENTITIES RUN_ANSIBLE_WARN_NO_ISSUER
+  unset OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID OPENBAO_PROVISIONING_TOKEN
   unset FIXTURE_ANSIBLE_EXIT
 
   export HOME="$BATS_TEST_TMPDIR/home"
@@ -56,7 +58,7 @@ case "$method $path" in
     ;;
   "POST /v1/"*"/sign/"*)
     printf 'SIGN %s ttl=%s\n' "$path" "$(jq -r '.ttl' <<<"$data")" >> "$FIXTURE_LOG"
-    if [ -n "${FIXTURE_SIGN_FAIL:-}" ]; then
+    if [ -n "${FIXTURE_SIGN_FAIL:-}" ] || [ "${path##*/}" = "${FIXTURE_SIGN_FAIL_ROLE:-}" ]; then
       exit 22
     fi
     printf '{"data":{"signed_key":"cert-for-%s"}}\n' "${path##*/}"
@@ -121,6 +123,7 @@ set -euo pipefail
   printf 'common=%s\n' "${ANSIBLE_SSH_COMMON_ARGS:-}"
   printf 'bao_token=%s\n' "${BAO_TOKEN:+set}"
   printf 'host_key_checking=%s\n' "${ANSIBLE_HOST_KEY_CHECKING:-}"
+  printf 'known_hosts_file=%s\n' "${SSH_KNOWN_HOSTS_FILE:-}"
 } >> "$FIXTURE_RUN_LOG"
 printf 'PLAYBOOK-OUTPUT\n'
 printf '%b' "${FIXTURE_RECAP:-}"
@@ -492,4 +495,56 @@ with_origin() {
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 1 ]
   [[ $output == *"must be a lowercase name"* ]]
+}
+
+@test "RUN_ANSIBLE_FALLBACK_ON_ERROR lets a marked identity fall through on a signing failure" {
+  semaphore_env
+  ansible_env
+  export FIXTURE_SIGN_FAIL_ROLE=automation-semaphore RUN_ANSIBLE_IDENTITIES='signer,semaphore?,ansible'
+  export RUN_ANSIBLE_FALLBACK_ON_ERROR=1
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"certificate mint failed for identity: semaphore"* ]]
+  grep -Fqx 'SIGN /v1/ssh-client-ca/sign/automation-ansible ttl=1h' "$FIXTURE_LOG"
+}
+
+@test "without RUN_ANSIBLE_FALLBACK_ON_ERROR a signing failure stops even a marked identity" {
+  semaphore_env
+  ansible_env
+  export FIXTURE_SIGN_FAIL_ROLE=automation-semaphore RUN_ANSIBLE_IDENTITIES='signer,semaphore?,ansible'
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 1 ]
+  [ ! -s "$FIXTURE_RUN_LOG" ]
+}
+
+@test "RUN_ANSIBLE_RETIRING_IDENTITIES warns when a retiring identity mints the certificate" {
+  ansible_env
+  export RUN_ANSIBLE_RETIRING_IDENTITIES=ansible
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"converging as the ansible AppRole, which is being retired"* ]]
+}
+
+@test "RUN_ANSIBLE_WARN_NO_ISSUER warns when the issuer pair is missing" {
+  semaphore_env
+  export RUN_ANSIBLE_WARN_NO_ISSUER=1
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"no AppRole issuer credentials in this environment"* ]]
+}
+
+@test "RUN_ANSIBLE_REQUIRE_RECAP fails an unlimited run that printed no play recap" {
+  static_key
+  export RUN_ANSIBLE_RECAP_CHECK=1 RUN_ANSIBLE_REQUIRE_RECAP=1
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 1 ]
+  [[ $output == *"ended before Ansible printed a play recap"* ]]
+}
+
+@test "SSH_KNOWN_HOSTS exports the per-run pin file path" {
+  static_key
+  export SSH_KNOWN_HOSTS='pin.example ssh-ed25519 AAAAPIN'
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  grep -Eq '^known_hosts_file=.+/known_hosts$' "$FIXTURE_RUN_LOG"
 }
