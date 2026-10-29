@@ -63,10 +63,33 @@
           '';
           meta.description = "Managed Semaphore task dispatch (list, start, wait, log, stop) with the API token read from OpenBao";
         };
+
+        run-ansible = pkgs.stdenvNoCC.mkDerivation {
+          pname = "run-ansible";
+          inherit version;
+          src = ./scripts;
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          installPhase = ''
+            install -Dm755 run-ansible $out/bin/run-ansible
+            wrapProgram $out/bin/run-ansible \
+              --prefix PATH : ${
+                pkgs.lib.makeBinPath [
+                  pkgs.coreutils
+                  pkgs.curl
+                  pkgs.gawk
+                  pkgs.git
+                  pkgs.gnugrep
+                  pkgs.jq
+                  pkgs.openssh
+                ]
+              }
+          '';
+          meta.description = "Run one ansible-playbook with an OpenBao-signed SSH certificate, a host-key pin and run checks";
+        };
       in
       {
         packages = {
-          inherit flow-lock semaphore-run;
+          inherit flow-lock semaphore-run run-ansible;
           default = flow-lock;
         };
 
