@@ -93,11 +93,11 @@ cleanup() {
   return "$status"
 }
 
-# Login body goes through jq's environment, so the secret_id never appears in a process argument list.
+# Login goes through the shared CLI, so the secret_id never appears in a process argument list.
+# --follow-redirects follows HTTP redirects (curl -L).
 bao_login() {
-  CONVERGE_ROLE_ID=$CONVERGE_ROLE_ID CONVERGE_SECRET_ID=$CONVERGE_SECRET_ID \
-    jq -nc '{role_id: env.CONVERGE_ROLE_ID, secret_id: env.CONVERGE_SECRET_ID}' \
-    | curl -fsSL --max-time 10 -H 'Content-Type: application/json' --data @- "$BAO_ADDR/v1/auth/approle/login"
+  FLOW_LOCK_API_MAX_TIME=10 BAO_APPROLE_ROLE_ID="$CONVERGE_ROLE_ID" \
+    BAO_APPROLE_SECRET_ID="$CONVERGE_SECRET_ID" bao-approle login --addr "$BAO_ADDR" --follow-redirects
 }
 
 # Sets CONVERGE_ROLE_ID, CONVERGE_SECRET_ID, CONVERGE_SIGN_ROLE and CONVERGE_IDENTITY for the named identity.
@@ -123,7 +123,7 @@ select_identity() {
 
 # Returns 0 when a certificate was minted, 2 when the login was refused, 1 for any other failure.
 mint_ssh_cert() {
-  local mount=${SSH_CA_MOUNT:-ssh-client-ca} login token signed rc=0
+  local mount=${SSH_CA_MOUNT:-ssh-client-ca} login signed rc=0
   revoke_runner_token || true
   rm -f "$WORK_DIR/id" "$WORK_DIR/id.pub" "$WORK_DIR/id-cert.pub"
   (umask 077 && ssh-keygen -q -t ed25519 -N '' -C run-ansible -f "$WORK_DIR/id") || return 1
@@ -136,8 +136,7 @@ mint_ssh_cert() {
     fi
     return 1
   }
-  token=$(printf '%s' "$login" | jq -er '.auth.client_token') || return 1
-  RUNNER_BAO_TOKEN=$token
+  RUNNER_BAO_TOKEN=$login
   signed=$(jq -nc --rawfile pub "$WORK_DIR/id.pub" --arg ttl "${SSH_CERT_TTL:-1h}" '{public_key: $pub, ttl: $ttl}' \
     | curl -fsSL --max-time 10 -H @<(printf 'X-Vault-Token: %s\n' "$RUNNER_BAO_TOKEN") --data @- \
       "$BAO_ADDR/v1/$mount/sign/$CONVERGE_SIGN_ROLE" \

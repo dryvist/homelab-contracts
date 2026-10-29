@@ -47,6 +47,7 @@
             wrapProgram $out/bin/flow-lock \
               --prefix PATH : ${
                 pkgs.lib.makeBinPath [
+                  bao-approle
                   pkgs.curl
                   pkgs.jq
                 ]
@@ -92,6 +93,7 @@
             wrapProgram $out/bin/run-ansible \
               --prefix PATH : ${
                 pkgs.lib.makeBinPath [
+                  bao-approle
                   pkgs.coreutils
                   pkgs.curl
                   pkgs.gawk

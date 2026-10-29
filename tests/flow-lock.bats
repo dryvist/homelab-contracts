@@ -6,6 +6,7 @@
 setup() {
   FLOW_LOCK="$BATS_TEST_DIRNAME/../bin/flow-lock"
   DEPLOYMENT_JSON="$BATS_TEST_DIRNAME/../bin/deployment-json"
+  export PATH="$BATS_TEST_DIRNAME/../bin:$PATH"
   # ensure no ambient config leaks in
   unset BAO_ADDR BAO_TOKEN FLOW_LOCK_ROLE_ID FLOW_LOCK_SECRET_ID
   unset OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID

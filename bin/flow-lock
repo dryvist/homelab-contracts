@@ -98,21 +98,12 @@ clear_issuer_credentials() {
   unset OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID
 }
 
-# AppRole login accepts its JSON body on stdin so secret_ids never appear in
-# curl's arguments. The response is returned to the caller for immediate use.
+# AppRole login delegates to the shared CLI; credentials stay out of argv.
 approle_login() {
-  local role_id="$1" secret_id="$2" response status body
-  response="$(
-    OPENBAO_LOGIN_ROLE_ID="$role_id" OPENBAO_LOGIN_SECRET_ID="$secret_id" \
-      jq -nc '{role_id:env.OPENBAO_LOGIN_ROLE_ID,secret_id:env.OPENBAO_LOGIN_SECRET_ID}' |
-      curl -sS --max-time "${FLOW_LOCK_API_MAX_TIME:-30}" -X POST \
-        -H 'Content-Type: application/json' -w '\n%{http_code}' --data-binary @- "$BAO_ADDR/v1/auth/approle/login"
-  )" || die "AppRole login request failed (is OpenBao up at $BAO_ADDR?)"
-  status="$(printf '%s\n' "$response" | awk 'END { print }')"
-  body="$(printf '%s' "$response" | sed '$d')"
-  [ "$status" = "200" ] || die "AppRole login rejected: $(jq -r '.errors[0] // "unknown error"' <<<"$body" 2>/dev/null)"
-  jq -er '.auth.client_token' <<<"$body" 2>/dev/null \
-    || die "AppRole login response did not contain a client token"
+  local role_id="$1" secret_id="$2" token
+  token="$(BAO_APPROLE_ROLE_ID="$role_id" BAO_APPROLE_SECRET_ID="$secret_id" \
+    bao-approle login --addr "$BAO_ADDR" 2>&1)" || die "$token"
+  printf '%s\n' "$token"
 }
 
 bao_issuer_token() {
