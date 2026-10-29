@@ -1,0 +1,457 @@
+---
+# Behavioural checks for ansible/roles/langfuse_project_keys against two local stand-ins:
+# tests/langfuse_project_keys/fake_langfuse.py (sign-in, session and the two tRPC procedures) and
+# tests/openbao_secrets/fake_kv2.py (the KV v2 routes that seed_generated uses). Each case uses its own secret path,
+# and each case resets the Langfuse stand-in, so the request logs describe one case at a time.
+#
+# Every OpenBao read and write goes through ansible.builtin.uri, so no hvac library is needed.
+#
+# Run from the repository root:
+#   ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook -i localhost, tests/langfuse_project_keys/provision.yml
+- name: Verify langfuse_project_keys planning, refusals, reuse and the single write
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    langfuse_port: 18241
+    kv_port: 18242
+    closed_port: 18243  # nothing listens here
+    unreachable_kv_path: lpk/unreachable
+    lpk_base: "http://127.0.0.1:{{ langfuse_port }}"
+    kv_addr: "http://127.0.0.1:{{ kv_port }}"
+  tasks:
+    - name: Start the Langfuse stand-in
+      ansible.builtin.command: "python3 {{ playbook_dir }}/fake_langfuse.py --port {{ langfuse_port }}"
+      async: 900
+      poll: 0
+      changed_when: false
+
+    - name: Start the KV v2 stand-in (shared with the seed_generated test)
+      ansible.builtin.command: "python3 {{ playbook_dir }}/../openbao_secrets/fake_kv2.py --port {{ kv_port }}"
+      async: 900
+      poll: 0
+      changed_when: false
+
+    - name: Wait for both stand-ins to listen
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ item }}"
+        timeout: 30
+      loop:
+        - "{{ langfuse_port }}"
+        - "{{ kv_port }}"
+
+    # ---- A: wrong password -------------------------------------------------------------------------------------
+
+    - name: Case A - a refused sign-in stops after the OpenBao plan, with no Langfuse project or key call
+      block:
+        - name: A - reset Langfuse and the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: homelab, projects: []}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: A - run with the wrong password (expected to fail)
+          block:
+            - name: A - sign in with the wrong password
+              ansible.builtin.include_role:
+                name: langfuse_project_keys
+              vars:
+                langfuse_project_keys_base_url: "{{ lpk_base }}/"
+                langfuse_project_keys_admin_email: admin@example.test
+                langfuse_project_keys_admin_password: not-the-password
+                langfuse_project_keys_org_name: homelab
+                langfuse_project_keys_project_name: hermes
+                langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_path: lpk/wrong-password
+          rescue:
+            - name: A - record the refused sign-in
+              ansible.builtin.set_fact:
+                case_a_refused: true
+
+        - name: A - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_a_states
+
+        - name: A - assert the run was refused, planned the read, and created and wrote nothing
+          ansible.builtin.assert:
+            that:
+              - case_a_refused | default(false) | bool
+              - case_a_states.results[0].json.log | selectattr('path', 'search', '/api/trpc/') | list | length == 0
+              - >-
+                case_a_states.results[1].json.log | selectattr('method', 'equalto', 'GET')
+                | selectattr('path', 'equalto', 'secret/data/lpk/wrong-password') | list | length == 1
+              - case_a_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+              - "'secret/data/lpk/wrong-password' not in case_a_states.results[1].json.state"
+
+    # ---- B: complete secret ------------------------------------------------------------------------------------
+
+    - name: Case B - a complete secret is planned and left alone, with no Langfuse call and no write
+      block:
+        - name: B - seed both key fields
+          ansible.builtin.uri:
+            url: "{{ kv_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/lpk/complete, version: 1, data: {LANGFUSE_PUBLIC_KEY: pk-lf-stored, LANGFUSE_SECRET_KEY: sk-lf-stored}}
+            status_code: [200]
+
+        - name: B - reset Langfuse and the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: homelab, projects: [hermes]}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: B - run with the correct credentials
+          ansible.builtin.include_role:
+            name: langfuse_project_keys
+          vars:
+            langfuse_project_keys_base_url: "{{ lpk_base }}/"
+            langfuse_project_keys_admin_email: admin@example.test
+            langfuse_project_keys_admin_password: admin-test-password
+            langfuse_project_keys_org_name: homelab
+            langfuse_project_keys_project_name: hermes
+            langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_path: lpk/complete
+
+        - name: B - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_b_states
+
+        - name: B - assert no Langfuse call, no write, and the stored pair untouched
+          ansible.builtin.assert:
+            that:
+              - case_b_states.results[0].json.log | length == 0
+              - case_b_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+              - case_b_states.results[1].json.state['secret/data/lpk/complete'].version == 1
+              - case_b_states.results[1].json.state['secret/data/lpk/complete'].data.LANGFUSE_PUBLIC_KEY == 'pk-lf-stored'
+
+    # ---- C: one key field stored -------------------------------------------------------------------------------
+
+    - name: Case C - a secret with one key field stops before any Langfuse call
+      block:
+        - name: C - seed only the public key field
+          ansible.builtin.uri:
+            url: "{{ kv_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/lpk/partial, version: 1, data: {LANGFUSE_PUBLIC_KEY: pk-lf-stored}}
+            status_code: [200]
+
+        - name: C - reset Langfuse and the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: homelab, projects: [hermes]}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: C - run against the partial secret (expected to fail)
+          block:
+            - name: C - run the role against the partial secret
+              ansible.builtin.include_role:
+                name: langfuse_project_keys
+              vars:
+                langfuse_project_keys_base_url: "{{ lpk_base }}/"
+                langfuse_project_keys_admin_email: admin@example.test
+                langfuse_project_keys_admin_password: admin-test-password
+                langfuse_project_keys_org_name: homelab
+                langfuse_project_keys_project_name: hermes
+                langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_path: lpk/partial
+          rescue:
+            - name: C - record the stop
+              ansible.builtin.set_fact:
+                case_c_stopped: true
+
+        - name: C - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_c_states
+
+        - name: C - assert the run stopped with no Langfuse call and no write
+          ansible.builtin.assert:
+            that:
+              - case_c_stopped | default(false) | bool
+              - case_c_states.results[0].json.log | length == 0
+              - case_c_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+              - case_c_states.results[1].json.state['secret/data/lpk/partial'].data | length == 1
+
+    # ---- D: organization name matches nothing -----------------------------------------------------------------
+
+    - name: Case D - an organization name that matches nothing stops before the project call
+      block:
+        - name: D - reset Langfuse to a differently named organization and reset the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: other-org, projects: []}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: D - run with the organization name the stand-in does not have (expected to fail)
+          block:
+            - name: D - run the role with an organization name the stand-in does not have
+              ansible.builtin.include_role:
+                name: langfuse_project_keys
+              vars:
+                langfuse_project_keys_base_url: "{{ lpk_base }}/"
+                langfuse_project_keys_admin_email: admin@example.test
+                langfuse_project_keys_admin_password: admin-test-password
+                langfuse_project_keys_org_name: homelab
+                langfuse_project_keys_project_name: hermes
+                langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_path: lpk/no-org
+          rescue:
+            - name: D - record the stop
+              ansible.builtin.set_fact:
+                case_d_stopped: true
+
+        - name: D - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_d_states
+
+        - name: D - assert the run stopped on the organization match, with no tRPC call and no write
+          ansible.builtin.assert:
+            that:
+              - case_d_stopped | default(false) | bool
+              - case_d_states.results[0].json.log | selectattr('path', 'search', '/api/trpc/') | list | length == 0
+              - case_d_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+
+    # ---- E: absent project, absent secret -----------------------------------------------------------------------
+
+    - name: Case E - an absent project and an absent secret get one project, one key pair and one write
+      block:
+        - name: E - reset Langfuse with no projects and reset the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: homelab, projects: []}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: E - run against the absent secret
+          ansible.builtin.include_role:
+            name: langfuse_project_keys
+          vars:
+            langfuse_project_keys_base_url: "{{ lpk_base }}/"
+            langfuse_project_keys_admin_email: admin@example.test
+            langfuse_project_keys_admin_password: admin-test-password
+            langfuse_project_keys_org_name: homelab
+            langfuse_project_keys_project_name: hermes
+            langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_path: lpk/fresh
+
+        - name: E - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_e_states
+
+        - name: E - assert one project, one key pair, and one check-and-set write of exactly the two fields
+          ansible.builtin.assert:
+            that:
+              - >-
+                case_e_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projects.create') | list | length == 1
+              - >-
+                case_e_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projectApiKeys.create') | list | length == 1
+              - case_e_states.results[0].json.state['keys'] | length == 1
+              - case_e_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list == [0]
+              - case_e_states.results[1].json.state['secret/data/lpk/fresh'].version == 1
+              - case_e_states.results[1].json.state['secret/data/lpk/fresh'].data.LANGFUSE_PUBLIC_KEY == 'pk-lf-fake-2'
+              - case_e_states.results[1].json.state['secret/data/lpk/fresh'].data.LANGFUSE_SECRET_KEY == 'sk-lf-fake-2'
+              - case_e_states.results[1].json.state['secret/data/lpk/fresh'].data | length == 2
+
+    # ---- F: existing project ------------------------------------------------------------------------------------
+
+    - name: Case F - an existing project is reused, and only the key pair is created
+      block:
+        - name: F - reset Langfuse with the project present and reset the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: homelab, projects: [hermes]}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: F - run against an absent secret
+          ansible.builtin.include_role:
+            name: langfuse_project_keys
+          vars:
+            langfuse_project_keys_base_url: "{{ lpk_base }}/"
+            langfuse_project_keys_admin_email: admin@example.test
+            langfuse_project_keys_admin_password: admin-test-password
+            langfuse_project_keys_org_name: homelab
+            langfuse_project_keys_project_name: hermes
+            langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_path: lpk/existing-project
+
+        - name: F - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_f_states
+
+        - name: F - assert no project create, one key create against proj-1, and one write
+          ansible.builtin.assert:
+            that:
+              - >-
+                case_f_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projects.create') | list | length == 0
+              - >-
+                case_f_states.results[0].json.log | selectattr('procedure', 'defined')
+                | selectattr('procedure', 'equalto', 'projectApiKeys.create') | map(attribute='input.projectId') | list == ['proj-1']
+              - case_f_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list == [0]
+              - case_f_states.results[1].json.state['secret/data/lpk/existing-project'].data.LANGFUSE_PUBLIC_KEY == 'pk-lf-fake-2'
+
+    # ---- G: rerun over the written secret -----------------------------------------------------------------------
+
+    - name: Case G - a rerun over the written secret makes no Langfuse call and no write
+      block:
+        - name: G - reset Langfuse and the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: homelab, projects: []}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: G - run again against the secret written by case E
+          ansible.builtin.include_role:
+            name: langfuse_project_keys
+          vars:
+            langfuse_project_keys_base_url: "{{ lpk_base }}/"
+            langfuse_project_keys_admin_email: admin@example.test
+            langfuse_project_keys_admin_password: admin-test-password
+            langfuse_project_keys_org_name: homelab
+            langfuse_project_keys_project_name: hermes
+            langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_path: lpk/fresh
+
+        - name: G - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_g_states
+
+        - name: G - assert no Langfuse call, no write, and the version unchanged
+          ansible.builtin.assert:
+            that:
+              - case_g_states.results[0].json.log | length == 0
+              - case_g_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+              - case_g_states.results[1].json.state['secret/data/lpk/fresh'].version == 1
+
+    # ---- H: OpenBao unreachable ---------------------------------------------------------------------------------
+
+    - name: Case H - an unreachable OpenBao stops before any Langfuse call, so no key is created
+      block:
+        - name: H - reset Langfuse
+          ansible.builtin.uri:
+            url: "{{ lpk_base }}/_test/reset"
+            method: POST
+            body_format: json
+            body: {org_name: homelab, projects: []}
+            status_code: [200]
+
+        - name: H - run against an OpenBao address that answers nothing (expected to fail)
+          block:
+            - name: H - run the role against the closed address
+              ansible.builtin.include_role:
+                name: langfuse_project_keys
+              vars:
+                langfuse_project_keys_base_url: "{{ lpk_base }}/"
+                langfuse_project_keys_admin_email: admin@example.test
+                langfuse_project_keys_admin_password: admin-test-password
+                langfuse_project_keys_org_name: homelab
+                langfuse_project_keys_project_name: hermes
+                langfuse_project_keys_openbao_addr: "http://127.0.0.1:{{ closed_port }}"
+                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_path: "{{ unreachable_kv_path }}"
+          rescue:
+            - name: H - record the stop
+              ansible.builtin.set_fact:
+                case_h_stopped: true
+
+        - name: H - read the Langfuse stand-in state
+          ansible.builtin.uri:
+            url: "{{ lpk_base }}/_test/state"
+            return_content: true
+          register: case_h_state
+
+        - name: H - assert the run stopped with no Langfuse call
+          ansible.builtin.assert:
+            that:
+              - case_h_stopped | default(false) | bool
+              - case_h_state.json.log | length == 0
+
+    - name: Shut both stand-ins down
+      ansible.builtin.uri:
+        url: "{{ item }}/_test/shutdown"
+        method: POST
+        status_code: [200]
+      failed_when: false
+      loop:
+        - "{{ lpk_base }}"
+        - "{{ kv_addr }}"

@@ -1,0 +1,157 @@
+---
+# Included by tasks/main.yml only when both key fields are absent from OpenBao.
+#
+# The calls are the ones the Langfuse web UI makes: the NextAuth credentials sign-in (csrf, then callback), the session
+# read, and the tRPC procedures projects.create and projectApiKeys.create. Each tRPC body is the superjson envelope
+# {"json": input}. The public admin API is not used.
+
+- name: Normalise the Langfuse API base URL
+  ansible.builtin.set_fact:
+    langfuse_project_keys_api: "{{ langfuse_project_keys_base_url | regex_replace('/+$', '') }}"
+
+- name: Fetch the NextAuth sign-in CSRF token
+  ansible.builtin.uri:
+    url: "{{ langfuse_project_keys_api }}/api/auth/csrf"
+    method: GET
+    return_content: true
+    status_code: [200]
+    validate_certs: "{{ langfuse_project_keys_validate_certs }}"
+  register: langfuse_project_keys_csrf
+  no_log: true
+
+- name: Sign in with the admin credentials (NextAuth credentials callback)
+  ansible.builtin.uri:
+    url: "{{ langfuse_project_keys_api }}/api/auth/callback/credentials"
+    method: POST
+    headers:
+      Cookie: "{{ langfuse_project_keys_csrf.cookies_string }}"
+    body_format: form-urlencoded
+    body:
+      csrfToken: "{{ langfuse_project_keys_csrf.json.csrfToken }}"
+      email: "{{ langfuse_project_keys_admin_email }}"
+      password: "{{ langfuse_project_keys_admin_password }}"
+      json: "true"
+    return_content: true
+    # A refused sign-in answers 401 with a JSON url that points at the error page.
+    status_code: [200, 401]
+    validate_certs: "{{ langfuse_project_keys_validate_certs }}"
+  register: langfuse_project_keys_login
+  no_log: true
+
+- name: Require a session cookie from a successful sign-in
+  ansible.builtin.assert:
+    that:
+      - langfuse_project_keys_login.status == 200
+      - "'/error' not in (langfuse_project_keys_login.json.url | default('', true))"
+      - "'session-token' in (langfuse_project_keys_login.cookies_string | default('', true))"
+    fail_msg: Sign-in to Langfuse was refused. The response is withheld because it can carry the credentials.
+  no_log: true
+
+- name: Read the session's organizations and projects
+  ansible.builtin.uri:
+    url: "{{ langfuse_project_keys_api }}/api/auth/session"
+    headers:
+      Cookie: "{{ langfuse_project_keys_login.cookies_string }}"
+    return_content: true
+    status_code: [200]
+    validate_certs: "{{ langfuse_project_keys_validate_certs }}"
+  register: langfuse_project_keys_session
+  no_log: true
+
+- name: Select the organization by name
+  ansible.builtin.set_fact:
+    langfuse_project_keys_org: >-
+      {{ langfuse_project_keys_session.json.user.organizations | default([], true)
+         | selectattr('name', 'equalto', langfuse_project_keys_org_name) | list }}
+  no_log: true
+
+- name: Require exactly one organization with that name
+  ansible.builtin.assert:
+    that:
+      - langfuse_project_keys_org | length == 1
+    fail_msg: >-
+      The admin session has {{ langfuse_project_keys_org | length }} organizations named
+      {{ langfuse_project_keys_org_name }}; exactly one is required.
+  no_log: true
+
+- name: Find the project by name in that organization
+  ansible.builtin.set_fact:
+    langfuse_project_keys_project_id: >-
+      {{ (langfuse_project_keys_org[0].projects | default([], true)
+          | selectattr('name', 'equalto', langfuse_project_keys_project_name) | map(attribute='id') | list
+          | first) | default('', true) }}
+  no_log: true
+
+- name: Create the project when it is absent
+  ansible.builtin.uri:
+    url: "{{ langfuse_project_keys_api }}/api/trpc/projects.create"
+    method: POST
+    headers:
+      Cookie: "{{ langfuse_project_keys_login.cookies_string }}"
+    body_format: json
+    body:
+      json:
+        name: "{{ langfuse_project_keys_project_name }}"
+        orgId: "{{ langfuse_project_keys_org[0].id }}"
+    return_content: true
+    status_code: [200]
+    validate_certs: "{{ langfuse_project_keys_validate_certs }}"
+  register: langfuse_project_keys_project_created
+  when: langfuse_project_keys_project_id == ''
+  no_log: true
+
+- name: Keep the project id for the key request
+  ansible.builtin.set_fact:
+    langfuse_project_keys_project_id: "{{ langfuse_project_keys_project_created.json.result.data.json.id }}"
+  when: langfuse_project_keys_project_id == ''
+  no_log: true
+
+# The key pair is returned once, in the response body. The task and the facts that hold it are no_log.
+- name: Create the project API key pair
+  ansible.builtin.uri:
+    url: "{{ langfuse_project_keys_api }}/api/trpc/projectApiKeys.create"
+    method: POST
+    headers:
+      Cookie: "{{ langfuse_project_keys_login.cookies_string }}"
+    body_format: json
+    body:
+      json:
+        projectId: "{{ langfuse_project_keys_project_id }}"
+        name: "{{ langfuse_project_keys_key_label }}"
+    return_content: true
+    status_code: [200]
+    validate_certs: "{{ langfuse_project_keys_validate_certs }}"
+  register: langfuse_project_keys_key
+  no_log: true
+
+- name: Hold the new pair in memory for the write
+  ansible.builtin.set_fact:
+    langfuse_project_keys_public_key: "{{ langfuse_project_keys_key.json.result.data.json.publicKey }}"
+    langfuse_project_keys_secret_key: "{{ langfuse_project_keys_key.json.result.data.json.secretKey }}"
+  no_log: true
+
+- name: Require the pair to carry Langfuse's key prefixes
+  ansible.builtin.assert:
+    that:
+      - langfuse_project_keys_public_key is match('^pk-lf-')
+      - langfuse_project_keys_secret_key is match('^sk-lf-')
+    fail_msg: The key pair returned by Langfuse does not carry the expected prefixes. Nothing was written.
+  no_log: true
+
+# Both fields are absent by construction, so the check-and-set write adds the pair and nothing else.
+- name: Write the key pair to OpenBao (check-and-set on the observed version)
+  ansible.builtin.include_role:
+    name: openbao_secrets
+    tasks_from: seed_generated
+  vars:
+    openbao_secrets_seed_register: langfuse_project_keys_written
+    openbao_secrets_seed_addr: "{{ langfuse_project_keys_openbao_addr }}"
+    openbao_secrets_seed_token: "{{ langfuse_project_keys_openbao_token }}"
+    openbao_secrets_seed_mount: "{{ langfuse_project_keys_openbao_mount }}"
+    openbao_secrets_seed_path: "{{ langfuse_project_keys_openbao_path }}"
+    openbao_secrets_seed_fields:
+      - name: "{{ langfuse_project_keys_public_key_field }}"
+        value: "{{ langfuse_project_keys_public_key }}"
+      - name: "{{ langfuse_project_keys_secret_key_field }}"
+        value: "{{ langfuse_project_keys_secret_key }}"
+  no_log: true

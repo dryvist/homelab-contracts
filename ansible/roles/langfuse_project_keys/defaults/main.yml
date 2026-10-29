@@ -1,0 +1,7 @@
+---
+# Defaults for the required inputs are in meta/argument_specs.yml. These are the optional ones.
+langfuse_project_keys_key_label: ansible-provisioned
+langfuse_project_keys_validate_certs: true
+langfuse_project_keys_openbao_mount: secret
+langfuse_project_keys_public_key_field: LANGFUSE_PUBLIC_KEY
+langfuse_project_keys_secret_key_field: LANGFUSE_SECRET_KEY
