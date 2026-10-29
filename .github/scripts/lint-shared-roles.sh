@@ -7,6 +7,7 @@ exec ansible-lint \
   ansible/roles/docker_engine \
   ansible/roles/ntp \
   ansible/roles/ssh_ca_trust \
+  ansible/roles/bao_approle_cli \
   ansible/roles/syslog_forwarder \
   ansible/roles/systemd_restart_policy \
   ansible/roles/openbao_secrets \

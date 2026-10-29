@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: bao_approle_cli
+  author: JacobPEvans
+  description: >-
+    Installs the shared OpenBao AppRole CLI on Debian guests.
+    Requires curl and jq on the target.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - openbao
+    - security
+    - cli
+
+dependencies: []
