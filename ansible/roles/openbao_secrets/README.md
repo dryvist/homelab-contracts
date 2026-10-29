@@ -98,8 +98,8 @@ to the active peer so any node can serve the read). It tries `BAO_ADDR` (the
 Traefik ingress VIP name, made HA by the `keepalived` role) first, then each
 `openbao`-tagged container's own per-node endpoint derived from the tofu
 inventory (no literal address), so failover holds even if both ingress instances
-are unreachable. If none answers, the role skips the read path for this run. Set
-`openbao_secrets_fail_when_unavailable` to `true` to fail the play instead. This is client failover only;
+are unreachable. If none answers, the role skips to the env/SOPS fallback for
+this run rather than hard-failing every converge. This is client failover only;
 server-side quorum HA needs a fourth node and is out of scope.
 
 ## Domains fetched (`openbao_secrets_domains`)
@@ -139,53 +139,20 @@ root-only systemd credential / `0600` EnvironmentFile. See
 
 ## Read-path switches
 
-Each switch below is an input of the default entry point, which the role runs when `tasks_from` is not set. Every
-default keeps the behaviour described above. A caller that needs the stricter behaviour sets the switch in its play
-vars. `meta/argument_specs.yml` documents each input.
+Each input defaults to the behaviour the role already had. `meta/argument_specs.yml` documents them.
 
-- `openbao_secrets_domain_groups` (domain name to consumer groups) with `openbao_secrets_active_groups`. Default `{}`
-  and `[]`, so every domain is fetched. When set, a domain with groups is fetched only when one of them is active. A
-  domain with no entry is always fetched.
-- `openbao_secrets_fail_on_missing_credentials`. Default `false`: a domain with no login is skipped. When `true`, the
-  play fails, unless the domain is listed in `openbao_secrets_optional_domains`. A domain with `required: true` always
-  fails.
-- `openbao_secrets_fail_when_unavailable`. Default `false`: when no endpoint is reachable, the read path is skipped.
-  When `true`, the play fails.
-- `openbao_secrets_skip_cidr_refusals`. Default `false`: a source-address refusal fails the play. When `true`, that
-  domain is skipped for the run and publishes no key.
-- `openbao_secrets_isolate_optional_login_failures`. Default `false`: a failed login fails the play. When `true`, a
-  domain whose every path is optional records the failure, publishes an empty result, and the run continues.
-- `openbao_secrets_strict_reads`. Default `false`: unreadable paths are ignored. When `true`, a 404 on a required
-  path, any 403, and any transport error fail the domain. A 404 on an `optional` path is still skipped with a warning.
-- `openbao_secrets_isolate_optional_read_failures`. Default `false`, used with `strict_reads`. When `true`, a domain
-  whose every path is optional records the unreadable path, publishes an empty result, and the run continues.
+| Input | Default | Effect when set |
+| --- | --- | --- |
+| `openbao_secrets_domain_groups`, `openbao_secrets_active_groups` | `{}`, `[]` | A grouped domain is fetched only when one of its groups is active. |
+| `openbao_secrets_fail_on_missing_credentials` | `false` | A domain with no login fails the play unless listed in `openbao_secrets_optional_domains`. |
+| `openbao_secrets_fail_when_unavailable` | `false` | No reachable endpoint fails the play instead of skipping the read path. |
+| `openbao_secrets_skip_cidr_refusals` | `false` | A source-address refusal skips its domain, which publishes no key. |
+| `openbao_secrets_isolate_optional_login_failures` | `false` | A failed login in an all-optional domain publishes an empty result. |
+| `openbao_secrets_strict_reads` | `false` | An unreadable required path, a 403 or a transport error fails its domain. |
+| `openbao_secrets_isolate_optional_read_failures` | `false` | With strict reads, an all-optional domain publishes an empty result on an unreadable path. |
 
-Path and domain fields:
-
-- A path is a string (required) or a mapping with `path` (required), `mount` (default `openbao_secrets_kv_mount`),
-  `optional` (default `false`), and `enabled` (default `true`; `false` skips the path before any read).
-- `workstation_issuer_role` logs the domain in with a per-call token from `flow-lock approle-token <role>` when
-  `OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID` and `OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID` are both set and `flow-lock`
-  is on the controller's `PATH`. The token is revoked after the domain's reads. If exactly one of the two issuer
-  variables is set, the play fails.
-- `credential_domain` names another domain whose AppRole pair the domain uses.
-- Source-address refusals are detected from the login's message. A refusal is never retried with another credential.
-
-The required-value guard is a separate entry point. `tasks_from: assert_nonempty.yml` fails when any variable named
-in `openbao_secrets_required_vars` resolves to an empty value. It prints the names only.
-
-```yaml
-- ansible.builtin.include_role:
-    name: openbao_secrets
-    tasks_from: assert_nonempty.yml
-  vars:
-    openbao_secrets_required_vars:
-      - myapp_db_password
-```
-
-`tests/openbao_secrets/read_path.yml` runs each switch and path field against `tests/openbao_secrets/fake_kv2.py`,
-which also serves an AppRole login and a `flow-lock` stand-in in `tests/openbao_secrets/stub-bin/`. The playbook's
-header lists the environment it needs.
+A path is a string or a mapping with `path`, `mount`, `optional` and `enabled`. `enabled: false` skips it before any read.
+`tasks_from: assert_nonempty.yml` fails when a variable named in `openbao_secrets_required_vars` resolves empty.
 
 ## Wiring
 
@@ -246,8 +213,9 @@ stand-in for the KV v2 and token endpoints. It is not an OpenBao implementation.
 
 - `seed_generated` uses `ansible.builtin.uri` for OpenBao HTTP requests, so it does not need Python `hvac` on the
   delegated host.
-- The read path's login and KV read tasks use `community.hashi_vault` (added to `requirements.yml`), which needs
-  Python `hvac` on the controller.
+- `community.hashi_vault` (added to `requirements.yml`) and its Python `hvac`
+  dependency in the controller environment (provided by the Nix dev shell —
+  `nix-devenv#ansible-apps`).
 - `community.general` for the `random_string` lookup used by `seed_generated`.
 
 ## Not yet live-validated
