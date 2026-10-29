@@ -25,6 +25,7 @@
 #
 # Options (unset means off):
 #   RUN_ANSIBLE_IDENTITIES             comma list; a trailing ? lets a refused login fall through to the next identity
+#   RUN_ANSIBLE_SIGN_ROLE_<NAME>       SSH CA role for identity <name> (upper case, - as _); default automation-<name>
 #   RUN_ANSIBLE_STATIC_KEY_FALLBACK=1  use PROXMOX_SSH_KEY_PATH when the certificate mint fails
 #   RUN_ANSIBLE_SSH_AGENT=1            load PROXMOX_SSH_PRIVATE_KEY into a private ssh-agent
 #   RUN_ANSIBLE_MERGE_KNOWN_HOSTS=1    also merge the pinned host keys into ~/.ssh/known_hosts
@@ -101,7 +102,7 @@ bao_login() {
 # Sets CONVERGE_ROLE_ID, CONVERGE_SECRET_ID, CONVERGE_SIGN_ROLE and CONVERGE_IDENTITY for the named identity.
 # Returns 1 when that identity's pair is not set.
 select_identity() {
-  local name=$1 upper role_var secret_var
+  local name=$1 upper role_var secret_var sign_var
   if [[ $name == signer ]]; then
     CONVERGE_ROLE_ID=${SSH_SIGNER_ROLE_ID:-}
     CONVERGE_SECRET_ID=${SSH_SIGNER_SECRET_ID:-}
@@ -112,7 +113,8 @@ select_identity() {
     secret_var="OPENBAO_APPROLE_${upper}_SECRET_ID"
     CONVERGE_ROLE_ID=${!role_var:-}
     CONVERGE_SECRET_ID=${!secret_var:-}
-    CONVERGE_SIGN_ROLE="automation-${name}"
+    sign_var="RUN_ANSIBLE_SIGN_ROLE_${upper}"
+    CONVERGE_SIGN_ROLE=${!sign_var:-automation-${name}}
   fi
   CONVERGE_IDENTITY=$name
   [[ -n $CONVERGE_ROLE_ID && -n $CONVERGE_SECRET_ID ]]
