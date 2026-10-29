@@ -34,6 +34,8 @@
 #   RUN_ANSIBLE_PIN_DIR=PATH           pinned checkout location (repo-relative)
 #   RUN_ANSIBLE_PIN_URL=URL            remote the pinned checkout is cloned from
 #   RUN_ANSIBLE_PIN_OPTIONAL=1         warn instead of failing when the pinned checkout fails
+#   RUN_ANSIBLE_PIN_PLAYBOOKS          comma list; pin checkout is required for these playbooks
+#   RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS comma list; warn on pin checkout failure for these playbooks
 #   RUN_ANSIBLE_LIMIT_LOCALHOST=1      append localhost to --limit (for callers that append task arguments)
 #   RUN_ANSIBLE_RECAP_CHECK=1          fail on failed or unreachable hosts, and on a non-localhost --limit that matched none
 #   RUN_ANSIBLE_LOG_DIR=DIR            keep the run log in DIR
@@ -298,6 +300,15 @@ checkout_pin() {
   fi
 }
 
+pin_list_contains_playbook() {
+  local playbook=$1
+  local playbooks=$2
+  case ",$playbooks," in
+    *,"$playbook",*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Returns 1 when a non-localhost --limit matched no host, a host failed or was unreachable, or (for a non-localhost
 # --limit, or always with RUN_ANSIBLE_REQUIRE_RECAP) the run printed no play recap.
 recap_check() {
@@ -380,7 +391,15 @@ main() {
     check_checkout
   fi
   if [[ -n ${RUN_ANSIBLE_PIN_FILE:-} ]]; then
-    if ! checkout_pin; then
+    if [[ -n ${RUN_ANSIBLE_PIN_PLAYBOOKS:-} || -n ${RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS:-} ]]; then
+      if pin_list_contains_playbook "$PLAYBOOK" "${RUN_ANSIBLE_PIN_PLAYBOOKS:-}"; then
+        checkout_pin || die "pinned checkout failed"
+      elif pin_list_contains_playbook "$PLAYBOOK" "${RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS:-}"; then
+        if ! checkout_pin; then
+          echo "WARNING: pinned checkout failed; continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)." >&2
+        fi
+      fi
+    elif ! checkout_pin; then
       if [[ -z ${RUN_ANSIBLE_PIN_OPTIONAL:-} ]]; then
         die "pinned checkout failed"
       fi

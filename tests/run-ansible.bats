@@ -14,6 +14,7 @@ setup() {
   unset RUN_ANSIBLE_IDENTITIES RUN_ANSIBLE_STATIC_KEY_FALLBACK RUN_ANSIBLE_SSH_AGENT RUN_ANSIBLE_MERGE_KNOWN_HOSTS
   unset RUN_ANSIBLE_REVOKE_ATTEMPTS RUN_ANSIBLE_CHECKOUT_GUARD RUN_ANSIBLE_PIN_FILE RUN_ANSIBLE_PIN_DIR
   unset RUN_ANSIBLE_PIN_URL RUN_ANSIBLE_PIN_OPTIONAL RUN_ANSIBLE_LIMIT_LOCALHOST RUN_ANSIBLE_RECAP_CHECK
+  unset RUN_ANSIBLE_PIN_PLAYBOOKS RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS
   unset RUN_ANSIBLE_LOG_DIR FIXTURE_REFUSED_ROLE FIXTURE_SIGN_FAIL FIXTURE_SIGN_FAIL_ROLE FIXTURE_REVOKE_FAILS FIXTURE_RECAP
   unset RUN_ANSIBLE_FALLBACK_ON_ERROR RUN_ANSIBLE_REQUIRE_RECAP RUN_ANSIBLE_RETIRING_IDENTITIES RUN_ANSIBLE_WARN_NO_ISSUER
   unset OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID OPENBAO_PROVISIONING_TOKEN
@@ -400,6 +401,49 @@ with_origin() {
   [ "$status" -eq 0 ]
   [ "$(git -C "$REPO/pinned-checkout" rev-parse HEAD)" = "$sha" ]
   [ -f "$REPO/pinned-checkout/content.txt" ]
+}
+
+@test "RUN_ANSIBLE_PIN_PLAYBOOKS makes a failed matching checkout fatal" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=required-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  export RUN_ANSIBLE_PIN_PLAYBOOKS=site.yml
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 1 ]
+  [[ $output == *"40-character lowercase hexadecimal"* ]]
+  [[ $output == *"pinned checkout failed"* ]]
+}
+
+@test "RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS warns and continues on a matching checkout failure" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=optional-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  export RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS=site.yml
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"40-character lowercase hexadecimal"* ]]
+  [[ $output == *"continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)"* ]]
+}
+
+@test "an unlisted playbook skips pin checkout when a per-playbook list is set" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=unlisted-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  export RUN_ANSIBLE_PIN_PLAYBOOKS=other.yml
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output != *"pinned checkout failed"* ]]
+  [ ! -e "$REPO/unlisted-checkout" ]
+}
+
+@test "empty per-playbook pin lists keep the global pinned checkout" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=empty-list-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  export RUN_ANSIBLE_PIN_PLAYBOOKS= RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS=
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 1 ]
+  [[ $output == *"pinned checkout failed"* ]]
 }
 
 @test "a malformed pin file fails the run, and RUN_ANSIBLE_PIN_OPTIONAL only warns" {
