@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.35.1](https://github.com/dryvist/homelab-contracts/compare/v5.35.0...v5.35.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **langfuse_project_keys:** require the converge writer identity ([#264](https://github.com/dryvist/homelab-contracts/issues/264)) ([11edcfd](https://github.com/dryvist/homelab-contracts/commit/11edcfd39e03359f44380639f294eac27584e125))
+* **langfuse_project_keys:** require the converge writer identity for both OpenBao calls ([11edcfd](https://github.com/dryvist/homelab-contracts/commit/11edcfd39e03359f44380639f294eac27584e125))
+
 ## [5.35.0](https://github.com/dryvist/homelab-contracts/compare/v5.34.0...v5.35.0) (2026-10-29)
 
 
