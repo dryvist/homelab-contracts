@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: shellcheck
-        run: shellcheck bin/flow-lock bin/deployment-json scripts/semaphore-run scripts/run-ansible
+        run: shellcheck bin/bao-approle bin/flow-lock bin/deployment-json scripts/semaphore-run scripts/run-ansible
 
   test-cli:
     name: bats CLI-contract tests
@@ -67,7 +67,7 @@ jobs:
       - name: Install bats
         run: sudo apt-get update -q && sudo apt-get install -y -q bats
       - name: Run bats
-        run: bats tests/flow-lock.bats tests/semaphore-run.bats tests/run-ansible.bats
+        run: bats tests/bao-approle.bats tests/flow-lock.bats tests/semaphore-run.bats tests/run-ansible.bats
 
   lint-ansible-role:
     name: ansible-lint inventory_resolve

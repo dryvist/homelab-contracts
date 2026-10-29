@@ -12,6 +12,7 @@ both the data shapes and the small shared tools that enforce them:
 - Versioned history under `versions/<vX.Y.Z>/` so breaking changes are structurally enforceable
 - `bin/flow-lock` — the OpenBao-backed lease for coordinated non-IaC mutation
   tools such as `deployment.json` edits
+- `bin/bao-approle` — shared OpenBao AppRole login, token revocation and GitHub installation-token CLI
 - `bin/deployment-json` — locked, schema-gated access to the canonical
   `deployment.json` object
 - `scripts/semaphore-run` — managed Semaphore task dispatch (`list`, `start`,
@@ -115,6 +116,7 @@ schemas/
   ansible-inventory-v1.json    # JSON Schema (draft 2020-12) for the inventory artifact, incl. the `constants` port block
 bin/
   flow-lock                    # Non-IaC mutation lease + gated credential injection
+  bao-approle                  # Shared AppRole login, revoke-self and GitHub installation-token CLI
   deployment-json              # Locked, schema-gated deployment.json fetch/edit/put
 scripts/
   semaphore-run                # Managed Semaphore task dispatch (list, start, wait, log, stop)
@@ -138,7 +140,7 @@ tests/
 docs/
   adr/                         # Architectural decision records
   assets/                      # Mermaid `.mmd` sources + rendered `.svg`
-flake.nix                      # packages.flow-lock, packages.semaphore-run, packages.run-ansible + dev shell (consumers pin by tag)
+flake.nix                      # packages.bao-approle, packages.flow-lock, packages.semaphore-run, packages.run-ansible + dev shell (consumers pin by tag)
 .github/workflows/
   ci-gate.yml                  # Thin caller of the org CI gate (profile: ansible)
   ci.yml                       # Schema checks, shape-snapshot gate, shellcheck, bats, ansible-lint, role contract tests

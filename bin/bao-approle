@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+# Shared OpenBao AppRole login, token revocation and GitHub installation-token helper.
+set -euo pipefail
+
+EX_USAGE=64
+
+usage() {
+  cat <<'EOF'
+Usage:
+  bao-approle login [--role-id-file PATH] [--secret-id-file PATH] [--addr URL] [--cacert PATH] [--follow-redirects]
+  bao-approle revoke-self
+  bao-approle gh-token MOUNT SET
+
+login reads credentials from the named 0600 files or BAO_APPROLE_ROLE_ID and BAO_APPROLE_SECRET_ID, and prints
+only the OpenBao client token. The address comes from --addr or BAO_ADDR. --follow-redirects lets curl follow HTTP
+redirects. FLOW_LOCK_API_MAX_TIME sets the login timeout in seconds (default 30).
+revoke-self reads BAO_TOKEN or one token from stdin.
+gh-token uses BAO_TOKEN to mint and print one GitHub installation token.
+revoke-self and gh-token require an https BAO_ADDR.
+EOF
+}
+
+die() {
+  printf 'bao-approle: %s\n' "$1" >&2
+  exit "${2:-1}"
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || die "$1 not found"
+}
+
+require_https() {
+  case "$1" in
+    https://*) ;;
+    *) die "BAO_ADDR must be an https URL for token requests" "$EX_USAGE" ;;
+  esac
+}
+
+openbao_error() {
+  local body="$1" message
+  message="$(jq -r '.errors[0] // "unknown error"' <<<"$body" 2>/dev/null)" || message="unknown error"
+  [ -n "$message" ] || message="unknown error"
+  printf '%s' "$message"
+}
+
+read_credential_file() {
+  local path="$1" name="$2" value=""
+  [ -f "$path" ] && [ -r "$path" ] || die "$name file is not a readable regular file" "$EX_USAGE"
+  IFS= read -r value < "$path" || [ -n "$value" ] || die "$name file is empty" "$EX_USAGE"
+  [ -n "$value" ] || die "$name file is empty" "$EX_USAGE"
+  printf '%s' "$value"
+}
+
+login() {
+  local role_file="" secret_file="" addr="${BAO_ADDR:-}" cacert="" follow_redirects=0
+  local role_id="" secret_id="" response status body token rc
+  local -a curl_args
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --role-id-file)
+        [ "$#" -ge 2 ] || die "--role-id-file requires a path" "$EX_USAGE"
+        role_file="$2"
+        shift 2
+        ;;
+      --secret-id-file)
+        [ "$#" -ge 2 ] || die "--secret-id-file requires a path" "$EX_USAGE"
+        secret_file="$2"
+        shift 2
+        ;;
+      --addr)
+        [ "$#" -ge 2 ] || die "--addr requires a URL" "$EX_USAGE"
+        addr="$2"
+        shift 2
+        ;;
+      --cacert)
+        [ "$#" -ge 2 ] || die "--cacert requires a path" "$EX_USAGE"
+        cacert="$2"
+        shift 2
+        ;;
+      --follow-redirects)
+        follow_redirects=1
+        shift
+        ;;
+      --help|-h)
+        usage
+        return 0
+        ;;
+      *) die "unknown login option" "$EX_USAGE" ;;
+    esac
+  done
+
+  if [ -n "$role_file" ]; then
+    role_id="$(read_credential_file "$role_file" role-id)"
+  else
+    role_id="${BAO_APPROLE_ROLE_ID:-}"
+  fi
+  if [ -n "$secret_file" ]; then
+    secret_id="$(read_credential_file "$secret_file" secret-id)"
+  else
+    secret_id="${BAO_APPROLE_SECRET_ID:-}"
+  fi
+  [ -n "$role_id" ] || die "BAO_APPROLE_ROLE_ID or --role-id-file is required" "$EX_USAGE"
+  [ -n "$secret_id" ] || die "BAO_APPROLE_SECRET_ID or --secret-id-file is required" "$EX_USAGE"
+  [ -n "$addr" ] || die "BAO_ADDR or --addr is required" "$EX_USAGE"
+  require_command jq
+  require_command curl
+
+  curl_args=(-sS --max-time "${FLOW_LOCK_API_MAX_TIME:-30}" -X POST
+    -H 'Content-Type: application/json' -w '\n%{http_code}' --data-binary @-)
+  if [ -n "$cacert" ]; then
+    curl_args+=(--cacert "$cacert")
+  fi
+  if [ "$follow_redirects" = 1 ]; then
+    curl_args+=(-L)
+  fi
+
+  if response="$(BAO_LOGIN_ROLE_ID="$role_id" BAO_LOGIN_SECRET_ID="$secret_id" \
+    jq -nc '{role_id:env.BAO_LOGIN_ROLE_ID,secret_id:env.BAO_LOGIN_SECRET_ID}' \
+      | curl "${curl_args[@]}" "$addr/v1/auth/approle/login")"; then
+    :
+  else
+    rc=$?
+    printf 'AppRole login request failed (is OpenBao up at %s?)\n' "$addr" >&2
+    return "$rc"
+  fi
+
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  if [ "$status" != 200 ]; then
+    printf 'AppRole login rejected: %s\n' "$(openbao_error "$body")" >&2
+    return 22
+  fi
+  if token="$(jq -er '.auth.client_token | select(type == "string" and length > 0)' <<<"$body" 2>/dev/null)"; then
+    printf '%s\n' "$token"
+  else
+    printf 'AppRole login response did not contain a client token\n' >&2
+    return 1
+  fi
+}
+
+token_from_stdin() {
+  local value=""
+  [ -t 0 ] && die "BAO_TOKEN is not set and stdin is a terminal" "$EX_USAGE"
+  IFS= read -r value || [ -n "$value" ] || die "BAO_TOKEN is not set and stdin is empty" "$EX_USAGE"
+  [ -n "$value" ] || die "BAO_TOKEN is not set and stdin is empty" "$EX_USAGE"
+  printf '%s' "$value"
+}
+
+revoke_self() {
+  local addr="${BAO_ADDR:-}" token="${BAO_TOKEN:-}" response status body rc
+  [ "$#" -eq 0 ] || die "revoke-self takes no arguments" "$EX_USAGE"
+  [ -n "$addr" ] || die "BAO_ADDR is not set" "$EX_USAGE"
+  require_https "$addr"
+  [ -n "$token" ] || token="$(token_from_stdin)"
+  require_command jq
+  require_command curl
+
+  if response="$(curl -sS --max-time "${FLOW_LOCK_API_MAX_TIME:-30}" -X POST \
+    -H 'Content-Type: application/json' -H @<(printf 'X-Vault-Token: %s\n' "$token") \
+    -w '\n%{http_code}' --data-binary '{}' "$addr/v1/auth/token/revoke-self")"; then
+    :
+  else
+    rc=$?
+    printf 'revoke-self request failed (is OpenBao up at %s?)\n' "$addr" >&2
+    return "$rc"
+  fi
+
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  case "$status" in
+    200|204) return 0 ;;
+    *) printf 'revoke-self rejected: %s\n' "$(openbao_error "$body")" >&2; return 22 ;;
+  esac
+}
+
+gh_token() {
+  local addr="${BAO_ADDR:-}" token="${BAO_TOKEN:-}" mount="$1" name="$2"
+  local response status body github_token rc
+  while [[ "$addr" == */ ]]; do addr="${addr%/}"; done
+  [ -n "$addr" ] || die "BAO_ADDR is not set" "$EX_USAGE"
+  require_https "$addr"
+  [ -n "$token" ] || die "BAO_TOKEN is not set" "$EX_USAGE"
+  [ -n "$mount" ] || die "MOUNT must not be empty" "$EX_USAGE"
+  [ -n "$name" ] || die "SET must not be empty" "$EX_USAGE"
+  require_command jq
+  require_command curl
+
+  if response="$(curl -sS --max-time "${BAO_APPROLE_API_MAX_TIME:-15}" -X POST \
+    -H 'Content-Type: application/json' -H @<(printf 'X-Vault-Token: %s\n' "$token") \
+    -w '\n%{http_code}' --data-binary '{}' "$addr/v1/${mount%/}/token/$name")"; then
+    :
+  else
+    rc=$?
+    printf 'GitHub token request failed (is OpenBao up at %s?)\n' "$addr" >&2
+    revoke_gh_token "$addr" "$token" || true
+    return "$rc"
+  fi
+
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+  if [ "$status" != 200 ]; then
+    printf 'GitHub token request rejected: %s\n' "$(openbao_error "$body")" >&2
+    revoke_gh_token "$addr" "$token" || true
+    return 22
+  fi
+  if github_token="$(jq -er '.data.token | select(type == "string" and length > 0)' <<<"$body" 2>/dev/null)"; then
+    revoke_gh_token "$addr" "$token" || true
+    printf '%s\n' "$github_token"
+  else
+    printf 'no token in response for set %s\n' "$name" >&2
+    revoke_gh_token "$addr" "$token" || true
+    return 1
+  fi
+}
+
+# Revokes the caller's own token once a GitHub token request has finished, on success or failure.
+revoke_gh_token() {
+  local addr="$1" token="$2" response status
+  if response="$(curl -sS --max-time "${BAO_APPROLE_API_MAX_TIME:-15}" -X POST \
+    -H 'Content-Type: application/json' -H @<(printf 'X-Vault-Token: %s\n' "$token") \
+    -w '\n%{http_code}' --data-binary '{}' "$addr/v1/auth/token/revoke-self" 2>/dev/null)"; then
+    status="${response##*$'\n'}"
+    case "$status" in
+      200|204) return 0 ;;
+      *) printf 'bao-approle: revoke-self failed (HTTP %s); token expires with its TTL\n' "$status" >&2 ;;
+    esac
+  else
+    printf 'bao-approle: revoke-self request failed; token expires with its TTL\n' >&2
+  fi
+  return 1
+}
+
+case "${1:-}" in
+  login)
+    shift
+    login "$@"
+    ;;
+  revoke-self)
+    shift
+    revoke_self "$@"
+    ;;
+  gh-token)
+    shift
+    [ "$#" -eq 2 ] || die "gh-token requires MOUNT and SET" "$EX_USAGE"
+    gh_token "$1" "$2"
+    ;;
+  help|--help|-h)
+    usage
+    ;;
+  *) die "unknown subcommand" "$EX_USAGE" ;;
+esac

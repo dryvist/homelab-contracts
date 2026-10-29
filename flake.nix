@@ -18,6 +18,24 @@
         pkgs = nixpkgs.legacyPackages.${system};
         version = (builtins.fromJSON (builtins.readFile ./.release-please-manifest.json)).".";
 
+        bao-approle = pkgs.stdenvNoCC.mkDerivation {
+          pname = "bao-approle";
+          inherit version;
+          src = ./bin;
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          installPhase = ''
+            install -Dm755 bao-approle $out/bin/bao-approle
+            wrapProgram $out/bin/bao-approle \
+              --prefix PATH : ${
+                pkgs.lib.makeBinPath [
+                  pkgs.curl
+                  pkgs.jq
+                ]
+              }
+          '';
+          meta.description = "Shared OpenBao AppRole login, token revocation and GitHub installation-token CLI";
+        };
+
         flow-lock = pkgs.stdenvNoCC.mkDerivation {
           pname = "flow-lock";
           inherit version;
@@ -89,7 +107,7 @@
       in
       {
         packages = {
-          inherit flow-lock semaphore-run run-ansible;
+          inherit bao-approle flow-lock semaphore-run run-ansible;
           default = flow-lock;
         };
 
