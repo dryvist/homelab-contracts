@@ -1,0 +1,89 @@
+---
+# Run with --check. The fake KV v2 endpoint proves the publish task does not
+# attempt a login, read, or write when the publish input is otherwise ready.
+- name: Verify credential publishing skips KV writes in check mode
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    fake_port: 18234
+    fake_addr: "http://127.0.0.1:{{ fake_port }}"
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tasks:
+    - name: Require the fake OpenBao test port to be free
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ fake_port }}"
+        state: stopped
+        timeout: 1
+      changed_when: false
+      check_mode: false
+
+    - name: Run the check-mode publish scenario
+      block:
+        - name: Start the KV v2 stand-in
+          ansible.builtin.command: "python3 {{ playbook_dir }}/fake_kv2.py --port {{ fake_port }}"
+          async: 900
+          poll: 0
+          changed_when: false
+          check_mode: false
+
+        - name: Mark the KV v2 stand-in as started
+          ansible.builtin.set_fact:
+            openbao_publish_fake_server_started: true
+
+        - name: Wait for the stand-in to listen
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ fake_port }}"
+            timeout: 30
+          changed_when: false
+          check_mode: false
+
+        - name: Publish a generated credential in check mode
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: publish
+          vars:
+            openbao_secrets_bao_addr: "{{ fake_addr }}"
+            openbao_secrets_publish_app: check-mode
+            openbao_secrets_publish_data:
+              test_key: test-value
+            openbao_secrets_publish_role_id: check-role
+            openbao_secrets_publish_secret_id: check-secret
+
+        - name: Read the fake OpenBao request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            method: GET
+            status_code: [200]
+          register: openbao_publish_fake_state
+          check_mode: false
+
+        - name: Assert publishing made no OpenBao requests
+          ansible.builtin.assert:
+            that:
+              - openbao_publish_fake_state.json.log | length == 0
+            fail_msg: "check mode reached OpenBao: {{ openbao_publish_fake_state.json.log | map(attribute='path') | list }}"
+            quiet: true
+      always:
+        - name: Stop the KV v2 stand-in
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/shutdown"
+            method: POST
+            status_code: [200]
+            timeout: 5
+          when: openbao_publish_fake_server_started | default(false) | bool
+          changed_when: false
+          check_mode: false
+
+        - name: Wait for the stand-in to stop
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ fake_port }}"
+            state: stopped
+            timeout: 10
+            connect_timeout: 1
+          when: openbao_publish_fake_server_started | default(false) | bool
+          changed_when: false
+          check_mode: false
