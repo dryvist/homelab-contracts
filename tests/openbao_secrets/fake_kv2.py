@@ -158,7 +158,7 @@ class Handler(BaseHTTPRequestHandler):
         body = self._body()
         if path == "/v1/auth/approle/login":
             self._record("POST", path)
-            outcome = APPROLE_LOGINS.get((body.get("role_id"), body.get("secret_id")))
+            outcome = APPROLE_LOGINS.get((str(body.get("role_id", "")), str(body.get("secret_id", ""))))
             if outcome is None:
                 return self._send(400, {"errors": ["invalid role or secret ID"]})
             kind, client_token = outcome
