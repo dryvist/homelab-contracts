@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.36.0](https://github.com/dryvist/homelab-contracts/compare/v5.35.1...v5.36.0) (2026-10-29)
+
+
+### Features
+
+* add the macOS fan-out pack to the Stream pack list ([#239](https://github.com/dryvist/homelab-contracts/issues/239)) ([e66c4f5](https://github.com/dryvist/homelab-contracts/commit/e66c4f5c7c66f9918345163aa17eb046a64f0e0c))
+
 ## [5.35.1](https://github.com/dryvist/homelab-contracts/compare/v5.35.0...v5.35.1) (2026-10-29)
 
 
