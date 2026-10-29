@@ -9,11 +9,19 @@
 - name: Resolve the AppRole pair for {{ openbao_domain.name }}
   ansible.builtin.include_tasks: resolve_approle.yml
 
+- name: Start the enabled path list for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_paths_to_read: []
+
+# A loop keeps the listed order, which decides merge precedence (later paths win).
 - name: Select the enabled paths for {{ openbao_domain.name }}
   ansible.builtin.set_fact:
-    openbao_secrets_domain_paths_to_read: >-
-      {{ openbao_domain.paths | rejectattr('enabled', 'equalto', false) | list }}
-  no_log: true
+    openbao_secrets_domain_paths_to_read: "{{ openbao_secrets_domain_paths_to_read + [openbao_path] }}"
+  loop: "{{ openbao_domain.paths }}"
+  loop_control:
+    loop_var: openbao_path
+    label: "{{ openbao_path.path | default(openbao_path) }}"
+  when: not (openbao_path is mapping and 'enabled' in openbao_path and not (openbao_path.enabled | bool))
 
 - name: Decide whether every enabled path is optional for {{ openbao_domain.name }}
   ansible.builtin.set_fact:
