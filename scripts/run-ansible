@@ -1,0 +1,447 @@
+#!/usr/bin/env bash
+# run-ansible — run one ansible-playbook with a short-lived OpenBao SSH certificate.
+#
+#   run-ansible PLAYBOOK [ansible-playbook args...]
+#
+# Mints an ed25519 certificate from an OpenBao SSH CA when an identity is configured, pins host keys when
+# SSH_KNOWN_HOSTS is set, runs ansible-playbook, and removes the runner's temporary credentials on exit.
+# With no options set, the run does only the mint and the host-key pin.
+#
+# Identities, tried in RUN_ANSIBLE_IDENTITIES order (default signer,semaphore,ansible); the first complete pair wins:
+#   signer   SSH_SIGNER_ROLE_ID, SSH_SIGNER_SECRET_ID; signs with SSH_SIGNER_ROLE on SSH_CA_MOUNT
+#   <name>   OPENBAO_APPROLE_<NAME>_ROLE_ID, OPENBAO_APPROLE_<NAME>_SECRET_ID; signs with automation-<name>
+#
+# Environment:
+#   SECRET_STORE_ADDR        OpenBao URL; overrides BAO_ADDR
+#   BAO_ADDR                 OpenBao URL; a certificate is minted only when this and an identity are set
+#   SSH_CA_MOUNT             SSH CA mount (default ssh-client-ca)
+#   SSH_CERT_TTL             certificate lifetime (default 1h)
+#   SSH_KNOWN_HOSTS          reviewed host keys; enables StrictHostKeyChecking=yes against this pin only
+#   PROXMOX_SSH_KEY_PATH     static private key file, used when no certificate is minted
+#   PROXMOX_SSH_PRIVATE_KEY  static private key content, used only with RUN_ANSIBLE_SSH_AGENT
+#   BAO_TOKEN                caller token; kept, and the runner's own token is revoked instead
+#   NIX_SHELL                flake path; runs ansible-playbook through `nix develop`
+#   ALLOW_STALE_CHECKOUT     1 skips the checkout guard
+#
+# Options (unset means off):
+#   RUN_ANSIBLE_IDENTITIES             comma list; a trailing ? lets a refused login fall through to the next identity
+#   RUN_ANSIBLE_STATIC_KEY_FALLBACK=1  use PROXMOX_SSH_KEY_PATH when the certificate mint fails
+#   RUN_ANSIBLE_SSH_AGENT=1            load PROXMOX_SSH_PRIVATE_KEY into a private ssh-agent
+#   RUN_ANSIBLE_MERGE_KNOWN_HOSTS=1    also merge the pinned host keys into ~/.ssh/known_hosts
+#   RUN_ANSIBLE_REVOKE_ATTEMPTS=N      attempts to revoke the runner's token (default 1)
+#   RUN_ANSIBLE_CHECKOUT_GUARD=1       refuse a checkout that differs from origin or has tracked edits
+#   RUN_ANSIBLE_PIN_FILE=PATH          check out the commit named in PATH (repo-relative, one 40-hex SHA)
+#   RUN_ANSIBLE_PIN_DIR=PATH           pinned checkout location (repo-relative)
+#   RUN_ANSIBLE_PIN_URL=URL            remote the pinned checkout is cloned from
+#   RUN_ANSIBLE_PIN_OPTIONAL=1         warn instead of failing when the pinned checkout fails
+#   RUN_ANSIBLE_LIMIT_LOCALHOST=1      append localhost to --limit (for callers that append task arguments)
+#   RUN_ANSIBLE_RECAP_CHECK=1          fail on failed or unreachable hosts, and on a non-localhost --limit that matched none
+#   RUN_ANSIBLE_LOG_DIR=DIR            keep the run log in DIR
+#
+# Exit status: the playbook's, 1 for a refusal or failed setup step, 64 for usage.
+
+set -euo pipefail
+
+die() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+RUNNER_BAO_TOKEN=""
+AGENT_STARTED=""
+
+revoke_runner_token() {
+  local attempt max=${RUN_ANSIBLE_REVOKE_ATTEMPTS:-1}
+  if [[ -z $RUNNER_BAO_TOKEN ]]; then
+    return 0
+  fi
+  if [[ ! $max =~ ^[1-9][0-9]*$ ]]; then
+    die "RUN_ANSIBLE_REVOKE_ATTEMPTS must be a positive integer"
+  fi
+  { set +x; } 2>/dev/null
+  for ((attempt = 1; attempt <= max; attempt++)); do
+    if curl -fsSL --max-time 30 -X POST -H @<(printf 'X-Vault-Token: %s\n' "$RUNNER_BAO_TOKEN") \
+      --output /dev/null "$BAO_ADDR/v1/auth/token/revoke-self"; then
+      RUNNER_BAO_TOKEN=""
+      return 0
+    fi
+    if ((attempt < max)); then
+      sleep "$attempt"
+    fi
+  done
+  echo "WARNING: could not revoke the runner-owned OpenBao token; it expires with its TTL." >&2
+  return 1
+}
+
+cleanup() {
+  local status=$?
+  revoke_runner_token || true
+  if [[ -n $AGENT_STARTED ]]; then
+    ssh-agent -k >/dev/null 2>&1 || true
+  fi
+  rm -rf "$WORK_DIR"
+  return "$status"
+}
+
+# Login body goes through jq's environment, so the secret_id never appears in a process argument list.
+bao_login() {
+  CONVERGE_ROLE_ID=$CONVERGE_ROLE_ID CONVERGE_SECRET_ID=$CONVERGE_SECRET_ID \
+    jq -nc '{role_id: env.CONVERGE_ROLE_ID, secret_id: env.CONVERGE_SECRET_ID}' \
+    | curl -fsSL --max-time 10 -H 'Content-Type: application/json' --data @- "$BAO_ADDR/v1/auth/approle/login"
+}
+
+# Sets CONVERGE_ROLE_ID, CONVERGE_SECRET_ID, CONVERGE_SIGN_ROLE and CONVERGE_IDENTITY for the named identity.
+# Returns 1 when that identity's pair is not set.
+select_identity() {
+  local name=$1 upper role_var secret_var
+  if [[ $name == signer ]]; then
+    CONVERGE_ROLE_ID=${SSH_SIGNER_ROLE_ID:-}
+    CONVERGE_SECRET_ID=${SSH_SIGNER_SECRET_ID:-}
+    CONVERGE_SIGN_ROLE=${SSH_SIGNER_ROLE:-}
+  else
+    upper=$(tr 'a-z-' 'A-Z_' <<<"$name")
+    role_var="OPENBAO_APPROLE_${upper}_ROLE_ID"
+    secret_var="OPENBAO_APPROLE_${upper}_SECRET_ID"
+    CONVERGE_ROLE_ID=${!role_var:-}
+    CONVERGE_SECRET_ID=${!secret_var:-}
+    CONVERGE_SIGN_ROLE="automation-${name}"
+  fi
+  CONVERGE_IDENTITY=$name
+  [[ -n $CONVERGE_ROLE_ID && -n $CONVERGE_SECRET_ID ]]
+}
+
+# Returns 0 when a certificate was minted, 2 when the login was refused, 1 for any other failure.
+mint_ssh_cert() {
+  local mount=${SSH_CA_MOUNT:-ssh-client-ca} login token signed rc=0
+  revoke_runner_token || true
+  rm -f "$WORK_DIR/id" "$WORK_DIR/id.pub" "$WORK_DIR/id-cert.pub"
+  (umask 077 && ssh-keygen -q -t ed25519 -N '' -C run-ansible -f "$WORK_DIR/id") || return 1
+  { set +x; } 2>/dev/null
+  login=$(bao_login) || {
+    rc=$?
+    # curl exit 22: the store answered with an HTTP error, so the login was refused.
+    if [[ $rc -eq 22 ]]; then
+      return 2
+    fi
+    return 1
+  }
+  token=$(printf '%s' "$login" | jq -er '.auth.client_token') || return 1
+  RUNNER_BAO_TOKEN=$token
+  signed=$(jq -nc --rawfile pub "$WORK_DIR/id.pub" --arg ttl "${SSH_CERT_TTL:-1h}" '{public_key: $pub, ttl: $ttl}' \
+    | curl -fsSL --max-time 10 -H @<(printf 'X-Vault-Token: %s\n' "$RUNNER_BAO_TOKEN") --data @- \
+      "$BAO_ADDR/v1/$mount/sign/$CONVERGE_SIGN_ROLE" \
+    | jq -er '.data.signed_key') || return 1
+  printf '%s\n' "$signed" > "$WORK_DIR/id-cert.pub"
+  export PROXMOX_SSH_KEY_PATH="$WORK_DIR/id"
+  if [[ -z ${BAO_TOKEN:-} ]]; then
+    export BAO_TOKEN=$RUNNER_BAO_TOKEN
+  else
+    # A caller token may carry broader policy; keep it and drop the runner's own token.
+    revoke_runner_token || true
+  fi
+}
+
+# Returns 0 when an identity minted, 2 when a refusal could not fall through, 1 for a mint failure, 3 when no
+# identity is configured.
+mint_from_identities() {
+  local entry name rc tried=""
+  for entry in "${IDENTITY_ENTRIES[@]}"; do
+    name=${entry%\?}
+    if ! select_identity "$name"; then
+      continue
+    fi
+    tried=1
+    rc=0
+    mint_ssh_cert || rc=$?
+    case $rc in
+      0) return 0 ;;
+      2)
+        if [[ $entry == *\? ]]; then
+          echo "WARNING: AppRole login refused for identity: $name; trying the next identity." >&2
+          continue
+        fi
+        echo "ERROR: AppRole login refused for identity: $name." >&2
+        return 2
+        ;;
+      *) return 1 ;;
+    esac
+  done
+  if [[ -z $tried ]]; then
+    return 3
+  fi
+  echo "ERROR: every configured identity was refused." >&2
+  return 2
+}
+
+use_static_key() {
+  if [[ -n ${PROXMOX_SSH_KEY_PATH:-} && -f ${PROXMOX_SSH_KEY_PATH/#\~/$HOME} ]]; then
+    export PROXMOX_SSH_KEY_PATH="${PROXMOX_SSH_KEY_PATH/#\~/$HOME}"
+  elif [[ -n ${PROXMOX_SSH_PRIVATE_KEY:-} && -n ${RUN_ANSIBLE_SSH_AGENT:-} ]]; then
+    eval "$(ssh-agent -s)" >/dev/null
+    AGENT_STARTED=1
+    if ! printf '%s\n' "$PROXMOX_SSH_PRIVATE_KEY" | ssh-add - >/dev/null; then
+      die "failed to load PROXMOX_SSH_PRIVATE_KEY into ssh-agent; the key must be valid and not passphrase-protected"
+    fi
+    unset PROXMOX_SSH_PRIVATE_KEY PROXMOX_SSH_KEY_PATH
+  else
+    die "no SSH auth available: set BAO_ADDR and an identity for a certificate, or PROXMOX_SSH_KEY_PATH for a static key"
+  fi
+}
+
+merge_known_hosts() {
+  local merged="$WORK_DIR/known_hosts.merged"
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+  touch "$HOME/.ssh/known_hosts"
+  chmod 600 "$HOME/.ssh/known_hosts"
+  # The pin wins: a user line naming a pinned host is dropped. Marker lines (@cert-authority, @revoked) are dropped
+  # from both files, since some SSH clients cannot parse them.
+  awk '
+    /^@/ { next }
+    NR == FNR { n = split($1, h, ","); for (i = 1; i <= n; i++) pinned[h[i]] = 1 }
+    NR != FNR { n = split($1, h, ","); for (i = 1; i <= n; i++) if (h[i] in pinned) next }
+    !seen[$0]++
+  ' "$WORK_DIR/known_hosts" "$HOME/.ssh/known_hosts" > "$merged"
+  cat "$merged" > "$HOME/.ssh/known_hosts"
+}
+
+check_checkout() {
+  local branch local_sha remote_sha behind ahead
+  if [[ -n ${ALLOW_STALE_CHECKOUT:-} ]]; then
+    return 0
+  fi
+  branch=$(git -C "$REPO_ROOT" symbolic-ref -q --short HEAD || true)
+  if [[ -n $branch ]]; then
+    git -C "$REPO_ROOT" fetch --quiet origin "$branch"
+    local_sha=$(git -C "$REPO_ROOT" rev-parse HEAD)
+    remote_sha=$(git -C "$REPO_ROOT" rev-parse "origin/$branch")
+    if [[ $local_sha != "$remote_sha" ]]; then
+      behind=$(git -C "$REPO_ROOT" rev-list --count "$local_sha..$remote_sha")
+      ahead=$(git -C "$REPO_ROOT" rev-list --count "$remote_sha..$local_sha")
+      echo "ERROR: checkout does not match origin/$branch ($behind behind, $ahead ahead); refusing to run." >&2
+      echo "  local:  $local_sha" >&2
+      echo "  remote: $remote_sha" >&2
+      echo "Push or pull so the run uses reviewed content, or set ALLOW_STALE_CHECKOUT=1 for a deliberate replay." >&2
+      exit 1
+    fi
+  fi
+  # Untracked files are not counted: they are working state, not drift in tracked content.
+  if [[ -n $(git -C "$REPO_ROOT" status --porcelain --untracked-files=no) ]]; then
+    die "working tree has uncommitted changes to tracked files; commit or stash them, or set ALLOW_STALE_CHECKOUT=1"
+  fi
+}
+
+checkout_pin() {
+  local pin_file checkout pin current_remote actual
+  if [[ -z ${RUN_ANSIBLE_PIN_DIR:-} || -z ${RUN_ANSIBLE_PIN_URL:-} ]]; then
+    echo "run-ansible: RUN_ANSIBLE_PIN_DIR and RUN_ANSIBLE_PIN_URL must be set with RUN_ANSIBLE_PIN_FILE" >&2
+    return 1
+  fi
+  pin_file="$REPO_ROOT/$RUN_ANSIBLE_PIN_FILE"
+  checkout="$REPO_ROOT/$RUN_ANSIBLE_PIN_DIR"
+  if [[ ! -f $pin_file ]]; then
+    echo "run-ansible: pin file $RUN_ANSIBLE_PIN_FILE not found" >&2
+    return 1
+  fi
+  pin=$(<"$pin_file")
+  if [[ ! $pin =~ ^[0-9a-f]{40}$ ]]; then
+    echo "run-ansible: $RUN_ANSIBLE_PIN_FILE must hold one 40-character lowercase hexadecimal commit SHA" >&2
+    return 1
+  fi
+  if [[ -e $checkout && ! -e $checkout/.git ]]; then
+    if ! rmdir "$checkout" 2>/dev/null; then
+      echo "run-ansible: $RUN_ANSIBLE_PIN_DIR exists but is not an empty Git checkout" >&2
+      return 1
+    fi
+  fi
+  if [[ -e $checkout/.git ]]; then
+    if ! current_remote=$(git -C "$checkout" remote get-url origin); then
+      echo "run-ansible: unable to read the origin of $RUN_ANSIBLE_PIN_DIR" >&2
+      return 1
+    fi
+    if [[ $current_remote != "$RUN_ANSIBLE_PIN_URL" ]]; then
+      echo "run-ansible: $RUN_ANSIBLE_PIN_DIR origin does not match RUN_ANSIBLE_PIN_URL" >&2
+      return 1
+    fi
+    if ! git -C "$checkout" diff --quiet || ! git -C "$checkout" diff --cached --quiet; then
+      echo "run-ansible: $RUN_ANSIBLE_PIN_DIR has local tracked changes" >&2
+      return 1
+    fi
+  elif ! git clone --quiet --no-checkout "$RUN_ANSIBLE_PIN_URL" "$checkout"; then
+    echo "run-ansible: unable to clone the pinned repository" >&2
+    return 1
+  fi
+  if ! git -C "$checkout" fetch --quiet --no-tags origin "$pin" ||
+    ! git -C "$checkout" checkout --quiet --detach "$pin"; then
+    echo "run-ansible: unable to check out the pinned commit" >&2
+    return 1
+  fi
+  actual=$(git -C "$checkout" rev-parse HEAD)
+  if [[ $actual != "$pin" ]]; then
+    echo "run-ansible: $RUN_ANSIBLE_PIN_DIR does not match the pin file" >&2
+    return 1
+  fi
+}
+
+# Returns 1 when a non-localhost --limit matched no host, a host failed or was unreachable, or (for a non-localhost
+# --limit) the run printed no play recap.
+recap_check() {
+  local non_localhost_limit recap_hosts failed
+  non_localhost_limit=$(tr ',:' '\n' <<<"$LIMIT_VAL" | grep -vx 'localhost' | grep -v '^$' || true)
+  if [[ -n $non_localhost_limit ]]; then
+    if ! grep -q '^PLAY RECAP' "$LOG_FILE"; then
+      echo "ERROR: the run ended before Ansible printed a play recap; it was interrupted or crashed." >&2
+      echo "This says nothing about how much work it completed; read the log before concluding it did nothing." >&2
+      return 1
+    fi
+    recap_hosts=$(awk '/^PLAY RECAP/{f=1;next} f && / ok=[0-9]/{print $1}' "$LOG_FILE")
+    if [[ -z $(grep -vx 'localhost' <<<"$recap_hosts" || true) ]]; then
+      echo "ERROR: --limit ($LIMIT_VAL) asked for hosts beyond localhost, but the play recap shows only localhost; this run did nothing." >&2
+      return 1
+    fi
+  fi
+  if grep -q '^PLAY RECAP' "$LOG_FILE"; then
+    failed=$(awk '/^PLAY RECAP/{f=1;next} f && NF && (/failed=[1-9]/ || /unreachable=[1-9]/){print "  " $1}' "$LOG_FILE")
+    if [[ -n $failed ]]; then
+      echo "ERROR: the play recap reports failed or unreachable hosts:" >&2
+      printf '%s\n' "$failed" >&2
+      return 1
+    fi
+  fi
+}
+
+run_playbook() {
+  if [[ -n ${NIX_SHELL:-} ]]; then
+    nix develop "$NIX_SHELL" --command ansible-playbook "$PLAYBOOK" "$@"
+  elif command -v ansible-playbook >/dev/null 2>&1; then
+    ansible-playbook "$PLAYBOOK" "$@"
+  else
+    echo "ERROR: ansible-playbook not found on PATH and NIX_SHELL not set" >&2
+    return 127
+  fi
+}
+
+main() {
+  if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <playbook> [ansible-playbook args...]" >&2
+    exit 64
+  fi
+  PLAYBOOK="$1"
+  shift
+
+  IDENTITY_ENTRIES=()
+  IFS=',' read -ra IDENTITY_ENTRIES <<<"${RUN_ANSIBLE_IDENTITIES:-signer,semaphore,ansible}"
+  for entry in "${IDENTITY_ENTRIES[@]}"; do
+    if [[ ! ${entry%\?} =~ ^[a-z][a-z0-9-]*$ ]]; then
+      die "RUN_ANSIBLE_IDENTITIES entry '${entry%\?}' must be a lowercase name"
+    fi
+  done
+
+  if [[ -n ${SSH_SIGNER_ROLE_ID:-} && -n ${SSH_SIGNER_SECRET_ID:-} ]] &&
+    [[ -z ${SSH_CA_MOUNT:-} || -z ${SSH_SIGNER_ROLE:-} ]]; then
+    die "SSH_SIGNER_ROLE_ID/SSH_SIGNER_SECRET_ID are set but SSH_CA_MOUNT or SSH_SIGNER_ROLE is not"
+  fi
+  if [[ -n ${SECRET_STORE_ADDR:-} ]]; then
+    export BAO_ADDR=$SECRET_STORE_ADDR
+  fi
+
+  REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/run-ansible.XXXXXX")
+  chmod 700 "$WORK_DIR"
+  trap 'cleanup' EXIT
+
+  if [[ -n ${RUN_ANSIBLE_CHECKOUT_GUARD:-} ]]; then
+    check_checkout
+  fi
+  if [[ -n ${RUN_ANSIBLE_PIN_FILE:-} ]]; then
+    if ! checkout_pin; then
+      if [[ -z ${RUN_ANSIBLE_PIN_OPTIONAL:-} ]]; then
+        die "pinned checkout failed"
+      fi
+      echo "WARNING: pinned checkout failed; continuing without it (RUN_ANSIBLE_PIN_OPTIONAL is set)." >&2
+    fi
+  fi
+
+  RC=0
+  if [[ -n ${BAO_ADDR:-} ]]; then
+    mint_from_identities || RC=$?
+  else
+    RC=3
+  fi
+  case $RC in
+    0)
+      echo "Using a short-lived SSH certificate from the OpenBao CA ($CONVERGE_SIGN_ROLE)."
+      echo "  authenticated as: $CONVERGE_IDENTITY"
+      ;;
+    3)
+      use_static_key
+      ;;
+    *)
+      if [[ -z ${RUN_ANSIBLE_STATIC_KEY_FALLBACK:-} ]]; then
+        die "OpenBao SSH certificate could not be minted (status $RC); set RUN_ANSIBLE_STATIC_KEY_FALLBACK=1 to use PROXMOX_SSH_KEY_PATH"
+      fi
+      echo "WARNING: OpenBao SSH certificate could not be minted; using PROXMOX_SSH_KEY_PATH." >&2
+      use_static_key
+      ;;
+  esac
+
+  if [[ -n ${SSH_KNOWN_HOSTS:-} ]]; then
+    printf '%s\n' "$SSH_KNOWN_HOSTS" > "$WORK_DIR/known_hosts"
+    chmod 600 "$WORK_DIR/known_hosts"
+    # Prepended options win: OpenSSH uses the first value per option, so caller extras cannot weaken the pin.
+    pin_args="-o UserKnownHostsFile=$WORK_DIR/known_hosts -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes"
+    export ANSIBLE_SSH_COMMON_ARGS="$pin_args${ANSIBLE_SSH_COMMON_ARGS:+ $ANSIBLE_SSH_COMMON_ARGS}"
+    if [[ -n ${RUN_ANSIBLE_MERGE_KNOWN_HOSTS:-} ]]; then
+      merge_known_hosts
+    fi
+  fi
+
+  # Semaphore appends task arguments, so the final --limit must include localhost.
+  LIMIT_VAL=""
+  prev=""
+  for a in "$@"; do
+    if [[ $prev == --limit || $prev == -l ]]; then
+      LIMIT_VAL=$a
+    fi
+    if [[ $a == --limit=* ]]; then
+      LIMIT_VAL=${a#--limit=}
+    fi
+    prev=$a
+  done
+  if [[ -n ${RUN_ANSIBLE_LIMIT_LOCALHOST:-} && -n $LIMIT_VAL ]]; then
+    LIMIT_NORM="${LIMIT_VAL//:/,}"
+    if [[ ",$LIMIT_NORM," != *,localhost,* ]]; then
+      LIMIT_NORM="$LIMIT_NORM,localhost"
+    fi
+    # With a comma present Ansible stops splitting on ':', so 'a:!b,c' would match no host.
+    if [[ $LIMIT_NORM != "$LIMIT_VAL" ]]; then
+      set -- "$@" --limit "$LIMIT_NORM"
+    fi
+  fi
+
+  if [[ -n ${RUN_ANSIBLE_LOG_DIR:-} ]]; then
+    mkdir -p "$RUN_ANSIBLE_LOG_DIR"
+    LOG_FILE="$RUN_ANSIBLE_LOG_DIR/$(date -u +%Y%m%dT%H%M%SZ)-$(basename "$PLAYBOOK" .yml).log"
+    echo "Logging this run to $LOG_FILE"
+  else
+    LOG_FILE="$WORK_DIR/run.log"
+  fi
+
+  set +e
+  run_playbook "$@" 2>&1 | tee "$LOG_FILE"
+  STATUS=${PIPESTATUS[0]}
+  set -e
+
+  if [[ -n ${RUN_ANSIBLE_RECAP_CHECK:-} ]] && ! recap_check; then
+    if [[ $STATUS -eq 0 ]]; then
+      STATUS=1
+    fi
+  fi
+
+  if [[ -n ${RUN_ANSIBLE_LOG_DIR:-} ]]; then
+    echo "Run log: $LOG_FILE"
+  fi
+  return "$STATUS"
+}
+
+main "$@"
