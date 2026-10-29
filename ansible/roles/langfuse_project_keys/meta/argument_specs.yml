@@ -50,7 +50,8 @@ argument_specs:
         required: true
         no_log: true
         description:
-          - Writer token for the target path. It needs create, read and update on the data path and read on the
+          - Writer token for the target path, which must be the converge identity. Its policies must be exactly
+            C(default) and C(ansible-converge). It needs create, read and update on the data path and read on the
             metadata path.
       langfuse_project_keys_openbao_mount:
         type: str

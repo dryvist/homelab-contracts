@@ -32,6 +32,13 @@ TOKENS = {
         "orphan": True,
         "ttl": 300,
     },
+    "writer-converge": {
+        "policies": ["default", "ansible-converge"],
+        "identity_policies": [],
+        "renewable": False,
+        "orphan": True,
+        "ttl": 300,
+    },
     "writer-extra-policy": {
         "policies": ["default", "test-write", "other"],
         "identity_policies": [],

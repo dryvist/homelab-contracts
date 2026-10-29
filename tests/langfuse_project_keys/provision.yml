@@ -68,7 +68,7 @@
                 langfuse_project_keys_org_name: homelab
                 langfuse_project_keys_project_name: hermes
                 langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
-                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_token: writer-converge
                 langfuse_project_keys_openbao_path: lpk/wrong-password
           rescue:
             - name: A - record the refused sign-in
@@ -128,7 +128,7 @@
             langfuse_project_keys_org_name: homelab
             langfuse_project_keys_project_name: hermes
             langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
-            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_token: writer-converge
             langfuse_project_keys_openbao_path: lpk/complete
 
         - name: B - read both stand-in states
@@ -183,7 +183,7 @@
                 langfuse_project_keys_org_name: homelab
                 langfuse_project_keys_project_name: hermes
                 langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
-                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_token: writer-converge
                 langfuse_project_keys_openbao_path: lpk/partial
           rescue:
             - name: C - record the stop
@@ -234,7 +234,7 @@
                 langfuse_project_keys_org_name: homelab
                 langfuse_project_keys_project_name: hermes
                 langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
-                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_token: writer-converge
                 langfuse_project_keys_openbao_path: lpk/no-org
           rescue:
             - name: D - record the stop
@@ -282,7 +282,7 @@
             langfuse_project_keys_org_name: homelab
             langfuse_project_keys_project_name: hermes
             langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
-            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_token: writer-converge
             langfuse_project_keys_openbao_path: lpk/fresh
 
         - name: E - read both stand-in states
@@ -335,7 +335,7 @@
             langfuse_project_keys_org_name: homelab
             langfuse_project_keys_project_name: hermes
             langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
-            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_token: writer-converge
             langfuse_project_keys_openbao_path: lpk/existing-project
 
         - name: F - read both stand-in states
@@ -384,7 +384,7 @@
             langfuse_project_keys_org_name: homelab
             langfuse_project_keys_project_name: hermes
             langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
-            langfuse_project_keys_openbao_token: writer-ok
+            langfuse_project_keys_openbao_token: writer-converge
             langfuse_project_keys_openbao_path: lpk/fresh
 
         - name: G - read both stand-in states
@@ -427,7 +427,7 @@
                 langfuse_project_keys_org_name: homelab
                 langfuse_project_keys_project_name: hermes
                 langfuse_project_keys_openbao_addr: "http://127.0.0.1:{{ closed_port }}"
-                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_token: writer-converge
                 langfuse_project_keys_openbao_path: "{{ unreachable_kv_path }}"
           rescue:
             - name: H - record the stop
@@ -445,6 +445,60 @@
             that:
               - case_h_stopped | default(false) | bool
               - case_h_state.json.log | length == 0
+
+    # ---- I: writer token outside the converge identity ----------------------------------------------------------
+
+    - name: Case I - a writer token without the converge policy stops before any read, write or Langfuse call
+      block:
+        - name: I - reset Langfuse and the KV log
+          ansible.builtin.uri:
+            url: "{{ item.url }}"
+            method: POST
+            body_format: json
+            body: "{{ item.body | default({}) }}"
+            status_code: [200]
+          loop:
+            - {url: "{{ lpk_base }}/_test/reset", body: {org_name: homelab, projects: []}}
+            - {url: "{{ kv_addr }}/_test/log-reset"}
+
+        - name: I - run with the test-write token (expected to fail)
+          block:
+            - name: I - run the role with a writer token that lacks ansible-converge
+              ansible.builtin.include_role:
+                name: langfuse_project_keys
+              vars:
+                langfuse_project_keys_base_url: "{{ lpk_base }}/"
+                langfuse_project_keys_admin_email: admin@example.test
+                langfuse_project_keys_admin_password: admin-test-password
+                langfuse_project_keys_org_name: homelab
+                langfuse_project_keys_project_name: hermes
+                langfuse_project_keys_openbao_addr: "{{ kv_addr }}"
+                langfuse_project_keys_openbao_token: writer-ok
+                langfuse_project_keys_openbao_path: lpk/wrong-writer
+          rescue:
+            - name: I - record the refusal
+              ansible.builtin.set_fact:
+                case_i_refused: true
+
+        - name: I - read both stand-in states
+          ansible.builtin.uri:
+            url: "{{ item }}"
+            return_content: true
+          loop:
+            - "{{ lpk_base }}/_test/state"
+            - "{{ kv_addr }}/_test/state"
+          register: case_i_states
+
+        - name: I - assert the identity was read and refused, with no Langfuse call and no write
+          ansible.builtin.assert:
+            that:
+              - case_i_refused | default(false) | bool
+              - case_i_states.results[0].json.log | length == 0
+              - >-
+                case_i_states.results[1].json.log | selectattr('path', 'equalto', '/v1/auth/token/lookup-self')
+                | list | length == 1
+              - case_i_states.results[1].json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+              - "'secret/data/lpk/wrong-writer' not in case_i_states.results[1].json.state"
 
     - name: Shut both stand-ins down
       ansible.builtin.uri:
