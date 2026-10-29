@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.37.1](https://github.com/dryvist/homelab-contracts/compare/v5.37.0...v5.37.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **langfuse_project_keys:** drop the expected writer policy assertion ([#270](https://github.com/dryvist/homelab-contracts/issues/270)) ([75ae22b](https://github.com/dryvist/homelab-contracts/commit/75ae22b0a185b2fb5c4d8fbfa411da76e0f9875c))
+* **openbao_secrets:** send publish check-and-set version as an integer ([#269](https://github.com/dryvist/homelab-contracts/issues/269)) ([f5b6e23](https://github.com/dryvist/homelab-contracts/commit/f5b6e232d6b575c93b5c3a3d3c4ed6948be28ac7))
+
 ## [5.37.0](https://github.com/dryvist/homelab-contracts/compare/v5.36.0...v5.37.0) (2026-10-29)
 
 
