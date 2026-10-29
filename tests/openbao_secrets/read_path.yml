@@ -20,6 +20,8 @@
   gather_facts: false
   vars:
     fake_port: 18233
+    # hvac for community.hashi_vault is installed for the interpreter that runs ansible-playbook.
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
     fake_addr: "http://127.0.0.1:{{ fake_port }}"
     openbao_secrets_bao_addr: "{{ fake_addr }}"
     tofu_data:
