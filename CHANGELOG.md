@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.27.0](https://github.com/dryvist/homelab-contracts/compare/v5.26.0...v5.27.0) (2026-10-28)
+
+
+### Features
+
+* **cribl_edge:** list the eight released macOS Edge packs ([#238](https://github.com/dryvist/homelab-contracts/issues/238)) ([0555b2d](https://github.com/dryvist/homelab-contracts/commit/0555b2dc0b57a5a3725b01e8991f3cefbc6a097b))
+
+## [5.26.0](https://github.com/dryvist/homelab-contracts/compare/v5.25.0...v5.26.0) (2026-10-28)
+
+
+### Features
+
+* **openbao_secrets:** return seed_generated values, check-mode placeholders, local fallback ([#236](https://github.com/dryvist/homelab-contracts/issues/236)) ([11e1055](https://github.com/dryvist/homelab-contracts/commit/11e10557ca8fe473ad60d4dee349877f318bb4ba))
+
+
+### Bug Fixes
+
+* **openbao_secrets:** send seed_generated CAS as an integer on every ansible-core ([#241](https://github.com/dryvist/homelab-contracts/issues/241)) ([159601b](https://github.com/dryvist/homelab-contracts/commit/159601bc7fcb870a9d65fd06e080bc07521ecdb3))
+
 ## [5.25.0](https://github.com/dryvist/homelab-contracts/compare/v5.24.0...v5.25.0) (2026-10-28)
 
 
