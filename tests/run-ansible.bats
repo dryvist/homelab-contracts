@@ -40,11 +40,13 @@ set -euo pipefail
 method=GET
 url=""
 data=""
+write_out=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -X) method="$2"; shift 2 ;;
     -H|--max-time|--output) shift 2 ;;
-    --data) method=POST; data=$(cat); shift 2 ;;
+    -w) write_out="$2"; shift 2 ;;
+    --data|--data-binary) method=POST; data=$(cat); shift 2 ;;
     -*) shift ;;
     *) url="$1"; shift ;;
   esac
@@ -55,9 +57,12 @@ case "$method $path" in
   "POST /v1/auth/approle/login")
     role=$(jq -r '.role_id' <<<"$data")
     if [ "$role" = "${FIXTURE_REFUSED_ROLE:-}" ]; then
-      exit 22
+      printf '{"errors":["invalid role or secret ID"]}\n'
+      [ -z "$write_out" ] || printf '403'
+      exit 0
     fi
     printf '{"auth":{"client_token":"token-%s"}}\n' "$role"
+    [ -z "$write_out" ] || printf '200'
     ;;
   "POST /v1/"*"/sign/"*)
     printf 'SIGN %s ttl=%s\n' "$path" "$(jq -r '.ttl' <<<"$data")" >> "$FIXTURE_LOG"
@@ -138,7 +143,7 @@ SH
 exit 0
 SH
   chmod +x "$STUB"/*
-  export PATH="$STUB:$PATH"
+  export PATH="$STUB:$BATS_TEST_DIRNAME/../bin:$PATH"
 
   REPO="$BATS_TEST_TMPDIR/repo"
   git init -q -b main "$REPO"

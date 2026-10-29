@@ -215,4 +215,5 @@ openbao_secrets_seed_alphabets:
   alnum: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
   lower: "abcdefghijklmnopqrstuvwxyz0123456789"
   lower_alpha: "abcdefghijklmnopqrstuvwxyz"
+  upper_numeric: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
   hex: "0123456789abcdef"

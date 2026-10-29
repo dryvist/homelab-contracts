@@ -25,6 +25,9 @@
             length: 32
             charset: hex
             prefix: "sk-"
+          - name: serial
+            length: 12
+            charset: upper_numeric
 
     - name: A - read the stand-in state
       ansible.builtin.uri:
@@ -39,10 +42,12 @@
           - state_a.json.state['secret/data/seed/absent'].data.password | length == 16
           - state_a.json.state['secret/data/seed/absent'].data.username is match('^[a-z]{16}$')
           - state_a.json.state['secret/data/seed/absent'].data.api_key is match('^sk-[0-9a-f]{32}$')
+          - state_a.json.state['secret/data/seed/absent'].data.serial is match('^[A-Z0-9]{12}$')
           - (state_a.json.log | selectattr('method', 'equalto', 'POST') | map(attribute='cas') | list) == [0]
           - openbao_secrets_seed_result.password == state_a.json.state['secret/data/seed/absent'].data.password
           - openbao_secrets_seed_result.username == state_a.json.state['secret/data/seed/absent'].data.username
           - openbao_secrets_seed_result.api_key == state_a.json.state['secret/data/seed/absent'].data.api_key
+          - openbao_secrets_seed_result.serial == state_a.json.state['secret/data/seed/absent'].data.serial
 
 - name: Case B - a complete secret is left alone and no write is sent
   block:

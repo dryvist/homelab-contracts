@@ -126,10 +126,10 @@ argument_specs:
           charset:
             type: str
             default: alnum
-            choices: [alnum, lower, lower_alpha, hex]
+            choices: [alnum, lower, lower_alpha, upper_numeric, hex]
             description: >-
-              Alphabet for the random part. C(lower_alpha) gives lowercase letters only; C(hex) gives lowercase
-              hexadecimal.
+              Alphabet for the random part. C(lower_alpha) gives lowercase letters only; C(upper_numeric) gives
+              uppercase letters and digits only; C(hex) gives lowercase hexadecimal.
           prefix:
             type: str
             default: ""
