@@ -20,6 +20,10 @@
       data: {disabled_key: disabled-value}
     - path: secret-external/data/apps/mounted
       data: {mounted_key: from-external}
+    - path: secret/data/apps/order-first
+      data: {shared_key: from-first}
+    - path: secret/data/apps/order-second
+      data: {shared_key: from-second}
   loop_control:
     label: "{{ item.path }}"
 
@@ -135,6 +139,27 @@
         that:
           - "hostvars['localhost'].openbao_secrets_by_domain.enabled_check == {'present_key': 'present-value'}"
           - case4_state.json.log | selectattr('path', 'equalto', 'secret/data/apps/disabled') | list | length == 0
+        quiet: true
+
+- name: Case 4b - an enabled path keeps its listed position in the merge
+  block:
+    - name: Case 4b - read the domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: order_check
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths:
+              - path: apps/order-first
+                enabled: true
+              - apps/order-second
+
+    - name: Case 4b - assert the later listed path wins the shared key
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.order_check == {'shared_key': 'from-second'}"
         quiet: true
 
 # ---- host-group scoping ------------------------------------------------------------------

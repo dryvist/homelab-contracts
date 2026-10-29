@@ -12,8 +12,7 @@
 - name: Select the enabled paths for {{ openbao_domain.name }}
   ansible.builtin.set_fact:
     openbao_secrets_domain_paths_to_read: >-
-      {{ openbao_domain.paths | rejectattr('enabled', 'defined') | list
-         + openbao_domain.paths | selectattr('enabled', 'defined') | selectattr('enabled') | list }}
+      {{ openbao_domain.paths | rejectattr('enabled', 'equalto', false) | list }}
   no_log: true
 
 - name: Decide whether every enabled path is optional for {{ openbao_domain.name }}
