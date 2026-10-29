@@ -37,9 +37,8 @@ routes the web UI uses, then calls two tRPC procedures:
     langfuse_project_keys_openbao_path: ai/hermes
 ```
 
-The caller supplies the admin password and the writer token from its own secret store. The role reads neither. The
-writer token is the converge identity: its policies must be exactly `default` and `ansible-converge`. The role checks
-that with `auth/token/lookup-self` before any OpenBao read or Langfuse call. The inputs are in
+The caller supplies the admin password and converge writer token from its own secret store. The role reads neither.
+It writes only the key pair with one check-and-set write. The inputs are in
 `meta/argument_specs.yml`; the field names default to `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`.
 
 ## Order and idempotency
