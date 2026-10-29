@@ -14,7 +14,8 @@ setup() {
   unset RUN_ANSIBLE_IDENTITIES RUN_ANSIBLE_STATIC_KEY_FALLBACK RUN_ANSIBLE_SSH_AGENT RUN_ANSIBLE_MERGE_KNOWN_HOSTS
   unset RUN_ANSIBLE_REVOKE_ATTEMPTS RUN_ANSIBLE_CHECKOUT_GUARD RUN_ANSIBLE_PIN_FILE RUN_ANSIBLE_PIN_DIR
   unset RUN_ANSIBLE_PIN_URL RUN_ANSIBLE_PIN_OPTIONAL RUN_ANSIBLE_LIMIT_LOCALHOST RUN_ANSIBLE_RECAP_CHECK
-  unset RUN_ANSIBLE_PIN_PLAYBOOKS RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS
+  unset RUN_ANSIBLE_PIN_PLAYBOOKS RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY
+  unset CONVERGE_ROLE_ID CONVERGE_SECRET_ID CONVERGE_IDENTITY
   unset RUN_ANSIBLE_LOG_DIR FIXTURE_REFUSED_ROLE FIXTURE_SIGN_FAIL FIXTURE_SIGN_FAIL_ROLE FIXTURE_REVOKE_FAILS FIXTURE_RECAP
   unset RUN_ANSIBLE_FALLBACK_ON_ERROR RUN_ANSIBLE_REQUIRE_RECAP RUN_ANSIBLE_RETIRING_IDENTITIES RUN_ANSIBLE_WARN_NO_ISSUER
   unset OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID OPENBAO_PROVISIONING_TOKEN
@@ -125,6 +126,7 @@ set -euo pipefail
   printf 'bao_token=%s\n' "${BAO_TOKEN:+set}"
   printf 'host_key_checking=%s\n' "${ANSIBLE_HOST_KEY_CHECKING:-}"
   printf 'known_hosts_file=%s\n' "${SSH_KNOWN_HOSTS_FILE:-}"
+  printf 'converge=%s:%s:%s\n' "${CONVERGE_IDENTITY:-}" "${CONVERGE_ROLE_ID:-}" "${CONVERGE_SECRET_ID:+set}"
 } >> "$FIXTURE_RUN_LOG"
 printf 'PLAYBOOK-OUTPUT\n'
 printf '%b' "${FIXTURE_RECAP:-}"
@@ -567,6 +569,23 @@ with_origin() {
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
   [[ $output == *"converging as the ansible AppRole, which is being retired"* ]]
+}
+
+@test "the converge identity is not exported by default" {
+  ansible_env
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  grep -qx 'converge=::' "$FIXTURE_RUN_LOG"
+}
+
+@test "RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY exports the pair that minted the certificate" {
+  semaphore_env
+  ansible_env
+  export FIXTURE_REFUSED_ROLE=semaphore-role RUN_ANSIBLE_IDENTITIES='semaphore?,ansible'
+  export RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY=1
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  grep -qx 'converge=ansible:ansible-role:set' "$FIXTURE_RUN_LOG"
 }
 
 @test "RUN_ANSIBLE_WARN_NO_ISSUER warns when the issuer pair is missing" {

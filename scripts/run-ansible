@@ -43,6 +43,8 @@
 #   RUN_ANSIBLE_REQUIRE_RECAP=1        with RUN_ANSIBLE_RECAP_CHECK, fail any run that printed no play recap
 #   RUN_ANSIBLE_RETIRING_IDENTITIES    comma list; warn when one of these identities mints the certificate
 #   RUN_ANSIBLE_WARN_NO_ISSUER=1       warn when BAO_ADDR is set but no AppRole issuer pair is present
+#   RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY=1  export CONVERGE_ROLE_ID, CONVERGE_SECRET_ID and CONVERGE_IDENTITY of the
+#                                      identity that minted the certificate, for playbooks that log in as it
 #
 # With SSH_KNOWN_HOSTS set, SSH_KNOWN_HOSTS_FILE is exported as the path of the per-run pin file.
 #
@@ -163,6 +165,9 @@ mint_from_identities() {
       0)
         if [[ ,${RUN_ANSIBLE_RETIRING_IDENTITIES:-}, == *",$name,"* ]]; then
           echo "WARNING: converging as the $name AppRole, which is being retired." >&2
+        fi
+        if [[ -n ${RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY:-} ]]; then
+          export CONVERGE_ROLE_ID CONVERGE_SECRET_ID CONVERGE_IDENTITY
         fi
         return 0
         ;;
