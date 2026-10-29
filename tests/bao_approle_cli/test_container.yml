@@ -1,0 +1,49 @@
+---
+- name: Test bao_approle_cli in a container
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Converge the role
+      ansible.builtin.include_role:
+        name: bao_approle_cli
+
+    - name: Read the installed CLI metadata
+      ansible.builtin.stat:
+        path: /usr/local/bin/bao-approle
+      register: bao_approle_cli_test_binary
+
+    - name: Assert the installed file mode and owner
+      ansible.builtin.assert:
+        that:
+          - bao_approle_cli_test_binary.stat.exists
+          - bao_approle_cli_test_binary.stat.isreg
+          - bao_approle_cli_test_binary.stat.pw_name == 'root'
+          - bao_approle_cli_test_binary.stat.mode == '0755'
+
+    - name: Run the CLI with no arguments
+      ansible.builtin.command:
+        cmd: /usr/local/bin/bao-approle
+      register: bao_approle_cli_test_no_args
+      changed_when: false
+      failed_when: false
+
+    - name: Assert no arguments returns EX_USAGE
+      ansible.builtin.assert:
+        that:
+          - bao_approle_cli_test_no_args.rc == 64
+          - "'unknown subcommand' in bao_approle_cli_test_no_args.stderr"
+
+    - name: Run the CLI help
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/bao-approle
+          - --help
+      register: bao_approle_cli_test_help
+      changed_when: false
+
+    - name: Assert help prints usage and exits 0
+      ansible.builtin.assert:
+        that:
+          - bao_approle_cli_test_help.rc == 0
+          - "'Usage:' in bao_approle_cli_test_help.stdout"

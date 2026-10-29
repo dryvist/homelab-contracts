@@ -1,0 +1,32 @@
+---
+- name: Check required utilities
+  ansible.builtin.command:
+    argv:
+      - "{{ item }}"
+      - --version
+  loop:
+    - curl
+    - jq
+  register: bao_approle_cli_dependency_checks
+  check_mode: false
+  changed_when: false
+  failed_when: false
+
+- name: Assert required utilities are installed
+  ansible.builtin.assert:
+    that:
+      - >-
+        bao_approle_cli_dependency_checks.results
+        | selectattr('rc', 'ne', 0)
+        | list | length == 0
+    fail_msg: >-
+      bao_approle_cli requires curl and jq installed on the target. Install
+      any missing utility before applying this role.
+
+- name: Install bao-approle CLI
+  ansible.builtin.copy:
+    src: bao-approle
+    dest: "{{ bao_approle_cli_dest }}"
+    owner: root
+    group: root
+    mode: "0755"

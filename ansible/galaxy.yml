@@ -7,8 +7,8 @@ authors:
 description: >-
   Shared Ansible roles and plugins for the homelab estate (Cribl Edge, Cribl
   packs, inventory resolution,
-  Docker/NTP/SSH-CA/syslog/systemd/deadman/OpenBao-secrets bootstrap, LLM
-  catalogs, converge-freshness telemetry).
+  Docker/NTP/SSH-CA/syslog/systemd/deadman/OpenBao-secrets/AppRole CLI
+  bootstrap, LLM catalogs, converge-freshness telemetry).
 license:
   - MIT
 tags:

@@ -21,10 +21,10 @@
         bao-approle = pkgs.stdenvNoCC.mkDerivation {
           pname = "bao-approle";
           inherit version;
-          src = ./bin;
+          src = ./ansible/roles/bao_approle_cli;
           nativeBuildInputs = [ pkgs.makeWrapper ];
           installPhase = ''
-            install -Dm755 bao-approle $out/bin/bao-approle
+            install -Dm755 files/bao-approle $out/bin/bao-approle
             wrapProgram $out/bin/bao-approle \
               --prefix PATH : ${
                 pkgs.lib.makeBinPath [

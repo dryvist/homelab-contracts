@@ -81,6 +81,19 @@ jobs:
         run: pip install 'ansible-lint==25.*' 'ansible-core==2.18.*' boto3 botocore hvac
       - name: Install required collections
         run: ansible-galaxy collection install amazon.aws community.hashi_vault community.general
+      - name: Converge bao_approle_cli in a Debian container
+        run: |
+          docker run --rm \
+            --volume "$PWD:/workspace:ro" \
+            --workdir /workspace \
+            python:3.13-slim \
+            bash -euc '
+              apt-get update -qq
+              apt-get install -y -qq --no-install-recommends curl jq
+              python -m pip install --no-cache-dir "ansible-core==2.18.*"
+              ANSIBLE_ROLES_PATH=/workspace/ansible/roles \
+                ansible-playbook -i localhost, tests/bao_approle_cli/test_container.yml
+            '
       - name: Lint the shared roles
         run: bash .github/scripts/lint-shared-roles.sh
       # Runs here because this job already has ansible-core and the collections

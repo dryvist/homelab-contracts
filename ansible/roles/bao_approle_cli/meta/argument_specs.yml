@@ -1,0 +1,12 @@
+---
+argument_specs:
+  main:
+    short_description: Install the shared bao-approle CLI
+    description:
+      - Installs the shared OpenBao AppRole CLI on the target.
+      - Requires curl and jq to be installed on the target; this role does not install packages.
+    options:
+      bao_approle_cli_dest:
+        type: path
+        description: Destination path for the CLI. Defaults to /usr/local/bin/bao-approle.
+        required: false

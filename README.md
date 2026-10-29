@@ -15,6 +15,7 @@ both the data shapes and the small shared tools that enforce them:
 - `bin/bao-approle` — shared OpenBao AppRole login, token revocation and GitHub installation-token CLI
 - `bin/deployment-json` — locked, schema-gated access to the canonical
   `deployment.json` object
+- `ansible/roles/bao_approle_cli` — installs the shared AppRole CLI on Debian guests
 - `scripts/semaphore-run` — managed Semaphore task dispatch (`list`, `start`,
   `wait`, `log`, `stop`); the API token is read from OpenBao once per call
 - `scripts/run-ansible` — one `ansible-playbook` run with an OpenBao-signed SSH certificate; each per-caller behaviour
