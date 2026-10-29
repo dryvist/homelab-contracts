@@ -1,0 +1,22 @@
+---
+# Selects the domains this run fetches into openbao_secrets_domains_to_fetch. A domain
+# with consumer groups in openbao_secrets_domain_groups is kept only when one of them
+# is in openbao_secrets_active_groups. A domain with no entry is always kept.
+
+# set_fact persists for the rest of the run, so the list starts empty each time: a
+# second include of this role in the same run must not inherit this one.
+- name: Reset the selected-domain list
+  ansible.builtin.set_fact:
+    openbao_secrets_domains_to_fetch: []
+
+- name: Keep each domain whose consumer groups are active, or that declares none
+  ansible.builtin.set_fact:
+    openbao_secrets_domains_to_fetch: >-
+      {{ openbao_secrets_domains_to_fetch
+         + ([item] if ((openbao_secrets_domain_groups.get(item.name, []) | length == 0)
+                       or (openbao_secrets_domain_groups.get(item.name, [])
+                           | intersect(openbao_secrets_active_groups) | length > 0))
+                   else []) }}
+  loop: "{{ openbao_secrets_domains }}"
+  loop_control:
+    label: "{{ item.name }}"

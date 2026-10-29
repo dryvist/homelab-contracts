@@ -1,0 +1,46 @@
+---
+# Sorts one domain's KV read results into openbao_secrets_domain_read_failures, a list of
+# {path, class} entries. A 404 on a path declared optional is tolerated: it is named in
+# a warning and is not a failure. Any other failed read is listed with one class:
+#   not_found               a 404 on a required path
+#   permission_denied       a 403
+#   transport_or_api_error  anything else
+# Decisions use the registered results only. A bare msg is not visible to a per-item
+# failed_when on ansible-core 2.21, which is why this is a separate pass.
+
+- name: Reset the read-failure list for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_read_failures: []
+  no_log: true
+
+- name: List each read that failed for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_read_failures: >-
+      {{ openbao_secrets_domain_read_failures
+         + [{'path': (item.item.path if item.item is mapping else item.item),
+             'class': ('not_found' if (item.msg is search('^Invalid or missing path'))
+                       else ('permission_denied' if (item.msg is search('Forbidden|[Pp]ermission'))
+                             else 'transport_or_api_error'))}] }}
+  loop: "{{ openbao_secrets_domain_reads.results }}"
+  loop_control:
+    label: "{{ item.item.path if item.item is mapping else item.item }}"
+  when:
+    - item.msg is defined
+    - >-
+      not (item.item is mapping and (item.item.optional | default(false) | bool)
+           and (item.msg is search('^Invalid or missing path')))
+  no_log: true
+
+- name: Warn about optional paths that are not seeded for {{ openbao_domain.name }}
+  ansible.builtin.debug:
+    msg: >-
+      OpenBao path '{{ item.item.get('mount', openbao_secrets_kv_mount) }}/{{ item.item.path }}'
+      is optional and was not found. Skipping it; fields from it are absent.
+  loop: "{{ openbao_secrets_domain_reads.results }}"
+  loop_control:
+    label: "{{ item.item.path if item.item is mapping else item.item }}"
+  when:
+    - item.msg is defined
+    - item.item is mapping
+    - item.item.optional | default(false) | bool
+    - item.msg is search('^Invalid or missing path')

@@ -1,0 +1,34 @@
+---
+# Isolates one domain whose every enabled path is optional. It records the failure,
+# publishes an empty result for the domain, sets openbao_secrets_domain_isolated so the
+# caller publishes nothing else for it, and warns. The caller sets
+# openbao_secrets_domain_failure_class and openbao_secrets_domain_failure_detail. Names
+# and messages only: no secret value is passed here.
+
+- name: Record the isolated failure for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_isolated_failures: >-
+      {{ (hostvars['localhost'].openbao_secrets_isolated_failures | default([]))
+         + [openbao_domain.name ~ ': ' ~ openbao_secrets_domain_failure_class ~ ': '
+            ~ openbao_secrets_domain_failure_detail] }}
+  delegate_to: localhost
+  delegate_facts: true
+
+- name: Publish an empty result for the isolated domain {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_by_domain: >-
+      {{ hostvars['localhost'].openbao_secrets_by_domain
+         | combine({openbao_domain.name: {}}) }}
+  delegate_to: localhost
+  delegate_facts: true
+
+- name: Mark the domain as isolated for this run — {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_isolated: true
+
+- name: Warn that the domain was isolated — {{ openbao_domain.name }}
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: {{ openbao_domain.name }} failed ({{ openbao_secrets_domain_failure_class }}:
+      {{ openbao_secrets_domain_failure_detail }}). Every one of its paths is optional, so the
+      domain is isolated: it publishes an empty result and the run continues.
