@@ -16,6 +16,8 @@ both the data shapes and the small shared tools that enforce them:
   `deployment.json` object
 - `scripts/semaphore-run` — managed Semaphore task dispatch (`list`, `start`,
   `wait`, `log`, `stop`); the API token is read from OpenBao once per call
+- `scripts/run-ansible` — one `ansible-playbook` run with an OpenBao-signed SSH certificate; each per-caller behaviour
+  is an opt-in `RUN_ANSIBLE_*` option, documented in the script header
 - `ansible/roles/inventory_resolve` — the shared inventory-resolution role
   consumed by the ansible repos (replaces per-repo copy-paste)
 - `ansible/roles/cribl_edge` — native Cribl Edge install (tarball, `mode-edge`,
@@ -116,6 +118,7 @@ bin/
   deployment-json              # Locked, schema-gated deployment.json fetch/edit/put
 scripts/
   semaphore-run                # Managed Semaphore task dispatch (list, start, wait, log, stop)
+  run-ansible                  # One ansible-playbook run with an OpenBao-signed SSH certificate
 ansible/
   roles/inventory_resolve/     # Shared inventory-resolution role (pin via requirements.yml)
   roles/cribl_edge/            # Cribl Edge install — hosts AND containers
@@ -131,10 +134,11 @@ tests/
   validate.sh                  # One-line check-jsonschema invocation
   flow-lock.bats               # CLI-contract tests for bin/
   semaphore-run.bats           # CLI-contract tests for scripts/semaphore-run
+  run-ansible.bats             # CLI-contract tests for scripts/run-ansible
 docs/
   adr/                         # Architectural decision records
   assets/                      # Mermaid `.mmd` sources + rendered `.svg`
-flake.nix                      # packages.flow-lock, packages.semaphore-run + dev shell (consumers pin by tag)
+flake.nix                      # packages.flow-lock, packages.semaphore-run, packages.run-ansible + dev shell (consumers pin by tag)
 .github/workflows/
   ci-gate.yml                  # Thin caller of the org CI gate (profile: ansible)
   ci.yml                       # Schema checks, shape-snapshot gate, shellcheck, bats, ansible-lint, role contract tests
