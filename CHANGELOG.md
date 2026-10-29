@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.34.0](https://github.com/dryvist/homelab-contracts/compare/v5.33.1...v5.34.0) (2026-10-29)
+
+
+### Features
+
+* **run-ansible:** allow localhost-only runs without SSH auth ([#260](https://github.com/dryvist/homelab-contracts/issues/260)) ([d28f2ba](https://github.com/dryvist/homelab-contracts/commit/d28f2ba5462fcb1d575926ae9980d362de77cbe3))
+
 ## [5.33.1](https://github.com/dryvist/homelab-contracts/compare/v5.33.0...v5.33.1) (2026-10-29)
 
 
