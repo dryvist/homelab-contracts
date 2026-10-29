@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.31.0](https://github.com/dryvist/homelab-contracts/compare/v5.30.0...v5.31.0) (2026-10-29)
+
+
+### Features
+
+* **run-ansible:** add opt-in parity switches for the remaining runner copies ([#252](https://github.com/dryvist/homelab-contracts/issues/252)) ([2036281](https://github.com/dryvist/homelab-contracts/commit/2036281750f52b208eeef53395442d961383ebb6))
+
 ## [5.30.0](https://github.com/dryvist/homelab-contracts/compare/v5.29.0...v5.30.0) (2026-10-29)
 
 
