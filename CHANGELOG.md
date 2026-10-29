@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.29.0](https://github.com/dryvist/homelab-contracts/compare/v5.28.0...v5.29.0) (2026-10-29)
+
+
+### Features
+
+* **run-ansible:** add the shared Ansible runner ([#248](https://github.com/dryvist/homelab-contracts/issues/248)) ([fe69377](https://github.com/dryvist/homelab-contracts/commit/fe69377e47c9993811d6611e0918efefe56aeaa0))
+
 ## [5.28.0](https://github.com/dryvist/homelab-contracts/compare/v5.27.1...v5.28.0) (2026-10-29)
 
 
