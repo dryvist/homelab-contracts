@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local stand-in for the OpenBao calls made by tasks/seed_generated.yml.
+"""Local stand-in for the OpenBao and ntfy calls made by openbao_secrets tests.
 
 Test-only. It implements the subset the role depends on: X-Vault-Token checks,
 AppRole login for the read path, KV v2 reads on any mount (200, or 404 for absent and
@@ -8,8 +8,8 @@ forbidden/ segment), check-and-set writes (cas must equal the current version; 0
 absent), token lookup-self, sys/capabilities-self and token revoke-self. It records
 every request so the playbook can assert what was sent.
 
-The /_test/ endpoints are for the playbook only: seed a secret, read state and the
-request log, arm one write failure, shut down. Revocation is recorded, not enforced.
+The /_test/ endpoints are for the playbook only: seed a secret, read state, alerts and
+the request log, arm one write failure, shut down. Revocation is recorded, not enforced.
 """
 
 import argparse
@@ -20,6 +20,7 @@ from typing import Any
 
 STATE = {}  # data path -> {"version": int, "data": dict or None}
 LOG = []  # one entry per request, oldest first
+ALERTS = []  # ntfy messages, without any OpenBao values
 ARMED = {"fail_next_write": False}
 HEALTH = {"status": 200}
 
@@ -154,6 +155,17 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/_test/"):
             return self._test_post()
         path = self.path.split("?")[0]
+        if path == "/ntfy":
+            length = int(self.headers.get("Content-Length") or 0)
+            message = self.rfile.read(length).decode()
+            ALERTS.append({
+                "body": message,
+                "title": self.headers.get("Title", ""),
+                "priority": self.headers.get("Priority", ""),
+                "tags": self.headers.get("Tags", ""),
+            })
+            self._record("POST", path)
+            return self._send(200, {})
         token = self._token()
         body = self._body()
         if path == "/v1/auth/approle/login":
@@ -195,6 +207,8 @@ class Handler(BaseHTTPRequestHandler):
     def _test_get(self):
         if self.path == "/_test/state":
             return self._send(200, {"state": STATE, "log": LOG})
+        if self.path == "/_test/alerts":
+            return self._send(200, {"alerts": ALERTS})
         return self._send(404, {"errors": ["no such test endpoint"]})
 
     def _test_post(self):
@@ -204,6 +218,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {})
         if self.path == "/_test/log-reset":
             LOG.clear()
+            ALERTS.clear()
             return self._send(200, {})
         if self.path == "/_test/arm-write-failure":
             ARMED["fail_next_write"] = True
@@ -219,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Local stand-in for the OpenBao calls made by seed_generated.")
+    parser = argparse.ArgumentParser(description="Local stand-in for the OpenBao and ntfy calls in openbao_secrets tests.")
     parser.add_argument("--port", type=int, required=True)
     args = parser.parse_args()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)

@@ -70,6 +70,8 @@ openbao_secrets_strict_reads: false
 # Only with strict_reads. true: a domain whose every path is optional is isolated
 # on an unreadable path instead of failing the play.
 openbao_secrets_isolate_optional_read_failures: false
+# Optional ntfy endpoint for best-effort pages when an optional domain is isolated.
+openbao_secrets_alert_ntfy_url: ""
 
 # --- Credential PUBLISHING (tasks/publish.yml) ---------------------------------
 # Identity used to write guest-generated credentials back into OpenBao under

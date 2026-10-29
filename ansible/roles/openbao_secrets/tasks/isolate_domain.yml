@@ -32,3 +32,27 @@
       WARNING: {{ openbao_domain.name }} failed ({{ openbao_secrets_domain_failure_class }}:
       {{ openbao_secrets_domain_failure_detail }}). Every one of its paths is optional, so the
       domain is isolated: it publishes an empty result and the run continues.
+
+- name: Page about the isolated domain — {{ openbao_domain.name }}
+  ansible.builtin.uri:
+    url: "{{ openbao_secrets_alert_ntfy_url }}"
+    method: POST
+    body: "{{ openbao_domain.name }} domain isolated: {{ openbao_secrets_domain_failure_class }}"
+    headers:
+      Title: "openbao_secrets: {{ openbao_domain.name }} isolated ({{ openbao_secrets_domain_failure_class }})"
+      Priority: high
+      Tags: warning
+    status_code: [200]
+  register: openbao_secrets_isolation_page
+  failed_when: false
+  no_log: false
+  when: openbao_secrets_alert_ntfy_url | length > 0
+
+- name: Warn that the isolated-domain page was not delivered — {{ openbao_domain.name }}
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: could not publish the {{ openbao_domain.name }} isolation failure to
+      the alert hub (HTTP {{ openbao_secrets_isolation_page.status | default('none') }}).
+  when:
+    - openbao_secrets_alert_ntfy_url | length > 0
+    - openbao_secrets_isolation_page.status | default(0) != 200

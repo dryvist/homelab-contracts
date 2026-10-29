@@ -144,6 +144,10 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/openbao_secrets/seed_generated.yml
+      - name: Verify credential publishing skips KV writes in check mode
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook --check -i localhost, tests/openbao_secrets/publish_check.yml
       - name: Verify the openbao_secrets read path (domain switches, login paths, read classification)
         env:
           ANSIBLE_ROLES_PATH: ansible/roles

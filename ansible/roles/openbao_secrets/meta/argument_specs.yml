@@ -63,6 +63,10 @@ argument_specs:
         description:
           - Only with C(openbao_secrets_strict_reads). When true, a domain whose every path is optional
             publishes an empty result on an unreadable path instead of failing the play.
+      openbao_secrets_alert_ntfy_url:
+        type: str
+        description:
+          - Optional ntfy URL. When set, an isolated domain sends a best-effort page naming the domain and failure class only.
   assert_nonempty:
     short_description: Fail when a named secret variable resolved empty
     description:
