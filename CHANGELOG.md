@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.30.0](https://github.com/dryvist/homelab-contracts/compare/v5.29.0...v5.30.0) (2026-10-29)
+
+
+### Features
+
+* **openbao_secrets:** add opt-in read-path switches ([#247](https://github.com/dryvist/homelab-contracts/issues/247)) ([553464e](https://github.com/dryvist/homelab-contracts/commit/553464e8700c9e874614345dee39702282f62097))
+
+
+### Bug Fixes
+
+* **run-ansible:** validate revoke attempts early, force host key checking, never trace ([#250](https://github.com/dryvist/homelab-contracts/issues/250)) ([23bd10d](https://github.com/dryvist/homelab-contracts/commit/23bd10d947df02bea6bbf34516cb3c29348936e5))
+
 ## [5.29.0](https://github.com/dryvist/homelab-contracts/compare/v5.28.0...v5.29.0) (2026-10-29)
 
 
