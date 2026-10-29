@@ -137,6 +137,23 @@ not the AppRole's own TTL) via a resolver script; on Linux guests, from a
 root-only systemd credential / `0600` EnvironmentFile. See
 `tofu-proxmox` `docs/SECRETS_HIERARCHY.md`.
 
+## Read-path switches
+
+Each input defaults to the behaviour the role already had. `meta/argument_specs.yml` documents them.
+
+| Input | Default | Effect when set |
+| --- | --- | --- |
+| `openbao_secrets_domain_groups`, `openbao_secrets_active_groups` | `{}`, `[]` | A grouped domain is fetched only when one of its groups is active. |
+| `openbao_secrets_fail_on_missing_credentials` | `false` | A domain with no login fails the play unless listed in `openbao_secrets_optional_domains`. |
+| `openbao_secrets_fail_when_unavailable` | `false` | No reachable endpoint fails the play instead of skipping the read path. |
+| `openbao_secrets_skip_cidr_refusals` | `false` | A source-address refusal skips its domain, which publishes no key. |
+| `openbao_secrets_isolate_optional_login_failures` | `false` | A failed login in an all-optional domain publishes an empty result. |
+| `openbao_secrets_strict_reads` | `false` | An unreadable required path, a 403 or a transport error fails its domain. |
+| `openbao_secrets_isolate_optional_read_failures` | `false` | With strict reads, an all-optional domain publishes an empty result on an unreadable path. |
+
+A path is a string or a mapping with `path`, `mount`, `optional` and `enabled`. `enabled: false` skips it before any read.
+`tasks_from: assert_nonempty.yml` fails when a variable named in `openbao_secrets_required_vars` resolves empty.
+
 ## Wiring
 
 Runs as a pre-fetch play in `playbooks/site.yml`, against the union of every

@@ -38,6 +38,39 @@ openbao_secrets_bao_addr_candidates: >-
   {{ (([openbao_secrets_bao_addr] if openbao_secrets_bao_addr | length > 0 else [])
       + openbao_secrets_node_addrs) | unique }}
 
+# --- Read-path behaviour switches (tasks/main.yml, fetch_domain.yml) -------------
+# Every value below keeps the behaviour this role has always had. A caller that
+# needs a stricter behaviour sets the switch in its play vars.
+#
+# Host-group scoping. A domain listed here with consumer groups is fetched only
+# when one of them is in openbao_secrets_active_groups. A domain with no entry is
+# always fetched, so a caller that sets neither input reads every domain.
+openbao_secrets_domain_groups: {}
+openbao_secrets_active_groups: []
+# Domains a missing AppRole pair may skip when fail_on_missing_credentials is set.
+openbao_secrets_optional_domains: []
+# false: a domain with no AppRole login is skipped with a message (this role's
+# behaviour). true: the play fails, unless the domain is listed in
+# openbao_secrets_optional_domains. A domain with required: true always fails.
+openbao_secrets_fail_on_missing_credentials: false
+# false: when no endpoint answers /v1/sys/health, the read path is skipped (this
+# role's behaviour). true: the play fails.
+openbao_secrets_fail_when_unavailable: false
+# false: a login refused on source-address (CIDR) grounds fails the play (this
+# role's behaviour). true: that domain is skipped for this run and publishes no key.
+openbao_secrets_skip_cidr_refusals: false
+# false: a failed AppRole login fails the play (this role's behaviour). true: a
+# domain whose every path is optional is isolated instead. Its failure is recorded,
+# it publishes an empty result, and the run continues.
+openbao_secrets_isolate_optional_login_failures: false
+# false: unreadable paths are ignored (this role's behaviour). true: a 404 on a
+# required path, or any 403 or transport error, fails the domain. A 404 on a path
+# declared optional is still skipped with a warning.
+openbao_secrets_strict_reads: false
+# Only with strict_reads. true: a domain whose every path is optional is isolated
+# on an unreadable path instead of failing the play.
+openbao_secrets_isolate_optional_read_failures: false
+
 # --- Credential PUBLISHING (tasks/publish.yml) ---------------------------------
 # Identity used to write guest-generated credentials back into OpenBao under
 # secret/apps/<app>. This is the ansible-converge AppRole, whose policy is

@@ -1,0 +1,43 @@
+---
+# Fail-closed guard: refuses to render a secret that resolved empty. A consumer that
+# reads a domain not fetched on this run resolves every field to nothing, and a
+# converge would then write that nothing over a live credential.
+#
+# Contract, set by the caller:
+#   openbao_secrets_required_vars : list of VARIABLE NAMES that must resolve non-empty
+#
+# Usage:
+#   - name: Assert this app's secrets resolved
+#     ansible.builtin.include_role:
+#       name: dryvist.homelab.openbao_secrets
+#       tasks_from: assert_nonempty.yml
+#     vars:
+#       openbao_secrets_required_vars:
+#         - myapp_db_password
+#
+# Only variable NAMES are printed, never values, so the task runs without no_log.
+
+- name: Validate the assert_nonempty inputs
+  ansible.builtin.assert:
+    that:
+      - openbao_secrets_required_vars is defined
+      - openbao_secrets_required_vars is sequence
+      - openbao_secrets_required_vars is not string
+      - openbao_secrets_required_vars | length > 0
+    fail_msg: >-
+      openbao_secrets assert_nonempty requires openbao_secrets_required_vars to be a
+      non-empty list of variable names.
+    quiet: true
+
+- name: Assert every required secret resolved to a non-empty value
+  ansible.builtin.assert:
+    that:
+      - lookup('vars', item, default='') | default('', true) | trim | length > 0
+    fail_msg: >-
+      '{{ item }}' resolved to an empty value. Converging would write that empty value over
+      the live credential. Re-run with its OpenBao domain fetched, or seed the field in
+      OpenBao. Never let this proceed empty.
+    quiet: true
+  loop: "{{ openbao_secrets_required_vars }}"
+  loop_control:
+    label: "{{ item }}"

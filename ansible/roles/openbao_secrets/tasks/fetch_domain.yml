@@ -1,74 +1,97 @@
 ---
-# Fetches ONE domain's KV subtree from OpenBao, invoked once per entry in
-# openbao_secrets_domains (the loop var is `openbao_domain`; delegation and
-# run_once are set by the caller's enclosing block in main.yml, so every task
-# here inherits them). SKIPS CLEANLY when this specific domain's role_id/
-# secret_id envs are unset — an operator can migrate one domain at a time
-# onto OpenBao while the rest still fall back to env/SOPS via the
-# group_vars/all.yml `{}` defaults.
+# Fetches ONE resource domain. openbao_domain is the loop variable set by main.yml,
+# which delegates the block, so every task here runs on the controller.
+#
+# A path is a string, or a mapping with path, mount, optional and enabled. A string
+# path is required. A mapping path is required unless optional is true, and is read
+# only when enabled is not false.
 
-- name: Resolve role_id/secret_id for {{ openbao_domain.name }}
+- name: Resolve the AppRole pair for {{ openbao_domain.name }}
   ansible.builtin.include_tasks: resolve_approle.yml
 
-- name: Report missing credentials (env/SOPS fallback) for {{ openbao_domain.name }}
+- name: Start the enabled path list for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_paths_to_read: []
+
+# A loop keeps the listed order, which decides merge precedence (later paths win).
+- name: Select the enabled paths for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_paths_to_read: "{{ openbao_secrets_domain_paths_to_read + [openbao_path] }}"
+  loop: "{{ openbao_domain.paths }}"
+  loop_control:
+    loop_var: openbao_path
+    label: "{{ openbao_path.path | default(openbao_path) }}"
+  when: not (openbao_path is mapping and 'enabled' in openbao_path and not (openbao_path.enabled | bool))
+
+- name: Decide whether every enabled path is optional for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_all_optional: >-
+      {{ (openbao_secrets_domain_paths_to_read | selectattr('optional', 'defined')
+          | selectattr('optional') | list | length)
+         == (openbao_secrets_domain_paths_to_read | length) }}
+  no_log: true
+
+- name: Check the workstation issuer inputs for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_issuer_role_set: "{{ openbao_domain.workstation_issuer_role | default('', true) | length > 0 }}"
+    openbao_secrets_issuer_pair_present: >-
+      {{ (lookup('env', 'OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID') | length > 0)
+         and (lookup('env', 'OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID') | length > 0) }}
+    openbao_secrets_issuer_pair_partial: >-
+      {{ (lookup('env', 'OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID') | length > 0)
+         != (lookup('env', 'OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID') | length > 0) }}
+    openbao_secrets_flow_lock_present: "{{ lookup('ansible.builtin.pipe', 'command -v flow-lock || true') | length > 0 }}"
+  no_log: true
+
+- name: Fail on an incomplete workstation issuer pair for {{ openbao_domain.name }}
+  ansible.builtin.fail:
+    msg: >-
+      The approle-issuer pair is incomplete for {{ openbao_domain.name }}: exactly one of
+      its two variables is set. Refusing to fall back to the domain's stored secret_id.
+  when:
+    - openbao_secrets_issuer_role_set | bool
+    - openbao_secrets_issuer_pair_partial | bool
+
+- name: Decide the login path for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_use_issuer: >-
+      {{ openbao_secrets_issuer_role_set | bool and openbao_secrets_issuer_pair_present | bool
+         and openbao_secrets_flow_lock_present | bool }}
+    openbao_secrets_domain_login_configured: >-
+      {{ (openbao_secrets_issuer_role_set | bool and openbao_secrets_issuer_pair_present | bool
+          and openbao_secrets_flow_lock_present | bool)
+         or (openbao_secrets_domain_role_id | length > 0 and openbao_secrets_domain_secret_id | length > 0) }}
+  no_log: true
+
+- name: Fail when a domain has no AppRole login — {{ openbao_domain.name }}
+  ansible.builtin.fail:
+    msg: >-
+      {{ openbao_domain.name }} has no AppRole login: neither its workstation issuer nor
+      an AppRole pair is configured. Supply the pair, or list the domain in
+      openbao_secrets_optional_domains to skip it deliberately.
+  when:
+    - openbao_secrets_domain_paths_to_read | length > 0
+    - not (openbao_secrets_domain_login_configured | bool)
+    - >-
+      (openbao_domain.required | default(false) | bool)
+      or (openbao_secrets_fail_on_missing_credentials | bool
+          and openbao_domain.name not in openbao_secrets_optional_domains)
+
+- name: Skip a domain with no AppRole login — {{ openbao_domain.name }}
   ansible.builtin.debug:
     msg: >-
-      OPENBAO_APPROLE_{{ openbao_domain.name | upper | replace('-', '_') }}_ROLE_ID/_SECRET_ID
-      (or {{ openbao_domain.role_id_env }} / {{ openbao_domain.secret_id_env }})
-      not both set — skipping the {{ openbao_domain.name }} domain; its
-      consumer roles fall back to env/SOPS secrets.
-  when: >-
-    openbao_secrets_domain_role_id | length == 0
-    or openbao_secrets_domain_secret_id | length == 0
-
-- name: Fetch and merge secrets for {{ openbao_domain.name }}
+      {{ openbao_domain.name }} has no AppRole login configured, so it is skipped. Its
+      consumers resolve nothing from OpenBao on this run.
   when:
-    - openbao_secrets_domain_role_id | length > 0
-    - openbao_secrets_domain_secret_id | length > 0
-  no_log: true
-  block:
-    # set_fact persists for the rest of the play, so without an explicit reset
-    # here the SECOND domain's merge would start from the FIRST domain's
-    # leftover data (facts aren't automatically scoped per loop iteration).
-    - name: Reset the per-domain merge accumulator for {{ openbao_domain.name }}
-      ansible.builtin.set_fact:
-        openbao_secrets_domain_merged: {}
+    - openbao_secrets_domain_paths_to_read | length > 0
+    - not (openbao_secrets_domain_login_configured | bool)
+    - not (openbao_domain.required | default(false) | bool)
+    - >-
+      not (openbao_secrets_fail_on_missing_credentials | bool
+           and openbao_domain.name not in openbao_secrets_optional_domains)
 
-    - name: Log in with the AppRole for {{ openbao_domain.name }}
-      community.hashi_vault.vault_login:
-        url: "{{ hostvars['localhost'].openbao_secrets_active_addr | default(openbao_secrets_bao_addr, true) }}"
-        auth_method: approle
-        role_id: "{{ openbao_secrets_domain_role_id }}"
-        secret_id: "{{ openbao_secrets_domain_secret_id }}"
-        validate_certs: "{{ openbao_secrets_validate_certs }}"
-      register: openbao_secrets_domain_login
-
-    - name: Read each KV path, tolerating not-yet-seeded ones, for {{ openbao_domain.name }}
-      community.hashi_vault.vault_kv2_get:
-        url: "{{ hostvars['localhost'].openbao_secrets_active_addr | default(openbao_secrets_bao_addr, true) }}"
-        auth_method: token
-        token: "{{ openbao_secrets_domain_login.login.auth.client_token }}"
-        engine_mount_point: "{{ openbao_secrets_kv_mount }}"
-        path: "{{ item }}"
-        validate_certs: "{{ openbao_secrets_validate_certs }}"
-      loop: "{{ openbao_domain.paths }}"
-      register: openbao_secrets_domain_reads
-      failed_when: false
-
-    - name: Merge readable paths into one dict for {{ openbao_domain.name }}
-      ansible.builtin.set_fact:
-        openbao_secrets_domain_merged: "{{ openbao_secrets_domain_merged | combine(item.secret) }}"
-      loop: "{{ openbao_secrets_domain_reads.results }}"
-      loop_control:
-        label: "{{ item.item }}"
-      when: item.secret is defined and item.secret is mapping
-
-    # delegate_facts + reading hostvars['localhost'] keep the single accumulator
-    # on localhost (see the note on the init task in main.yml). Reading the bare
-    # var here would resolve the play-host copy and silently drop earlier domains.
-    - name: Accumulate into the by-domain dict for {{ openbao_domain.name }}
-      ansible.builtin.set_fact:
-        openbao_secrets_by_domain: >-
-          {{ hostvars['localhost'].openbao_secrets_by_domain
-             | combine({ openbao_domain.name: openbao_secrets_domain_merged }) }}
-      delegate_facts: true
+- name: Fetch the domain when it has a login path — {{ openbao_domain.name }}
+  ansible.builtin.include_tasks: login_and_read.yml
+  when:
+    - openbao_secrets_domain_paths_to_read | length > 0
+    - openbao_secrets_domain_login_configured | bool

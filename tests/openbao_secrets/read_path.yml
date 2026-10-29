@@ -1,0 +1,80 @@
+---
+# Behavioural checks for the openbao_secrets read path (tasks/main.yml and its includes)
+# against the local KV v2 and AppRole stand-in in tests/openbao_secrets/fake_kv2.py.
+#
+# Each env var below names a credential the cases use. flow-lock is the stand-in in
+# stub-bin/, so the issuer login path runs without a real flow-lock. Run from the
+# repository root:
+#
+#   PATH="$PWD/tests/openbao_secrets/stub-bin:$PATH" \
+#   FAKE_READER_ROLE_ID=reader FAKE_READER_SECRET_ID=reader-secret \
+#   FAKE_CIDR_ROLE_ID=cidr FAKE_CIDR_SECRET_ID=cidr-secret \
+#   FAKE_REFUSED_ROLE_ID=refused FAKE_REFUSED_SECRET_ID=refused-secret \
+#   OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role \
+#   OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret \
+#   ANSIBLE_ROLES_PATH=ansible/roles \
+#     ansible-playbook -i localhost, tests/openbao_secrets/read_path.yml
+- name: Verify the openbao_secrets read path against the KV v2 and AppRole stand-in
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    fake_port: 18233
+    # hvac for community.hashi_vault is installed for the interpreter that runs ansible-playbook.
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    fake_addr: "http://127.0.0.1:{{ fake_port }}"
+    openbao_secrets_bao_addr: "{{ fake_addr }}"
+    tofu_data:
+      containers: {}
+      constants:
+        service_ports:
+          openbao_api: 8200
+  tasks:
+    - name: Require the fake OpenBao test port to be free
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ fake_port }}"
+        state: stopped
+        timeout: 1
+      changed_when: false
+
+    - name: Run the read-path test cases
+      block:
+        - name: Start the KV v2 and AppRole stand-in
+          ansible.builtin.command: "python3 {{ playbook_dir }}/fake_kv2.py --port {{ fake_port }}"
+          async: 900
+          poll: 0
+          changed_when: false
+
+        - name: Mark the stand-in as started
+          ansible.builtin.set_fact:
+            openbao_read_fake_server_started: true
+
+        - name: Wait for the stand-in to listen
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ fake_port }}"
+            timeout: 30
+          changed_when: false
+
+        - name: Run the read-path scenarios
+          ansible.builtin.import_tasks: read_path_cases.yml
+      always:
+        - name: Stop the stand-in
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/shutdown"
+            method: POST
+            status_code: [200]
+            timeout: 5
+          when: openbao_read_fake_server_started | default(false) | bool
+          changed_when: false
+
+        - name: Wait for the stand-in to stop
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ fake_port }}"
+            state: stopped
+            timeout: 10
+            connect_timeout: 1
+          when: openbao_read_fake_server_started | default(false) | bool
+          changed_when: false

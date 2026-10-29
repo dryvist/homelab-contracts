@@ -1,0 +1,195 @@
+---
+# ---- read failures -------------------------------------------------------------------------
+
+- name: Case 16 - an unreadable path is ignored when strict reads are off
+  block:
+    - name: Case 16 - read the domain with one forbidden path
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: partial
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths:
+              - apps/present
+              - apps/forbidden/secret
+
+    - name: Case 16 - assert the readable path is published and nothing failed
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.partial == {'present_key': 'present-value'}"
+        quiet: true
+
+- name: Case 17 - an unreadable path fails the domain under strict reads
+  block:
+    - name: Case 17 - expect the read to fail
+      block:
+        - name: Case 17 - read the domain with one forbidden path
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_strict_reads: true
+            openbao_secrets_domains:
+              - name: partial
+                role_id_env: FAKE_READER_ROLE_ID
+                secret_id_env: FAKE_READER_SECRET_ID
+                paths:
+                  - apps/present
+                  - apps/forbidden/secret
+
+        - name: Case 17 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 17 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 17 - assert the domain failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+- name: Case 18 - an unreadable path in an all-optional domain is isolated when isolate_optional_read_failures is true
+  block:
+    - name: Case 18 - read the forbidden optional domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_strict_reads: true
+        openbao_secrets_isolate_optional_read_failures: true
+        openbao_secrets_domains:
+          - name: optional_forbidden
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths:
+              - path: apps/forbidden/secret
+                optional: true
+
+    - name: Case 18 - assert the domain publishes an empty result and the failure is recorded
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.optional_forbidden == {}"
+          - "hostvars['localhost'].openbao_secrets_isolated_failures | select('match', '^optional_forbidden: read_failed') | list | length == 1"
+        quiet: true
+
+- name: Case 19 - an unreadable path in an all-optional domain fails when isolate_optional_read_failures is false
+  block:
+    - name: Case 19 - expect the read to fail
+      block:
+        - name: Case 19 - read the forbidden optional domain
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_strict_reads: true
+            openbao_secrets_isolate_optional_read_failures: false
+            openbao_secrets_domains:
+              - name: optional_forbidden
+                role_id_env: FAKE_READER_ROLE_ID
+                secret_id_env: FAKE_READER_SECRET_ID
+                paths:
+                  - path: apps/forbidden/secret
+                    optional: true
+
+        - name: Case 19 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 19 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 19 - assert the domain failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+# ---- check mode, required values, distinct prefixes -----------------------------------------
+
+- name: Case 20 - reads run for real under check mode
+  check_mode: true
+  block:
+    - name: Case 20 - read the domain in check mode
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: checked
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths: [apps/present]
+
+    - name: Case 20 - assert the values were read under check mode
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.checked == {'present_key': 'present-value'}"
+        quiet: true
+
+- name: Case 21 - a required variable that resolved empty fails the assert_nonempty guard
+  block:
+    - name: Case 21 - a resolved variable passes the guard
+      ansible.builtin.include_role:
+        name: openbao_secrets
+        tasks_from: assert_nonempty.yml
+      vars:
+        openbao_secrets_case_resolved_value: present-value
+        openbao_secrets_required_vars: [openbao_secrets_case_resolved_value]
+
+    - name: Case 21 - expect the guard to fail on an unresolved variable
+      block:
+        - name: Case 21 - run the guard on an unset variable
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: assert_nonempty.yml
+          vars:
+            openbao_secrets_case_empty_value: ""
+            openbao_secrets_required_vars: [openbao_secrets_case_empty_value]
+
+        - name: Case 21 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 21 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 21 - assert the guard failed on the empty variable
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+- name: Case 22 - two domain names that share an AppRole env prefix fail the play
+  block:
+    - name: Case 22 - expect the read to fail
+      block:
+        - name: Case 22 - read two colliding domains
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_domains:
+              - name: dup-name
+                role_id_env: FAKE_READER_ROLE_ID
+                secret_id_env: FAKE_READER_SECRET_ID
+                paths: [apps/present]
+              - name: dup_name
+                role_id_env: FAKE_READER_ROLE_ID
+                secret_id_env: FAKE_READER_SECRET_ID
+                paths: [apps/present]
+
+        - name: Case 22 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 22 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 22 - assert the play failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true

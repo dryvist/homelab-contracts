@@ -1,5 +1,78 @@
 ---
 argument_specs:
+  main:
+    short_description: Read the configured OpenBao domains on the controller
+    description:
+      - Logs in once per domain, reads its enabled paths, and publishes the merged data as
+        C(hostvars['localhost'].openbao_secrets_by_domain), keyed by domain name.
+      - Every switch defaults to this role's original behaviour. A stricter value is opt-in.
+      - Include it with C(include_role). It delegates to localhost and runs once per play.
+    options:
+      openbao_secrets_bao_addr:
+        type: str
+        description: OpenBao base URL. Defaults to C(SECRET_STORE_ADDR), then C(BAO_ADDR).
+      openbao_secrets_kv_mount:
+        type: str
+        description: Default KV v2 mount for paths that do not name one.
+      openbao_secrets_validate_certs:
+        type: bool
+        description: Verify the OpenBao TLS certificate.
+      openbao_secrets_domains:
+        type: list
+        elements: dict
+        description:
+          - One entry per domain. C(name) is required; C(paths) is a list of strings or mappings.
+          - A path mapping takes C(path), and optionally C(mount), C(optional) and C(enabled).
+          - C(credential_domain) names another domain whose AppRole pair to use.
+          - C(workstation_issuer_role) selects the flow-lock issuer login when the issuer pair is set.
+          - C(required) makes a missing login fail the play, even for a domain listed as optional.
+      openbao_secrets_domain_groups:
+        type: dict
+        description: Maps a domain name to its consumer groups. A domain with no entry is always fetched.
+      openbao_secrets_active_groups:
+        type: list
+        elements: str
+        description: Consumer groups active in this run. Used with C(openbao_secrets_domain_groups).
+      openbao_secrets_optional_domains:
+        type: list
+        elements: str
+        description: Domains that may skip when no AppRole login is configured and fail-on-missing is set.
+      openbao_secrets_fail_on_missing_credentials:
+        type: bool
+        description: When true, a domain with no AppRole login fails the play unless it is optional.
+      openbao_secrets_fail_when_unavailable:
+        type: bool
+        description: When true, no reachable OpenBao endpoint fails the play. When false the read path is skipped.
+      openbao_secrets_skip_cidr_refusals:
+        type: bool
+        description: When true, a login refused on source-address grounds skips that domain and publishes no key.
+      openbao_secrets_isolate_optional_login_failures:
+        type: bool
+        description:
+          - When true, a failed login in a domain whose every path is optional is recorded, publishes an empty
+            result, and the run continues.
+          - When false the play fails.
+      openbao_secrets_strict_reads:
+        type: bool
+        description:
+          - When true, a 404 on a required path and any 403 or transport error fails the domain.
+          - A 404 on a path declared C(optional) is still skipped with a warning.
+          - When false, unreadable paths are ignored.
+      openbao_secrets_isolate_optional_read_failures:
+        type: bool
+        description:
+          - Only with C(openbao_secrets_strict_reads). When true, a domain whose every path is optional
+            publishes an empty result on an unreadable path instead of failing the play.
+  assert_nonempty:
+    short_description: Fail when a named secret variable resolved empty
+    description:
+      - Call it with C(include_role) and C(tasks_from) set to C(assert_nonempty). Only names are printed.
+    options:
+      openbao_secrets_required_vars:
+        type: list
+        elements: str
+        required: true
+        description: Variable names that must resolve to a non-empty value.
   seed_generated:
     short_description: Generate-if-absent seeding of fields in one KV v2 secret
     description:

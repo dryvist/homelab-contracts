@@ -1,0 +1,526 @@
+---
+# Cases for tests/openbao_secrets/read_path.yml. Each case resets the request log, runs
+# the real role through include_role, and asserts the published result. A case that must
+# fail the play runs inside block/rescue, and the outcome is asserted afterwards.
+
+- name: Seed the KV entries the cases read
+  ansible.builtin.uri:
+    url: "{{ fake_addr }}/_test/seed"
+    method: POST
+    body_format: json
+    body:
+      path: "{{ item.path }}"
+      version: 1
+      data: "{{ item.data }}"
+    status_code: [200]
+  loop:
+    - path: secret/data/apps/present
+      data: {present_key: present-value}
+    - path: secret/data/apps/disabled
+      data: {disabled_key: disabled-value}
+    - path: secret-external/data/apps/mounted
+      data: {mounted_key: from-external}
+    - path: secret/data/apps/order-first
+      data: {shared_key: from-first}
+    - path: secret/data/apps/order-second
+      data: {shared_key: from-second}
+  loop_control:
+    label: "{{ item.path }}"
+
+# ---- paths: mount, optional, enabled ---------------------------------------------------
+
+- name: Case 1 - a path is read from its declared mount
+  block:
+    - name: Case 1 - reset the request log
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/log-reset"
+        method: POST
+        status_code: [200]
+
+    - name: Case 1 - read the domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: mounted
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths:
+              - path: apps/mounted
+                mount: secret-external
+
+    - name: Case 1 - assert the value came from the declared mount
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.mounted == {'mounted_key': 'from-external'}"
+        quiet: true
+
+- name: Case 2 - a 404 on an optional path is skipped under strict reads
+  block:
+    - name: Case 2 - read the domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_strict_reads: true
+        openbao_secrets_domains:
+          - name: optional_ok
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths:
+              - apps/present
+              - path: apps/absent-optional
+                optional: true
+
+    - name: Case 2 - assert the readable path is published and nothing failed
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.optional_ok == {'present_key': 'present-value'}"
+        quiet: true
+
+- name: Case 3 - a 404 on a required path fails the domain under strict reads
+  block:
+    - name: Case 3 - expect the read to fail
+      block:
+        - name: Case 3 - read the domain
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_strict_reads: true
+            openbao_secrets_domains:
+              - name: required_missing
+                role_id_env: FAKE_READER_ROLE_ID
+                secret_id_env: FAKE_READER_SECRET_ID
+                paths:
+                  - apps/absent-required
+
+        - name: Case 3 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 3 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 3 - assert the domain failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+- name: Case 4 - a path with enabled false is not read
+  block:
+    - name: Case 4 - reset the request log
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/log-reset"
+        method: POST
+        status_code: [200]
+
+    - name: Case 4 - read the domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: enabled_check
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths:
+              - path: apps/disabled
+                enabled: false
+              - apps/present
+
+    - name: Case 4 - read the request log
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/state"
+        return_content: true
+      register: case4_state
+
+    - name: Case 4 - assert the disabled path was never requested or published
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.enabled_check == {'present_key': 'present-value'}"
+          - case4_state.json.log | selectattr('path', 'equalto', 'secret/data/apps/disabled') | list | length == 0
+        quiet: true
+
+- name: Case 4b - an enabled path keeps its listed position in the merge
+  block:
+    - name: Case 4b - read the domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: order_check
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths:
+              - path: apps/order-first
+                enabled: true
+              - apps/order-second
+
+    - name: Case 4b - assert the later listed path wins the shared key
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.order_check == {'shared_key': 'from-second'}"
+        quiet: true
+
+# ---- host-group scoping ------------------------------------------------------------------
+
+- name: Case 5 - a domain whose groups are inactive is not fetched
+  block:
+    - name: Case 5 - read with the media group inactive
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domain_groups:
+          grouped_out: [media]
+        openbao_secrets_active_groups: [observability]
+        openbao_secrets_domains:
+          - name: grouped_out
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths: [apps/present]
+          - name: open_domain
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths: [apps/present]
+
+    - name: Case 5 - assert only the ungrouped domain was fetched
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain | list == ['open_domain']"
+        quiet: true
+
+    - name: Case 5 - read again with the media group active
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domain_groups:
+          grouped_out: [media]
+        openbao_secrets_active_groups: [media]
+        openbao_secrets_domains:
+          - name: grouped_out
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths: [apps/present]
+
+    - name: Case 5 - assert the grouped domain is fetched once its group is active
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain | list == ['grouped_out']"
+        quiet: true
+
+# ---- login paths -------------------------------------------------------------------------
+
+- name: Case 6 - a domain with a workstation issuer logs in through flow-lock and revokes its token
+  block:
+    - name: Case 6 - reset the request log
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/log-reset"
+        method: POST
+        status_code: [200]
+
+    - name: Case 6 - read the issuer domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: issued
+            workstation_issuer_role: issuer-role
+            paths: [apps/present]
+
+    - name: Case 6 - read the request log
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/state"
+        return_content: true
+      register: case6_state
+
+    - name: Case 6 - assert the value was read and the issuer token was revoked
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.issued == {'present_key': 'present-value'}"
+          - >-
+            case6_state.json.log | selectattr('path', 'equalto', '/v1/auth/token/revoke-self')
+            | selectattr('token', 'equalto', 'issuer-token') | list | length == 1
+        quiet: true
+
+- name: Case 7 - a domain with no AppRole login is skipped by default
+  block:
+    - name: Case 7 - read the unprovisioned domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: unprovisioned
+            role_id_env: FAKE_UNPROVISIONED_ROLE_ID
+            secret_id_env: FAKE_UNPROVISIONED_SECRET_ID
+            paths: [apps/present]
+
+    - name: Case 7 - assert the domain is absent and nothing failed
+      ansible.builtin.assert:
+        that:
+          - "'unprovisioned' not in hostvars['localhost'].openbao_secrets_by_domain"
+        quiet: true
+
+- name: Case 8 - a domain with no AppRole login fails when fail_on_missing_credentials is set
+  block:
+    - name: Case 8 - expect the read to fail
+      block:
+        - name: Case 8 - read the unprovisioned domain
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_fail_on_missing_credentials: true
+            openbao_secrets_domains:
+              - name: unprovisioned
+                role_id_env: FAKE_UNPROVISIONED_ROLE_ID
+                secret_id_env: FAKE_UNPROVISIONED_SECRET_ID
+                paths: [apps/present]
+
+        - name: Case 8 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 8 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 8 - assert the domain failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+- name: Case 9 - a listed optional domain with no AppRole login is skipped when fail_on_missing_credentials is set
+  block:
+    - name: Case 9 - read the listed optional domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_fail_on_missing_credentials: true
+        openbao_secrets_optional_domains: [unprovisioned]
+        openbao_secrets_domains:
+          - name: unprovisioned
+            role_id_env: FAKE_UNPROVISIONED_ROLE_ID
+            secret_id_env: FAKE_UNPROVISIONED_SECRET_ID
+            paths: [apps/present]
+
+    - name: Case 9 - assert the optional domain is absent and nothing failed
+      ansible.builtin.assert:
+        that:
+          - "'unprovisioned' not in hostvars['localhost'].openbao_secrets_by_domain"
+        quiet: true
+
+# ---- endpoint availability -------------------------------------------------------------------
+
+- name: Case 10 - no reachable endpoint skips the read path by default
+  block:
+    - name: Case 10 - report the endpoint as unhealthy
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/health-status"
+        method: POST
+        body_format: json
+        body: {status: 503}
+        status_code: [200]
+
+    - name: Case 10 - read with the endpoint unhealthy
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_domains:
+          - name: reader_when_down
+            role_id_env: FAKE_READER_ROLE_ID
+            secret_id_env: FAKE_READER_SECRET_ID
+            paths: [apps/present]
+
+    - name: Case 10 - assert nothing was published and nothing failed
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain == {}"
+        quiet: true
+  always:
+    - name: Case 10 - restore the endpoint to healthy
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/health-status"
+        method: POST
+        body_format: json
+        body: {status: 200}
+        status_code: [200]
+
+- name: Case 11 - no reachable endpoint fails the play when fail_when_unavailable is set
+  block:
+    - name: Case 11 - report the endpoint as unhealthy
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/health-status"
+        method: POST
+        body_format: json
+        body: {status: 503}
+        status_code: [200]
+
+    - name: Case 11 - expect the read to fail
+      block:
+        - name: Case 11 - read with the endpoint unhealthy
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_fail_when_unavailable: true
+            openbao_secrets_domains:
+              - name: reader_when_down
+                role_id_env: FAKE_READER_ROLE_ID
+                secret_id_env: FAKE_READER_SECRET_ID
+                paths: [apps/present]
+
+        - name: Case 11 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 11 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 11 - assert the play failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+  always:
+    - name: Case 11 - restore the endpoint to healthy
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/health-status"
+        method: POST
+        body_format: json
+        body: {status: 200}
+        status_code: [200]
+
+# ---- login failures ----------------------------------------------------------------------
+
+- name: Case 12 - a failed login fails the play when isolate_optional_login_failures is false
+  block:
+    - name: Case 12 - expect the read to fail
+      block:
+        - name: Case 12 - read the refused optional domain
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_isolate_optional_login_failures: false
+            openbao_secrets_domains:
+              - name: loginfail
+                role_id_env: FAKE_REFUSED_ROLE_ID
+                secret_id_env: FAKE_REFUSED_SECRET_ID
+                paths:
+                  - path: apps/present
+                    optional: true
+
+        - name: Case 12 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 12 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 12 - assert the play failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+- name: Case 13 - a failed login in an all-optional domain is isolated when isolate_optional_login_failures is true
+  block:
+    - name: Case 13 - read the refused all-optional domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_isolate_optional_login_failures: true
+        openbao_secrets_domains:
+          - name: loginfail
+            role_id_env: FAKE_REFUSED_ROLE_ID
+            secret_id_env: FAKE_REFUSED_SECRET_ID
+            paths:
+              - path: apps/present
+                optional: true
+
+    - name: Case 13 - assert the domain publishes an empty result and the failure is recorded
+      ansible.builtin.assert:
+        that:
+          - "hostvars['localhost'].openbao_secrets_by_domain.loginfail == {}"
+          - "hostvars['localhost'].openbao_secrets_isolated_failures | select('match', '^loginfail: login_failed') | list | length == 1"
+        quiet: true
+
+    - name: Case 13 - expect a required path to still fail the play
+      block:
+        - name: Case 13 - read the refused domain with a required path
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_isolate_optional_login_failures: true
+            openbao_secrets_domains:
+              - name: loginfail
+                role_id_env: FAKE_REFUSED_ROLE_ID
+                secret_id_env: FAKE_REFUSED_SECRET_ID
+                paths:
+                  - apps/present
+
+        - name: Case 13 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 13 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 13 - assert the required-path domain failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+- name: Case 14 - a source-address refusal fails the play by default
+  block:
+    - name: Case 14 - expect the read to fail
+      block:
+        - name: Case 14 - read the CIDR-bound domain
+          ansible.builtin.include_role:
+            name: openbao_secrets
+          vars:
+            openbao_secrets_domains:
+              - name: cidr_domain
+                role_id_env: FAKE_CIDR_ROLE_ID
+                secret_id_env: FAKE_CIDR_SECRET_ID
+                paths: [apps/present]
+
+        - name: Case 14 - record an unexpected pass
+          ansible.builtin.set_fact:
+            case_outcome: passed
+      rescue:
+        - name: Case 14 - record the expected failure
+          ansible.builtin.set_fact:
+            case_outcome: failed
+
+    - name: Case 14 - assert the play failed
+      ansible.builtin.assert:
+        that:
+          - case_outcome == 'failed'
+        quiet: true
+
+- name: Case 15 - a source-address refusal skips the domain when skip_cidr_refusals is true
+  block:
+    - name: Case 15 - read the CIDR-bound domain
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_skip_cidr_refusals: true
+        openbao_secrets_domains:
+          - name: cidr_domain
+            role_id_env: FAKE_CIDR_ROLE_ID
+            secret_id_env: FAKE_CIDR_SECRET_ID
+            paths: [apps/present]
+
+    - name: Case 15 - assert the domain publishes no key and the refusal is recorded
+      ansible.builtin.assert:
+        that:
+          - "'cidr_domain' not in hostvars['localhost'].openbao_secrets_by_domain"
+          - "hostvars['localhost'].openbao_secrets_isolated_failures | select('match', '^cidr_domain: cidr_refused') | list | length == 1"
+        quiet: true
+
+
+- name: Run the read-path cases from the read failures section onward
+  ansible.builtin.import_tasks: read_path_cases_2.yml

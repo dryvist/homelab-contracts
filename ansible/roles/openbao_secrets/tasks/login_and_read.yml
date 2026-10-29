@@ -1,0 +1,260 @@
+---
+# Logs one domain in, reads its enabled paths, and publishes the merged result.
+# Included by fetch_domain.yml only when the domain has a login path and at least one
+# enabled path. A token minted through flow-lock is revoked on every way out of this
+# file. Tokens and secret values are never printed.
+
+- name: Reset the per-domain state for {{ openbao_domain.name }}
+  ansible.builtin.set_fact:
+    openbao_secrets_domain_token: ""
+    openbao_secrets_domain_login_ok: false
+    openbao_secrets_domain_login_error: ""
+    openbao_secrets_domain_cidr_refused: false
+    openbao_secrets_domain_isolated: false
+    openbao_secrets_domain_merged: {}
+    openbao_secrets_domain_read_failures: []
+  no_log: true
+
+- name: Login, read and publish {{ openbao_domain.name }}
+  block:
+    - name: Mint a per-call token through flow-lock for {{ openbao_domain.name }}
+      ansible.builtin.command:
+        argv:
+          - flow-lock
+          - approle-token
+          - "{{ openbao_domain.workstation_issuer_role }}"
+      register: openbao_secrets_domain_issuer_login
+      changed_when: false
+      check_mode: false
+      # ignore_errors, not failed_when: false. failed_when drops the result's
+      # rc/stdout/msg, so the failure class could not be read below.
+      ignore_errors: true
+      no_log: true
+      when: openbao_secrets_domain_use_issuer | bool
+
+    - name: Log in with the stored AppRole for {{ openbao_domain.name }}
+      community.hashi_vault.vault_login:
+        url: "{{ hostvars['localhost'].openbao_secrets_active_addr }}"
+        auth_method: approle
+        role_id: "{{ openbao_secrets_domain_role_id }}"
+        secret_id: "{{ openbao_secrets_domain_secret_id }}"
+        validate_certs: "{{ openbao_secrets_validate_certs }}"
+      register: openbao_secrets_domain_login
+      changed_when: false
+      check_mode: false
+      # ignore_errors keeps the module's msg, which the CIDR and failure-class
+      # decisions read. failed_when: false would drop it.
+      ignore_errors: true
+      no_log: true
+      when: not (openbao_secrets_domain_use_issuer | bool)
+
+    # The login outcome is decided here from the registered result, not by the task
+    # above, so each failure class can be handled explicitly below.
+    - name: Keep the issuer-minted token in memory for {{ openbao_domain.name }}
+      ansible.builtin.set_fact:
+        openbao_secrets_domain_token: >-
+          {{ openbao_secrets_domain_issuer_login.stdout | trim
+             if openbao_secrets_domain_issuer_login.rc == 0 else '' }}
+        openbao_secrets_domain_login_ok: >-
+          {{ openbao_secrets_domain_issuer_login.rc == 0
+             and (openbao_secrets_domain_issuer_login.stdout | trim | length) > 0 }}
+        openbao_secrets_domain_login_error: >-
+          flow-lock could not mint an approle token (exit {{ openbao_secrets_domain_issuer_login.rc }})
+      when: openbao_secrets_domain_use_issuer | bool
+      no_log: true
+
+    - name: Keep the stored-pair token in memory for {{ openbao_domain.name }}
+      ansible.builtin.set_fact:
+        openbao_secrets_domain_token: >-
+          {{ openbao_secrets_domain_login.login.auth.client_token
+             if openbao_secrets_domain_login.login is defined else '' }}
+        openbao_secrets_domain_login_ok: >-
+          {{ openbao_secrets_domain_login.login is defined
+             and (openbao_secrets_domain_login.login.auth.client_token | default('', true) | length) > 0 }}
+        openbao_secrets_domain_login_error: >-
+          {{ openbao_secrets_domain_login.msg | default('AppRole login failed', true) }}
+        # Read from msg, and from module_stderr and exception too: when the module
+        # does not catch the hvac error (ansible-core 2.18 with community.hashi_vault
+        # 7.x), the text arrives only in module_stderr.
+        openbao_secrets_domain_cidr_refused: >-
+          {{ openbao_secrets_domain_login.login is not defined
+             and ('CIDR restrictions' in ((openbao_secrets_domain_login.msg | default(''))
+                                          ~ (openbao_secrets_domain_login.module_stderr | default(''))
+                                          ~ (openbao_secrets_domain_login.exception | default('')))) }}
+      when: not (openbao_secrets_domain_use_issuer | bool)
+      no_log: true
+
+    # A source-address refusal means this identity may not redeem this domain from
+    # this host. It is a statement about scope, not a broken credential. It is
+    # skipped only when the caller opts in, and publishes no key.
+    - name: Flag a source-address refusal to skip for {{ openbao_domain.name }}
+      ansible.builtin.set_fact:
+        openbao_secrets_domain_isolated: true
+      when:
+        - not (openbao_secrets_domain_login_ok | bool)
+        - openbao_secrets_domain_cidr_refused | bool
+        - openbao_secrets_skip_cidr_refusals | bool
+
+    - name: Record a source-address refusal for {{ openbao_domain.name }}
+      ansible.builtin.set_fact:
+        openbao_secrets_isolated_failures: >-
+          {{ (hostvars['localhost'].openbao_secrets_isolated_failures | default([]))
+             + [openbao_domain.name ~ ': cidr_refused: ' ~ openbao_secrets_domain_login_error] }}
+      delegate_to: localhost
+      delegate_facts: true
+      when:
+        - not (openbao_secrets_domain_login_ok | bool)
+        - openbao_secrets_domain_cidr_refused | bool
+        - openbao_secrets_skip_cidr_refusals | bool
+
+    - name: Warn that the domain was skipped on a source-address refusal — {{ openbao_domain.name }}
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: the {{ openbao_domain.name }} AppRole refused this host on source-address
+          grounds, so the domain is skipped for this run and publishes no value. Do not add
+          a CIDR to get past it. Consumers that need a value from it fail by name.
+      when:
+        - not (openbao_secrets_domain_login_ok | bool)
+        - openbao_secrets_domain_cidr_refused | bool
+        - openbao_secrets_skip_cidr_refusals | bool
+
+    - name: Isolate a failed login for an all-optional domain — {{ openbao_domain.name }}
+      ansible.builtin.include_tasks: isolate_domain.yml
+      vars:
+        openbao_secrets_domain_failure_class: login_failed
+        openbao_secrets_domain_failure_detail: "{{ openbao_secrets_domain_login_error }}"
+      when:
+        - not (openbao_secrets_domain_login_ok | bool)
+        - not (openbao_secrets_domain_cidr_refused | bool and openbao_secrets_skip_cidr_refusals | bool)
+        - openbao_secrets_isolate_optional_login_failures | bool
+        - openbao_secrets_domain_all_optional | bool
+
+    - name: Fail on a failed login for {{ openbao_domain.name }}
+      ansible.builtin.fail:
+        msg: >-
+          {{ openbao_domain.name }} AppRole login failed: {{ openbao_secrets_domain_login_error }}.
+          Refusing to publish a partial or empty secret set for this domain.
+      when:
+        - not (openbao_secrets_domain_login_ok | bool)
+        - not (openbao_secrets_domain_cidr_refused | bool and openbao_secrets_skip_cidr_refusals | bool)
+        - not (openbao_secrets_isolate_optional_login_failures | bool and openbao_secrets_domain_all_optional | bool)
+
+    - name: Read, classify and merge the paths of {{ openbao_domain.name }}
+      when:
+        - openbao_secrets_domain_login_ok | bool
+        - not (openbao_secrets_domain_isolated | bool)
+      block:
+        # Reads are never failed here. The classification below decides what a failed
+        # read means, from the registered results.
+        - name: Read each enabled path of {{ openbao_domain.name }}
+          community.hashi_vault.vault_kv2_get:
+            url: "{{ hostvars['localhost'].openbao_secrets_active_addr }}"
+            auth_method: token
+            token: "{{ openbao_secrets_domain_token }}"
+            engine_mount_point: >-
+              {{ item.get('mount', openbao_secrets_kv_mount) if item is mapping else openbao_secrets_kv_mount }}
+            path: "{{ item.path if item is mapping else item }}"
+            validate_certs: "{{ openbao_secrets_validate_certs }}"
+          loop: "{{ openbao_secrets_domain_paths_to_read }}"
+          loop_control:
+            label: "{{ item.path if item is mapping else item }}"
+          register: openbao_secrets_domain_reads
+          check_mode: false
+          # Outcomes are classified from the registered msg (see classify_reads.yml).
+          ignore_errors: true
+          no_log: true
+
+        - name: Classify the reads of {{ openbao_domain.name }}
+          ansible.builtin.include_tasks: classify_reads.yml
+
+        - name: Warn about unreadable paths that non-strict reads ignore — {{ openbao_domain.name }}
+          ansible.builtin.debug:
+            msg: >-
+              {{ openbao_domain.name }}: {{ openbao_secrets_domain_read_failures | length }} path(s)
+              could not be read and are ignored (strict_reads is off):
+              {{ openbao_secrets_domain_read_failures | map(attribute='path') | join(', ') }}
+          when:
+            - not (openbao_secrets_strict_reads | bool)
+            - openbao_secrets_domain_read_failures | length > 0
+
+        - name: Isolate unreadable paths of an all-optional domain — {{ openbao_domain.name }}
+          ansible.builtin.include_tasks: isolate_domain.yml
+          vars:
+            openbao_secrets_domain_failure_class: read_failed
+            openbao_secrets_domain_failure_detail: >-
+              {{ openbao_secrets_domain_read_failures
+                 | map(attribute='path') | join(', ') }}
+          when:
+            - openbao_secrets_strict_reads | bool
+            - openbao_secrets_domain_read_failures | length > 0
+            - openbao_secrets_domain_all_optional | bool
+            - openbao_secrets_isolate_optional_read_failures | bool
+
+        - name: Fail on unreadable paths of {{ openbao_domain.name }}
+          ansible.builtin.fail:
+            msg: >-
+              OpenBao read failed in the {{ openbao_domain.name }} domain for
+              {{ openbao_secrets_domain_read_failures
+                 | map(attribute='path') | join(', ') }}
+              ({{ openbao_secrets_domain_read_failures | map(attribute='class') | join(', ') }}).
+              Refusing to continue with a partial secret set; consumers render these
+              values into live config. Declare a path optional only if it is seeded
+              when its feature is enabled.
+          when:
+            - openbao_secrets_strict_reads | bool
+            - openbao_secrets_domain_read_failures | length > 0
+            - not (openbao_secrets_domain_all_optional | bool and openbao_secrets_isolate_optional_read_failures | bool)
+
+        - name: Merge the readable paths of {{ openbao_domain.name }}
+          ansible.builtin.set_fact:
+            openbao_secrets_domain_merged: "{{ openbao_secrets_domain_merged | combine(item.secret) }}"
+          loop: "{{ openbao_secrets_domain_reads.results }}"
+          loop_control:
+            label: "{{ item.item.path if item.item is mapping else item.item }}"
+          when:
+            - not (openbao_secrets_domain_isolated | bool)
+            - item.secret is defined
+            - item.secret is mapping
+          no_log: true
+
+        - name: Accumulate the result for {{ openbao_domain.name }}
+          ansible.builtin.set_fact:
+            openbao_secrets_by_domain: >-
+              {{ hostvars['localhost'].openbao_secrets_by_domain
+                 | combine({openbao_domain.name: openbao_secrets_domain_merged}) }}
+          delegate_to: localhost
+          delegate_facts: true
+          when: not (openbao_secrets_domain_isolated | bool)
+          no_log: true
+
+  always:
+    # A revocation failure is reported, not fatal: the token expires on its own TTL,
+    # and this runs in always so it must not mask the error of the block above.
+    - name: Revoke the issuer-minted token for {{ openbao_domain.name }}
+      ansible.builtin.uri:
+        url: "{{ hostvars['localhost'].openbao_secrets_active_addr }}/v1/auth/token/revoke-self"
+        method: POST
+        headers:
+          X-Vault-Token: "{{ openbao_secrets_domain_token }}"
+        status_code: [200, 204]
+        validate_certs: "{{ openbao_secrets_validate_certs }}"
+        timeout: 10
+      register: openbao_secrets_domain_revoke
+      ignore_errors: true
+      changed_when: false
+      check_mode: false
+      no_log: true
+      when:
+        - openbao_secrets_domain_use_issuer | bool
+        - openbao_secrets_domain_token | length > 0
+
+    - name: Warn that the issuer-minted token was not revoked — {{ openbao_domain.name }}
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: OpenBao did not confirm revocation of the {{ openbao_domain.name }}
+          token (HTTP {{ openbao_secrets_domain_revoke.status | default('none') }}). It stays
+          valid until its TTL expires.
+      when:
+        - openbao_secrets_domain_use_issuer | bool
+        - openbao_secrets_domain_token | length > 0
+        - openbao_secrets_domain_revoke.status | default(0) | int not in [200, 204]
