@@ -120,6 +120,7 @@ set -euo pipefail
   printf 'key=%s\n' "${PROXMOX_SSH_KEY_PATH:-}"
   printf 'common=%s\n' "${ANSIBLE_SSH_COMMON_ARGS:-}"
   printf 'bao_token=%s\n' "${BAO_TOKEN:+set}"
+  printf 'host_key_checking=%s\n' "${ANSIBLE_HOST_KEY_CHECKING:-}"
 } >> "$FIXTURE_RUN_LOG"
 printf 'PLAYBOOK-OUTPUT\n'
 printf '%b' "${FIXTURE_RECAP:-}"
@@ -282,6 +283,23 @@ with_origin() {
   grep -Fq 'StrictHostKeyChecking=yes' "$FIXTURE_RUN_LOG"
   grep -Fq 'GlobalKnownHostsFile=/dev/null' "$FIXTURE_RUN_LOG"
   [ ! -e "$HOME/.ssh/known_hosts" ]
+}
+
+@test "SSH_KNOWN_HOSTS forces Ansible host key checking on" {
+  static_key
+  export SSH_KNOWN_HOSTS='pin.example ssh-ed25519 AAAAPIN' ANSIBLE_HOST_KEY_CHECKING=False
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  grep -Fxq 'host_key_checking=True' "$FIXTURE_RUN_LOG"
+}
+
+@test "an invalid RUN_ANSIBLE_REVOKE_ATTEMPTS fails before the playbook runs" {
+  static_key
+  export RUN_ANSIBLE_REVOKE_ATTEMPTS=abc
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 1 ]
+  [[ $output == *"must be a positive integer"* ]]
+  [ ! -s "$FIXTURE_RUN_LOG" ]
 }
 
 @test "RUN_ANSIBLE_MERGE_KNOWN_HOSTS replaces a stale pinned line and keeps other lines once" {
