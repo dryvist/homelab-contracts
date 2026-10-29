@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.27.1](https://github.com/dryvist/homelab-contracts/compare/v5.27.0...v5.27.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **openbao_secrets:** report a failed seed token revocation ([#243](https://github.com/dryvist/homelab-contracts/issues/243)) ([6947bcc](https://github.com/dryvist/homelab-contracts/commit/6947bcc553661c87f4b524c6dbc6f52519a300ff))
+
 ## [5.27.0](https://github.com/dryvist/homelab-contracts/compare/v5.26.0...v5.27.0) (2026-10-28)
 
 
