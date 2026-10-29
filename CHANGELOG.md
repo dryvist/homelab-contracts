@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.35.0](https://github.com/dryvist/homelab-contracts/compare/v5.34.0...v5.35.0) (2026-10-29)
+
+
+### Features
+
+* **bao-approle:** add shared OpenBao AppRole CLI ([#262](https://github.com/dryvist/homelab-contracts/issues/262)) ([6812ba3](https://github.com/dryvist/homelab-contracts/commit/6812ba33dda42f9dbdb23cce458d955b925beaf7))
+
 ## [5.34.0](https://github.com/dryvist/homelab-contracts/compare/v5.33.1...v5.34.0) (2026-10-29)
 
 
