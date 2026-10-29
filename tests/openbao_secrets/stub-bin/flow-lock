@@ -1,0 +1,10 @@
+#!/bin/sh
+# Test stand-in for `flow-lock approle-token ROLE`: prints the token the fake OpenBao
+# accepts ("issuer-token"). Put this directory first on PATH for the read-path test;
+# the role finds flow-lock with `command -v`. Not a secret.
+if [ "$1" = "approle-token" ] && [ -n "$2" ]; then
+  printf '%s' issuer-token
+  exit 0
+fi
+echo "flow-lock stand-in: unsupported arguments" >&2
+exit 2

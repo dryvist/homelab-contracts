@@ -2,10 +2,11 @@
 """Local stand-in for the OpenBao calls made by tasks/seed_generated.yml.
 
 Test-only. It implements the subset the role depends on: X-Vault-Token checks,
-KV v2 reads (200, or 404 for absent and soft-deleted secrets, with metadata for the
-latter), check-and-set writes (cas must equal the current version; 0 means absent),
-token lookup-self, sys/capabilities-self and token revoke-self. It records every
-request so the playbook can assert what was sent.
+AppRole login for the read path, KV v2 reads on any mount (200, or 404 for absent and
+soft-deleted secrets, with metadata for the latter; 403 for any path under a
+forbidden/ segment), check-and-set writes (cas must equal the current version; 0 means
+absent), token lookup-self, sys/capabilities-self and token revoke-self. It records
+every request so the playbook can assert what was sent.
 
 The /_test/ endpoints are for the playbook only: seed a secret, read state and the
 request log, arm one write failure, shut down. Revocation is recorded, not enforced.
@@ -58,6 +59,28 @@ TOKENS = {
         "orphan": True,
         "ttl": 300,
     },
+    # Read-path identities. "reader-token" is what the AppRole login below returns;
+    # "issuer-token" is what the flow-lock stand-in prints.
+    "reader-token": {
+        "policies": ["default", "read-all"],
+        "identity_policies": [],
+        "renewable": False,
+        "orphan": True,
+        "ttl": 300,
+    },
+    "issuer-token": {
+        "policies": ["default", "read-all"],
+        "identity_policies": [],
+        "renewable": False,
+        "orphan": True,
+        "ttl": 300,
+    },
+}
+
+# AppRole role_id/secret_id pairs the login accepts, and the outcome of each.
+APPROLE_LOGINS = {
+    ("reader", "reader-secret"): ("ok", "reader-token"),
+    ("cidr", "cidr-secret"): ("cidr", None),
 }
 
 
@@ -113,9 +136,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/v1/auth/token/lookup-self":
             self._record("GET", path)
             return self._send(200, {"data": TOKENS[token]})
-        if path.startswith("/v1/secret/data/"):
+        if path.startswith("/v1/") and "/data/" in path:
             data_path = path[len("/v1/"):]
             self._record("GET", data_path)
+            if "/forbidden/" in data_path:
+                return self._send(403, {"errors": ["permission denied"]})
             entry = STATE.get(data_path)
             if entry is None:
                 return self._send(404, {"errors": []})
@@ -131,6 +156,15 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         token = self._token()
         body = self._body()
+        if path == "/v1/auth/approle/login":
+            self._record("POST", path)
+            outcome = APPROLE_LOGINS.get((body.get("role_id"), body.get("secret_id")))
+            if outcome is None:
+                return self._send(400, {"errors": ["invalid role or secret ID"]})
+            kind, client_token = outcome
+            if kind == "cidr":
+                return self._send(403, {"errors": ["source address is outside the CIDR restrictions bound to this role"]})
+            return self._send(200, {"auth": {"client_token": client_token}})
         if token not in TOKENS:
             self._record("POST", path)
             return self._send(403, {"errors": ["permission denied"]})
