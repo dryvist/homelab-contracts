@@ -20,7 +20,8 @@
       "cc-stream-github-copilot-rest-io",
       "cc-stream-apple-mlx-metrics",
       "cc-stream-cribl-internal-telemetry",
-      "cc-stream-cribl-edge-host-metrics"
+      "cc-stream-cribl-edge-host-metrics",
+      "cc-stream-macos-fanout-io"
     ]
   }
 }
