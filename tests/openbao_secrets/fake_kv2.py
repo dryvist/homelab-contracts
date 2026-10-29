@@ -82,6 +82,7 @@ TOKENS = {
 APPROLE_LOGINS = {
     ("reader", "reader-secret"): ("ok", "reader-token"),
     ("cidr", "cidr-secret"): ("cidr", None),
+    ("publisher", "publisher-secret"): ("ok", "writer-ok"),
 }
 
 

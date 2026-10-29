@@ -1,0 +1,126 @@
+---
+# Credential publishing against the fake KV v2 endpoint: an existing secret is
+# merged under check-and-set, an absent path is created with cas=0, and a 403 on
+# the read-before-write fails the publish without writing anything.
+- name: Verify credential publishing merges under check-and-set and refuses a failed read
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    fake_port: 18235
+    fake_addr: "http://127.0.0.1:{{ fake_port }}"
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    publish_vars: &publish_vars
+      openbao_secrets_bao_addr: "{{ fake_addr }}"
+      openbao_secrets_kv_mount: secret
+      openbao_secrets_publish_role_id: publisher
+      openbao_secrets_publish_secret_id: publisher-secret
+  tasks:
+    - name: Require the fake OpenBao test port to be free
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ fake_port }}"
+        state: stopped
+        timeout: 1
+
+    - name: Run the publish scenarios
+      block:
+        - name: Start the KV v2 stand-in
+          ansible.builtin.command: "python3 {{ playbook_dir }}/fake_kv2.py --port {{ fake_port }}"
+          async: 900
+          poll: 0
+          changed_when: false
+
+        - name: Mark the KV v2 stand-in as started
+          ansible.builtin.set_fact:
+            publish_fake_server_started: true
+
+        - name: Wait for the stand-in to listen
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ fake_port }}"
+            timeout: 30
+
+        - name: Seed an existing secret with a sibling field at version 3
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/seed"
+            method: POST
+            body_format: json
+            body: {path: secret/data/apps/merge, version: 3, data: {sibling: kept}}
+            status_code: [200]
+
+        - name: Publish one field over the existing secret
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: publish
+          vars:
+            <<: *publish_vars
+            openbao_secrets_publish_app: merge
+            openbao_secrets_publish_data: {new_key: added}
+
+        - name: Publish to a path that does not exist yet
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: publish
+          vars:
+            <<: *publish_vars
+            openbao_secrets_publish_app: fresh
+            openbao_secrets_publish_data: {only_key: created}
+
+        - name: Publish to a path whose read is refused
+          block:
+            - name: Publish to the forbidden path
+              ansible.builtin.include_role:
+                name: openbao_secrets
+                tasks_from: publish
+              vars:
+                <<: *publish_vars
+                openbao_secrets_publish_app: forbidden/denied
+                openbao_secrets_publish_data: {lost_key: value}
+
+            - name: Record that the refused read did not fail the publish
+              ansible.builtin.set_fact:
+                publish_forbidden_failed: false
+          rescue:
+            - name: Record that the refused read failed the publish
+              ansible.builtin.set_fact:
+                publish_forbidden_failed: true
+
+        - name: Read the fake OpenBao state and request log
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/state"
+            method: GET
+            status_code: [200]
+          register: publish_fake_state
+
+        - name: Assert merge, create and refusal behaviour
+          vars:
+            _writes: "{{ publish_fake_state.json.log | selectattr('method', 'equalto', 'POST') | selectattr('path', 'match', '^secret/data/') | list }}"
+          ansible.builtin.assert:
+            that:
+              - "publish_fake_state.json.state['secret/data/apps/merge'].data == {'sibling': 'kept', 'new_key': 'added'}"
+              - publish_fake_state.json.state['secret/data/apps/merge'].version == 4
+              - (_writes | selectattr('path', 'equalto', 'secret/data/apps/merge') | map(attribute='cas') | list) == [3]
+              - "publish_fake_state.json.state['secret/data/apps/fresh'].data == {'only_key': 'created'}"
+              - (_writes | selectattr('path', 'equalto', 'secret/data/apps/fresh') | map(attribute='cas') | list) == [0]
+              - publish_forbidden_failed | bool
+              - (_writes | selectattr('path', 'search', 'forbidden') | list | length) == 0
+            quiet: true
+      always:
+        - name: Stop the KV v2 stand-in
+          ansible.builtin.uri:
+            url: "{{ fake_addr }}/_test/shutdown"
+            method: POST
+            status_code: [200]
+            timeout: 5
+          when: publish_fake_server_started | default(false) | bool
+          changed_when: false
+
+        - name: Wait for the stand-in to stop
+          ansible.builtin.wait_for:
+            host: 127.0.0.1
+            port: "{{ fake_port }}"
+            state: stopped
+            timeout: 10
+            connect_timeout: 1
+          when: publish_fake_server_started | default(false) | bool
