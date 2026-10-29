@@ -26,6 +26,7 @@
 # Options (unset means off):
 #   RUN_ANSIBLE_IDENTITIES             comma list; a trailing ? lets a refused login fall through to the next identity
 #   RUN_ANSIBLE_SIGN_ROLE_<NAME>       SSH CA role for identity <name> (upper case, - as _); default automation-<name>
+#   RUN_ANSIBLE_NO_SSH=1               skip SSH auth (no certificate, no key) for playbooks that only run on localhost
 #   RUN_ANSIBLE_STATIC_KEY_FALLBACK=1  use PROXMOX_SSH_KEY_PATH when the certificate mint fails
 #   RUN_ANSIBLE_SSH_AGENT=1            load PROXMOX_SSH_PRIVATE_KEY into a private ssh-agent
 #   RUN_ANSIBLE_MERGE_KNOWN_HOSTS=1    also merge the pinned host keys into ~/.ssh/known_hosts
@@ -415,7 +416,9 @@ main() {
   fi
 
   RC=0
-  if [[ -n ${BAO_ADDR:-} ]]; then
+  if [[ -n ${RUN_ANSIBLE_NO_SSH:-} ]]; then
+    RC=4
+  elif [[ -n ${BAO_ADDR:-} ]]; then
     mint_from_identities || RC=$?
   else
     RC=3
@@ -427,6 +430,9 @@ main() {
       ;;
     3)
       use_static_key
+      ;;
+    4)
+      echo "No SSH auth: RUN_ANSIBLE_NO_SSH is set, so the playbook must run on localhost only."
       ;;
     *)
       if [[ -z ${RUN_ANSIBLE_STATIC_KEY_FALLBACK:-} ]]; then

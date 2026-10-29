@@ -14,7 +14,7 @@ setup() {
   unset RUN_ANSIBLE_IDENTITIES RUN_ANSIBLE_STATIC_KEY_FALLBACK RUN_ANSIBLE_SSH_AGENT RUN_ANSIBLE_MERGE_KNOWN_HOSTS
   unset RUN_ANSIBLE_REVOKE_ATTEMPTS RUN_ANSIBLE_CHECKOUT_GUARD RUN_ANSIBLE_PIN_FILE RUN_ANSIBLE_PIN_DIR
   unset RUN_ANSIBLE_PIN_URL RUN_ANSIBLE_PIN_OPTIONAL RUN_ANSIBLE_LIMIT_LOCALHOST RUN_ANSIBLE_RECAP_CHECK
-  unset RUN_ANSIBLE_PIN_PLAYBOOKS RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY
+  unset RUN_ANSIBLE_PIN_PLAYBOOKS RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY RUN_ANSIBLE_NO_SSH
   unset CONVERGE_ROLE_ID CONVERGE_SECRET_ID CONVERGE_IDENTITY RUN_ANSIBLE_SIGN_ROLE_ANSIBLE_CONVERGE
   unset OPENBAO_APPROLE_ANSIBLE_CONVERGE_ROLE_ID OPENBAO_APPROLE_ANSIBLE_CONVERGE_SECRET_ID
   unset RUN_ANSIBLE_LOG_DIR FIXTURE_REFUSED_ROLE FIXTURE_SIGN_FAIL FIXTURE_SIGN_FAIL_ROLE FIXTURE_REVOKE_FAILS FIXTURE_RECAP
@@ -606,6 +606,29 @@ with_origin() {
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
   grep -Fqx 'SIGN /v1/ssh-client-ca/sign/automation-ansible-converge ttl=1h' "$FIXTURE_LOG"
+}
+
+@test "RUN_ANSIBLE_NO_SSH runs the playbook without any SSH auth" {
+  export RUN_ANSIBLE_NO_SSH=1
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"No SSH auth: RUN_ANSIBLE_NO_SSH is set"* ]]
+  grep -q '^ansible-playbook \[site.yml\]' "$FIXTURE_RUN_LOG"
+  grep -qx 'key=' "$FIXTURE_RUN_LOG"
+}
+
+@test "RUN_ANSIBLE_NO_SSH skips the certificate mint even when an identity is configured" {
+  ansible_env
+  export RUN_ANSIBLE_NO_SSH=1
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  ! grep -Eq 'approle/login|/sign/' "$FIXTURE_LOG"
+}
+
+@test "without RUN_ANSIBLE_NO_SSH a run with no SSH auth still fails" {
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -ne 0 ]
+  [[ $output == *"no SSH auth available"* ]]
 }
 
 @test "RUN_ANSIBLE_WARN_NO_ISSUER warns when the issuer pair is missing" {
