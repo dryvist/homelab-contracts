@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.32.0](https://github.com/dryvist/homelab-contracts/compare/v5.31.0...v5.32.0) (2026-10-29)
+
+
+### Features
+
+* close shared runner and openbao_secrets parity gaps ([#254](https://github.com/dryvist/homelab-contracts/issues/254)) ([d9d48c1](https://github.com/dryvist/homelab-contracts/commit/d9d48c150518d2aca672cddcc2e3207eea5c6977))
+
 ## [5.31.0](https://github.com/dryvist/homelab-contracts/compare/v5.30.0...v5.31.0) (2026-10-29)
 
 
