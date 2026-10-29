@@ -16,6 +16,7 @@
     langfuse_port: 18241
     kv_port: 18242
     closed_port: 18243  # nothing listens here
+    unreachable_kv_path: lpk/unreachable
     lpk_base: "http://127.0.0.1:{{ langfuse_port }}"
     kv_addr: "http://127.0.0.1:{{ kv_port }}"
   tasks:
@@ -427,7 +428,7 @@
                 langfuse_project_keys_project_name: hermes
                 langfuse_project_keys_openbao_addr: "http://127.0.0.1:{{ closed_port }}"
                 langfuse_project_keys_openbao_token: writer-ok
-                langfuse_project_keys_openbao_path: lpk/unreachable
+                langfuse_project_keys_openbao_path: "{{ unreachable_kv_path }}"
           rescue:
             - name: H - record the stop
               ansible.builtin.set_fact:
