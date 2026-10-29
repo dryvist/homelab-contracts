@@ -295,7 +295,19 @@
           X-Vault-Token: "{{ openbao_secrets_seed_token }}"
         status_code: [200, 204]
         validate_certs: "{{ openbao_secrets_validate_certs }}"
+      register: openbao_secrets_seed_revoke
+      failed_when: false
       when:
         - openbao_secrets_seed_available | bool
         - openbao_secrets_seed_revoke_token | bool
       no_log: true
+
+    # Outside no_log so the operator sees the warning; it carries only the HTTP status.
+    - name: Report a failed writer token self-revocation
+      ansible.builtin.fail:
+        msg: >-
+          Writer token self-revocation failed (HTTP {{ openbao_secrets_seed_revoke.status | default('none') }});
+          the token stays usable until its TTL expires.
+      when:
+        - openbao_secrets_seed_revoke is not skipped
+        - openbao_secrets_seed_revoke.status | default(0) not in [200, 204]
