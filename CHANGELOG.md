@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.33.0](https://github.com/dryvist/homelab-contracts/compare/v5.32.0...v5.33.0) (2026-10-29)
+
+
+### Features
+
+* **run-ansible:** allow a per-identity SSH CA sign role override ([#256](https://github.com/dryvist/homelab-contracts/issues/256)) ([13f8430](https://github.com/dryvist/homelab-contracts/commit/13f843069ede32884aefb556608f87d987df6c80))
+
 ## [5.32.0](https://github.com/dryvist/homelab-contracts/compare/v5.31.0...v5.32.0) (2026-10-29)
 
 
