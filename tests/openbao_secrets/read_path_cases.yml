@@ -425,11 +425,18 @@
 
 - name: Case 13 - a failed login in an all-optional domain is isolated when isolate_optional_login_failures is true
   block:
+    - name: Case 13 - reset the ntfy alert stub
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/log-reset"
+        method: POST
+        status_code: [200]
+
     - name: Case 13 - read the refused all-optional domain
       ansible.builtin.include_role:
         name: openbao_secrets
       vars:
         openbao_secrets_isolate_optional_login_failures: true
+        openbao_secrets_alert_ntfy_url: "{{ fake_addr }}/ntfy"
         openbao_secrets_domains:
           - name: loginfail
             role_id_env: FAKE_REFUSED_ROLE_ID
@@ -443,6 +450,23 @@
         that:
           - "hostvars['localhost'].openbao_secrets_by_domain.loginfail == {}"
           - "hostvars['localhost'].openbao_secrets_isolated_failures | select('match', '^loginfail: login_failed') | list | length == 1"
+        quiet: true
+
+    - name: Case 13 - read the ntfy alert stub
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/alerts"
+        method: GET
+        status_code: [200]
+      register: case_13_alerts
+
+    - name: Case 13 - assert the alert contains only the domain and failure class
+      ansible.builtin.assert:
+        that:
+          - case_13_alerts.json.alerts | length == 1
+          - "case_13_alerts.json.alerts[0].body == 'loginfail domain isolated: login_failed'"
+          - "case_13_alerts.json.alerts[0].title == 'openbao_secrets: loginfail isolated (login_failed)'"
+          - case_13_alerts.json.alerts[0].priority == 'high'
+          - case_13_alerts.json.alerts[0].tags == 'warning'
         quiet: true
 
     - name: Case 13 - expect a required path to still fail the play
@@ -519,6 +543,40 @@
         that:
           - "'cidr_domain' not in hostvars['localhost'].openbao_secrets_by_domain"
           - "hostvars['localhost'].openbao_secrets_isolated_failures | select('match', '^cidr_domain: cidr_refused') | list | length == 1"
+        quiet: true
+
+- name: Case 23 - an isolated domain with the default empty ntfy URL sends no request
+  block:
+    - name: Case 23 - reset the ntfy alert stub
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/log-reset"
+        method: POST
+        status_code: [200]
+
+    - name: Case 23 - isolate an optional domain without an alert URL
+      ansible.builtin.include_role:
+        name: openbao_secrets
+      vars:
+        openbao_secrets_isolate_optional_login_failures: true
+        openbao_secrets_domains:
+          - name: empty_alert
+            role_id_env: FAKE_REFUSED_ROLE_ID
+            secret_id_env: FAKE_REFUSED_SECRET_ID
+            paths:
+              - path: apps/present
+                optional: true
+
+    - name: Case 23 - read the ntfy alert stub
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/alerts"
+        method: GET
+        status_code: [200]
+      register: case_23_alerts
+
+    - name: Case 23 - assert the empty alert URL sends no request
+      ansible.builtin.assert:
+        that:
+          - case_23_alerts.json.alerts | length == 0
         quiet: true
 
 

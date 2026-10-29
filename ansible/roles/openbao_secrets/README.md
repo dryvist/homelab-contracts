@@ -150,6 +150,7 @@ Each input defaults to the behaviour the role already had. `meta/argument_specs.
 | `openbao_secrets_isolate_optional_login_failures` | `false` | A failed login in an all-optional domain publishes an empty result. |
 | `openbao_secrets_strict_reads` | `false` | An unreadable required path, a 403 or a transport error fails its domain. |
 | `openbao_secrets_isolate_optional_read_failures` | `false` | With strict reads, an all-optional domain publishes an empty result on an unreadable path. |
+| `openbao_secrets_alert_ntfy_url` | `""` | An isolated domain sends a best-effort ntfy page naming the domain and failure class. |
 
 A path is a string or a mapping with `path`, `mount`, `optional` and `enabled`. `enabled: false` skips it before any read.
 `tasks_from: assert_nonempty.yml` fails when a variable named in `openbao_secrets_required_vars` resolves empty.
