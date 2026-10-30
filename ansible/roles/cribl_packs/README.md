@@ -10,16 +10,19 @@ For each host the role detects whether it belongs to `cribl_edge` or
 corresponding pack list under the right Cribl mode directory:
 
 - Edge LXCs (`cribl_edge` group) → `/opt/cribl/local/edge/packs/<pack-name>/`
-- Stream LXCs (`cribl_stream_group`) → `/opt/cribl/local/cribl/packs/<pack-name>/`
+- Stream LXCs (`cribl_stream_group`) → `/opt/cribl/default/<pack-name>/`,
+  installed and registered through Cribl's CLI
 
 Hosts in neither group are skipped (no-op).
 
 ## Idempotency
 
 Each pack installation drops a sentinel file `.<version>.installed` inside the
-pack directory. Re-runs on the same version skip the download. Re-runs on a
-new version remove the prior pack directory, redownload, and unarchive — then
-notify the appropriate `Restart cribl` handler.
+pack directory. Re-runs on the same version skip the download. On a version
+change, Edge removes and unarchives the pack directory through an atomic rename;
+Stream runs `cribl pack install -f` on the downloaded `.crbl`, clears old version
+sentinels, and writes the new sentinel. Both paths notify their `Restart cribl`
+handler.
 
 ## Installation
 

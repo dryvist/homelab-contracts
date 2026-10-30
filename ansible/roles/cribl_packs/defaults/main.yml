@@ -11,8 +11,8 @@ cribl_packs_stream_service: cribl
 
 # Edge config tree root (cribl mode-edge)
 cribl_packs_edge_config_root: "{{ cribl_packs_install_dir }}/local/edge"
-# Stream config tree root
-cribl_packs_stream_config_root: "{{ cribl_packs_install_dir }}/local/cribl"
+# Stream's native pack install registers packs in the default worker group.
+cribl_packs_stream_pack_root: "{{ cribl_packs_install_dir }}/default"
 
 # Pack names and targets come from the shared catalog; release tags resolve to
 # each pack's latest GitHub release at run time.
