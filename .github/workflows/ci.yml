@@ -24,6 +24,17 @@ jobs:
         run: pip install 'check-jsonschema==0.38.2'
       - name: Validate ansible_inventory example against schema
         run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
+      - name: Validate optional Hindsight service state and prior schema compatibility
+        run: |
+          jq '.constants.service_state.hindsight_enabled = false' examples/ansible_inventory.json > "$RUNNER_TEMP/hindsight-disabled.json"
+          jq '.constants.service_state.hindsight_enabled = true' examples/ansible_inventory.json > "$RUNNER_TEMP/hindsight-enabled.json"
+          jq '.constants.service_state.hindsight_enabled = "false"' examples/ansible_inventory.json > "$RUNNER_TEMP/hindsight-invalid.json"
+          check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/hindsight-disabled.json" "$RUNNER_TEMP/hindsight-enabled.json"
+          check-jsonschema --schemafile versions/v5.19.0/ansible-inventory.json "$RUNNER_TEMP/hindsight-disabled.json" "$RUNNER_TEMP/hindsight-enabled.json"
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/hindsight-invalid.json"; then
+            echo "String service state unexpectedly validated" >&2
+            exit 1
+          fi
       - name: Validate nautobot_export example against schema
         run: check-jsonschema --schemafile schemas/nautobot-export-v1.json examples/nautobot_export.json
       - name: Validate the llm_roles model map against its schema
