@@ -181,12 +181,54 @@ teardown() {
   grep -Fq '/v1/auth/token/revoke-self' "$FIXTURE_ARGV_LOG"
 }
 
-@test "token requests refuse a non-https address before contacting OpenBao" {
-  export BAO_TOKEN=bao-token-fixture BAO_ADDR=http://bao.fixture
+@test "token requests accept loopback http addresses" {
+  export BAO_TOKEN=bao-token-fixture BAO_ADDR=http://127.0.0.1:8200
+
+  run "$BAO_APPROLE" revoke-self
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+
+  export BAO_ADDR=http://localhost
+  run "$BAO_APPROLE" revoke-self
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+
+  export BAO_ADDR='http://[::1]:8200/'
+  run "$BAO_APPROLE" revoke-self
+
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "token requests reject non-loopback http addresses before contacting OpenBao" {
+  export BAO_TOKEN=bao-token-fixture BAO_ADDR=http://127.0.0.1.evil.example
 
   run "$BAO_APPROLE" gh-token github-apps review
 
   [ "$status" -eq 64 ]
-  [[ "$output" == *"https"* ]]
+  [[ "$output" == *"BAO_ADDR must be an https URL for token requests"* ]]
+  [ ! -s "$FIXTURE_ARGV_LOG" ]
+
+  export BAO_ADDR=http://localhost.evil.example
+  run "$BAO_APPROLE" gh-token github-apps review
+
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"BAO_ADDR must be an https URL for token requests"* ]]
+  [ ! -s "$FIXTURE_ARGV_LOG" ]
+
+  export BAO_ADDR=http://192.0.2.5
+  run "$BAO_APPROLE" gh-token github-apps review
+
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"BAO_ADDR must be an https URL for token requests"* ]]
+  [ ! -s "$FIXTURE_ARGV_LOG" ]
+
+  export BAO_ADDR=http://example.com
+  run "$BAO_APPROLE" gh-token github-apps review
+
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"BAO_ADDR must be an https URL for token requests"* ]]
   [ ! -s "$FIXTURE_ARGV_LOG" ]
 }

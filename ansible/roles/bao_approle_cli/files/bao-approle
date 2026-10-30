@@ -16,7 +16,7 @@ only the OpenBao client token. The address comes from --addr or BAO_ADDR. --foll
 redirects. FLOW_LOCK_API_MAX_TIME sets the login timeout in seconds (default 30).
 revoke-self reads BAO_TOKEN or one token from stdin.
 gh-token uses BAO_TOKEN to mint and print one GitHub installation token.
-revoke-self and gh-token require an https BAO_ADDR.
+revoke-self and gh-token require an https or loopback http BAO_ADDR.
 EOF
 }
 
@@ -30,10 +30,8 @@ require_command() {
 }
 
 require_https() {
-  case "$1" in
-    https://*) ;;
-    *) die "BAO_ADDR must be an https URL for token requests" "$EX_USAGE" ;;
-  esac
+  [[ "$1" == https://* || "$1" =~ ^http://(127\.0\.0\.1|localhost|\[::1\])(:[0-9]+)?(/.*)?$ ]] ||
+    die "BAO_ADDR must be an https URL for token requests" "$EX_USAGE"
 }
 
 openbao_error() {
@@ -152,6 +150,7 @@ revoke_self() {
   [ "$#" -eq 0 ] || die "revoke-self takes no arguments" "$EX_USAGE"
   [ -n "$addr" ] || die "BAO_ADDR is not set" "$EX_USAGE"
   require_https "$addr"
+  while [[ "$addr" == */ ]]; do addr="${addr%/}"; done
   [ -n "$token" ] || token="$(token_from_stdin)"
   require_command jq
   require_command curl
