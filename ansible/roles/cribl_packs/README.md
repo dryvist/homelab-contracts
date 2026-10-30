@@ -11,7 +11,8 @@ corresponding pack list under the right Cribl mode directory:
 
 - Edge LXCs (`cribl_edge` group) → `/opt/cribl/local/edge/packs/<pack-name>/`
 - Stream LXCs (`cribl_stream_group`) → `/opt/cribl/default/<pack-name>/`
-  (a single-instance Stream registers packs from its `default` tree at start)
+  holding the archive's `default/` contents and `package.json`, the layout Cribl's own
+  install produces (a single-instance Stream registers packs from its `default` tree at start)
 
 Hosts in neither group are skipped (no-op).
 
