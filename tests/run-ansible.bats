@@ -159,17 +159,17 @@ static_key() {
 }
 
 signer_env() {
-  export BAO_ADDR=http://bao.fixture SSH_SIGNER_ROLE_ID=signer-role SSH_SIGNER_SECRET_ID=signer-secret
+  export BAO_ADDR=https://bao.fixture SSH_SIGNER_ROLE_ID=signer-role SSH_SIGNER_SECRET_ID=signer-secret
   export SSH_CA_MOUNT=ssh-client-ca SSH_SIGNER_ROLE=automation-signer
 }
 
 semaphore_env() {
-  export BAO_ADDR=http://bao.fixture
+  export BAO_ADDR=https://bao.fixture
   export OPENBAO_APPROLE_SEMAPHORE_ROLE_ID=semaphore-role OPENBAO_APPROLE_SEMAPHORE_SECRET_ID=semaphore-secret
 }
 
 ansible_env() {
-  export BAO_ADDR=http://bao.fixture
+  export BAO_ADDR=https://bao.fixture
   export OPENBAO_APPROLE_ANSIBLE_ROLE_ID=ansible-role OPENBAO_APPROLE_ANSIBLE_SECRET_ID=ansible-secret
 }
 
@@ -205,9 +205,9 @@ with_origin() {
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
   [[ $output == *"authenticated as: signer"* ]]
-  grep -Fq 'POST http://bao.fixture/v1/auth/approle/login' "$FIXTURE_LOG"
+  grep -Fq 'POST https://bao.fixture/v1/auth/approle/login' "$FIXTURE_LOG"
   grep -Fqx 'SIGN /v1/ssh-client-ca/sign/automation-signer ttl=1h' "$FIXTURE_LOG"
-  grep -Fq 'POST http://bao.fixture/v1/auth/token/revoke-self' "$FIXTURE_LOG"
+  grep -Fq 'POST https://bao.fixture/v1/auth/token/revoke-self' "$FIXTURE_LOG"
   key=$(sed -n 's/^key=//p' "$FIXTURE_RUN_LOG")
   [ -n "$key" ]
   [ ! -e "$key" ]
@@ -271,11 +271,11 @@ with_origin() {
 
 @test "SECRET_STORE_ADDR takes precedence over BAO_ADDR" {
   semaphore_env
-  export BAO_ADDR=http://old.fixture SECRET_STORE_ADDR=http://bao.fixture
+  export BAO_ADDR=https://old.fixture SECRET_STORE_ADDR=https://bao.fixture
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
   ! grep -Fq 'old.fixture' "$FIXTURE_LOG"
-  grep -Fq 'http://bao.fixture/v1/auth/approle/login' "$FIXTURE_LOG"
+  grep -Fq 'https://bao.fixture/v1/auth/approle/login' "$FIXTURE_LOG"
 }
 
 @test "a caller BAO_TOKEN is kept and only the runner token is revoked" {
@@ -595,7 +595,7 @@ with_origin() {
 }
 
 @test "RUN_ANSIBLE_SIGN_ROLE_<NAME> overrides the CA role for that identity only" {
-  export BAO_ADDR=http://bao.fixture
+  export BAO_ADDR=https://bao.fixture
   export OPENBAO_APPROLE_ANSIBLE_CONVERGE_ROLE_ID=converge-role OPENBAO_APPROLE_ANSIBLE_CONVERGE_SECRET_ID=converge-secret
   export RUN_ANSIBLE_IDENTITIES=ansible-converge RUN_ANSIBLE_SIGN_ROLE_ANSIBLE_CONVERGE=automation-ansible
   run "$RUN_ANSIBLE" site.yml
@@ -605,7 +605,7 @@ with_origin() {
 }
 
 @test "an identity without a sign-role override signs as automation-<name>" {
-  export BAO_ADDR=http://bao.fixture
+  export BAO_ADDR=https://bao.fixture
   export OPENBAO_APPROLE_ANSIBLE_CONVERGE_ROLE_ID=converge-role OPENBAO_APPROLE_ANSIBLE_CONVERGE_SECRET_ID=converge-secret
   export RUN_ANSIBLE_IDENTITIES=ansible-converge
   run "$RUN_ANSIBLE" site.yml

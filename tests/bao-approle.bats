@@ -202,6 +202,22 @@ teardown() {
   [ -z "$output" ]
 }
 
+@test "login accepts loopback http and rejects other http addresses before contacting OpenBao" {
+  export BAO_APPROLE_ROLE_ID=role-fixture BAO_APPROLE_SECRET_ID=secret-fixture
+
+  run "$BAO_APPROLE" login --addr http://127.0.0.1:8200
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "client-token-fixture" ]
+
+  : > "$FIXTURE_ARGV_LOG"
+  run "$BAO_APPROLE" login --addr http://192.0.2.5:8200
+
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"BAO_ADDR must be an https URL for token requests"* ]]
+  [ ! -s "$FIXTURE_ARGV_LOG" ]
+}
+
 @test "token requests reject non-loopback http addresses before contacting OpenBao" {
   export BAO_TOKEN=bao-token-fixture BAO_ADDR=http://127.0.0.1.evil.example
 

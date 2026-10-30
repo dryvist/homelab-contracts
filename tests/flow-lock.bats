@@ -282,7 +282,7 @@ SH
 
 @test "flow-lock status mints a one-use credential through approle-issuer once" {
   fake_flow_lock_openbao
-  export BAO_ADDR=fixture
+  export BAO_ADDR=https://fixture
   export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
   export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
 
@@ -301,7 +301,7 @@ SH
 
 @test "approle-token mints a fresh credential for the requested role" {
   fake_flow_lock_openbao
-  export BAO_ADDR=fixture
+  export BAO_ADDR=https://fixture
   export BAO_TOKEN=unrelated-runner-token
   export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
   export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
@@ -319,7 +319,7 @@ SH
 
 @test "approle-token revokes its secret id when the target login fails" {
   fake_flow_lock_openbao
-  export BAO_ADDR=fixture
+  export BAO_ADDR=https://fixture
   export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
   export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
   export FLOW_LOCK_FIXTURE_REJECT_RECONCILE=1
@@ -333,7 +333,7 @@ SH
 
 approle_env() {
   fake_flow_lock_openbao
-  export BAO_ADDR=fixture
+  export BAO_ADDR=https://fixture
   export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
   export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
 }
@@ -416,7 +416,7 @@ DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor
 
 @test "approle-token rejects malformed role names before calling OpenBao" {
   fake_flow_lock_openbao
-  export BAO_ADDR=fixture
+  export BAO_ADDR=https://fixture
   export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
   export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
 
@@ -428,7 +428,7 @@ DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor
 
 @test "flow-lock status treats a supplied BAO_TOKEN as issuer authority" {
   fake_flow_lock_openbao
-  BAO_ADDR=fixture BAO_TOKEN=issuer-token run "$FLOW_LOCK" status
+  BAO_ADDR=https://fixture BAO_TOKEN=issuer-token run "$FLOW_LOCK" status
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"flow-lock: free (no lease held)"* ]]
@@ -438,7 +438,7 @@ DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor
 }
 
 @test "flow-lock status refuses the obsolete static flow-lock pair" {
-  BAO_ADDR=fixture FLOW_LOCK_ROLE_ID=old-role FLOW_LOCK_SECRET_ID=old-secret run "$FLOW_LOCK" status
+  BAO_ADDR=https://fixture FLOW_LOCK_ROLE_ID=old-role FLOW_LOCK_SECRET_ID=old-secret run "$FLOW_LOCK" status
 
   [ "$status" -eq 64 ]
   [[ "$output" == *"OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID/SECRET_ID"* ]]
@@ -446,7 +446,7 @@ DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor
 
 @test "flow-lock run reuses the scoped token and withholds issuer inputs from the child" {
   fake_flow_lock_openbao
-  export BAO_ADDR=fixture
+  export BAO_ADDR=https://fixture
   export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
   export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
 
