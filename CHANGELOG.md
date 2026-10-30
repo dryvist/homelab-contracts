@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.40.1](https://github.com/dryvist/homelab-contracts/compare/v5.40.0...v5.40.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* **cribl_packs:** give the Cribl user read access to installed packs ([#290](https://github.com/dryvist/homelab-contracts/issues/290)) ([84037b1](https://github.com/dryvist/homelab-contracts/commit/84037b1e7351116f907ded1e6c0935fd4e1c4df3))
+
 ## [5.40.0](https://github.com/dryvist/homelab-contracts/compare/v5.39.0...v5.40.0) (2026-10-30)
 
 
