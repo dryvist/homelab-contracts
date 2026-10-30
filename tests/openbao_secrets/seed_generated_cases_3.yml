@@ -1,0 +1,173 @@
+---
+- name: Case S - fields can forbid generation while retaining or importing values
+  block:
+    - name: S - prepare an existing field
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/seed"
+        method: POST
+        body_format: json
+        body: {path: secret/data/seed/no-generate, version: 1, data: {existing: keep-me}}
+        status_code: [200]
+
+    - name: S - retain the stored field and import the missing field
+      ansible.builtin.include_role:
+        name: openbao_secrets
+        tasks_from: seed_generated
+      vars:
+        openbao_secrets_seed_path: seed/no-generate
+        openbao_secrets_seed_fields:
+          - {name: existing, generate: false}
+          - {name: imported, generate: false, value: imported-value}
+
+    - name: S - read the resulting state
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/state"
+        return_content: true
+      register: state_s
+
+    - name: S - assert the existing and imported values are preserved
+      ansible.builtin.assert:
+        that:
+          - state_s.json.state['secret/data/seed/no-generate'].version == 2
+          - "state_s.json.state['secret/data/seed/no-generate'].data == {'existing': 'keep-me', 'imported': 'imported-value'}"
+
+    - name: S - replace rotated and invalid fields with caller values
+      ansible.builtin.include_role:
+        name: openbao_secrets
+        tasks_from: seed_generated
+      vars:
+        openbao_secrets_seed_path: seed/no-generate
+        openbao_secrets_seed_rotate_fields: [existing]
+        openbao_secrets_seed_fields:
+          - {name: existing, generate: false, value: rotated-value}
+          - {name: imported, generate: false, valid_pattern: '^new-', value: new-value}
+
+    - name: S - read the replacement state
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/state"
+        return_content: true
+      register: state_s_replaced
+
+    - name: S - assert both caller replacements were written
+      ansible.builtin.assert:
+        that:
+          - state_s_replaced.json.state['secret/data/seed/no-generate'].version == 3
+          - "state_s_replaced.json.state['secret/data/seed/no-generate'].data == {'existing': 'rotated-value', 'imported': 'new-value'}"
+
+- name: Case T - missing, rotated and invalid fields cannot generate or write
+  block:
+    - name: T - prepare the existing values
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/seed"
+        method: POST
+        body_format: json
+        body: {path: secret/data/seed/no-generate-refuse, version: 1, data: {existing: keep-me}}
+        status_code: [200]
+
+    - name: T - reset the request log
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/log-reset"
+        method: POST
+        status_code: [200]
+
+    - name: T - refuse a missing field without a caller value
+      block:
+        - name: T - attempt the missing field
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/no-generate-refuse
+            openbao_secrets_seed_fields:
+              - {name: otherwise_generated}
+              - {name: missing, generate: false}
+      rescue:
+        - name: T - record the refusal
+          ansible.builtin.set_fact:
+            case_t_failed: true
+
+    - name: T - refuse a whitespace caller value
+      block:
+        - name: T - attempt the whitespace value
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/no-generate-refuse
+            openbao_secrets_seed_fields:
+              - {name: missing, generate: false, value: '   '}
+      rescue:
+        - name: T - record the whitespace refusal
+          ansible.builtin.set_fact:
+            case_t_whitespace_failed: true
+
+    - name: T - refuse rotation without a caller value
+      block:
+        - name: T - attempt rotation
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/no-generate-refuse
+            openbao_secrets_seed_rotate_fields: [existing]
+            openbao_secrets_seed_fields:
+              - {name: existing, generate: false}
+      rescue:
+        - name: T - record the rotation refusal
+          ansible.builtin.set_fact:
+            case_t_rotate_failed: true
+
+    - name: T - refuse invalid stored values without a caller value
+      block:
+        - name: T - attempt pattern replacement
+          ansible.builtin.include_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          vars:
+            openbao_secrets_seed_path: seed/no-generate-refuse
+            openbao_secrets_seed_fields:
+              - {name: existing, generate: false, valid_pattern: '^different'}
+      rescue:
+        - name: T - record the pattern refusal
+          ansible.builtin.set_fact:
+            case_t_pattern_failed: true
+
+    - name: T - read the state
+      ansible.builtin.uri:
+        url: "{{ fake_addr }}/_test/state"
+        return_content: true
+      register: state_t
+
+    - name: T - assert the guard failed without a write
+      ansible.builtin.assert:
+        that:
+          - case_t_failed | default(false) | bool
+          - case_t_whitespace_failed | default(false) | bool
+          - case_t_rotate_failed | default(false) | bool
+          - case_t_pattern_failed | default(false) | bool
+          - state_t.json.state['secret/data/seed/no-generate-refuse'].version == 1
+          - "state_t.json.state['secret/data/seed/no-generate-refuse'].data == {'existing': 'keep-me'}"
+          - state_t.json.log | selectattr('method', 'equalto', 'POST') | list | length == 0
+
+- name: Case U - check mode also refuses a missing guarded field
+  block:
+    - name: U - attempt a guarded seed in check mode
+      block:
+        - name: U - import the shared seed role in check mode
+          ansible.builtin.import_role:
+            name: openbao_secrets
+            tasks_from: seed_generated
+          check_mode: true
+          vars:
+            openbao_secrets_seed_path: seed/no-generate-check
+            openbao_secrets_seed_fields:
+              - {name: missing, generate: false}
+      rescue:
+        - name: U - record the refusal
+          ansible.builtin.set_fact:
+            case_u_failed: true
+
+    - name: U - assert the refusal
+      ansible.builtin.assert:
+        that:
+          - case_u_failed | default(false) | bool
