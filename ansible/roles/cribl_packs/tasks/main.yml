@@ -29,6 +29,9 @@
         cribl_packs_for_edge if cribl_packs_target == 'edge'
         else cribl_packs_for_stream
       }}
+    # Stream sentinels carry the flat-layout marker so packs installed in the
+    # earlier nested layout are reinstalled once.
+    _cribl_packs_sentinel_ext: "{{ 'flat.installed' if cribl_packs_target == 'stream' else 'installed' }}"
     _cribl_packs_list: []
 
 - name: Read the mirrored Cribl pack manifest
@@ -134,7 +137,7 @@
 # Check version sentinels beside each pack in its target-specific install root.
 - name: Stat installed-version sentinel for each pack
   ansible.builtin.stat:
-    path: "{{ _cribl_packs_pack_root }}/{{ item.name }}/.{{ item.version }}.installed"
+    path: "{{ _cribl_packs_pack_root }}/{{ item.name }}/.{{ item.version }}.{{ _cribl_packs_sentinel_ext }}"
   loop: "{{ _cribl_packs_list }}"
   loop_control:
     label: "{{ item.name }}"
@@ -200,10 +203,12 @@
     label: "{{ item.item.item.name }}"
   when: not (item.skipped | default(false))
 
+# Edge keeps the archive layout. Stream's native install places the archive's
+# default/ contents directly in the pack directory, beside package.json.
 - name: Move extracted pack into place
   ansible.builtin.command:
     cmd: >-
-      mv {{ item.path }}
+      mv {{ item.path }}{{ '/default' if cribl_packs_target == 'stream' else '' }}
       {{ _cribl_packs_pack_root }}/{{ item.item.item.name }}
   loop: "{{ cribl_packs_tmp_dirs.results }}"
   loop_control:
@@ -211,6 +216,30 @@
   when: not (item.skipped | default(false))
   changed_when: true
   notify: "{{ 'Restart cribl edge' if cribl_packs_target == 'edge' else 'Restart cribl stream' }}"
+
+- name: Keep the pack manifest beside the Stream pack configuration
+  ansible.builtin.command:
+    cmd: >-
+      mv {{ item.path }}/package.json
+      {{ _cribl_packs_pack_root }}/{{ item.item.item.name }}/package.json
+  loop: "{{ cribl_packs_tmp_dirs.results }}"
+  loop_control:
+    label: "{{ item.item.item.name }}"
+  when:
+    - cribl_packs_target == 'stream'
+    - not (item.skipped | default(false))
+  changed_when: true
+
+- name: Remove the Stream staging directory
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ cribl_packs_tmp_dirs.results }}"
+  loop_control:
+    label: "{{ item.item.item.name }}"
+  when:
+    - cribl_packs_target == 'stream'
+    - not (item.skipped | default(false))
 
 # Stream only registers packs listed in its package.json; with that file present
 # the start-up scan ignores new directories. Cribl rebuilds it from the default
@@ -256,7 +285,7 @@
   ansible.builtin.copy:
     dest: >-
       {{ _cribl_packs_pack_root }}/{{
-      item.item.name }}/.{{ item.item.version }}.installed
+      item.item.name }}/.{{ item.item.version }}.{{ _cribl_packs_sentinel_ext }}
     content: "{{ item.item.version }}\n"
     owner: "{{ cribl_packs_user }}"
     group: "{{ cribl_packs_group }}"
