@@ -122,7 +122,7 @@
     label: "{{ item.item }} {{ item.json.tag_name | default('') }}"
   when: cribl_packs_object_storage_base_url is not defined
 
-# Edge packs use the local config tree; Stream's CLI installs under default.
+# Edge packs use the local config tree; Stream loads packs from its default tree.
 - name: Ensure packs directory exists
   ansible.builtin.file:
     path: "{{ _cribl_packs_pack_root }}"
@@ -165,19 +165,20 @@
   vars:
     ansible_become: false
 
-# Only Edge is unpacked here; Stream must use its CLI to register the pack.
+# Extract beside the install root, not inside Stream's default tree, so the pack
+# scanner never sees a half-extracted directory; the rename below is atomic.
 - name: Create temporary extraction directory for each pack
   ansible.builtin.tempfile:
     state: directory
     suffix: "-cribl-pack-{{ item.item.name }}"
-    path: "{{ _cribl_packs_pack_root }}"
+    path: "{{ _cribl_packs_pack_root if cribl_packs_target == 'edge' else cribl_packs_install_dir }}"
   loop: "{{ cribl_packs_sentinel_stats.results }}"
   loop_control:
     label: "{{ item.item.name }}"
-  when: cribl_packs_target == 'edge' and not item.stat.exists
+  when: not item.stat.exists
   register: cribl_packs_tmp_dirs
 
-# Unarchive only for Edge, whose install contract remains an on-disk pack tree.
+# Both targets install an on-disk pack tree; Cribl registers it at the next start.
 - name: Unarchive pack into temporary directory
   ansible.builtin.unarchive:
     src: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.item.name }}-{{ item.item.item.version }}.crbl"
@@ -187,9 +188,9 @@
   loop: "{{ cribl_packs_tmp_dirs.results }}"
   loop_control:
     label: "{{ item.item.item.name }} {{ item.item.item.version }}"
-  when: cribl_packs_target == 'edge' and not (item.skipped | default(false))
+  when: not (item.skipped | default(false))
 
-# Preserve the atomic replacement path for Edge's on-disk packs.
+# Replace the pack directory (and with it any older version sentinel).
 - name: Remove existing pack directory before atomic replace
   ansible.builtin.file:
     path: "{{ _cribl_packs_pack_root }}/{{ item.item.item.name }}"
@@ -197,9 +198,8 @@
   loop: "{{ cribl_packs_tmp_dirs.results }}"
   loop_control:
     label: "{{ item.item.item.name }}"
-  when: cribl_packs_target == 'edge' and not (item.skipped | default(false))
+  when: not (item.skipped | default(false))
 
-# Edge's pack files are installed by the atomic rename below.
 - name: Move extracted pack into place
   ansible.builtin.command:
     cmd: >-
@@ -208,80 +208,9 @@
   loop: "{{ cribl_packs_tmp_dirs.results }}"
   loop_control:
     label: "{{ item.item.item.name }}"
-  when: cribl_packs_target == 'edge' and not (item.skipped | default(false))
+  when: not (item.skipped | default(false))
   changed_when: true
-  notify: Restart cribl edge
-
-# Copy the archive to Stream because its CLI runs on the managed host.
-- name: Copy Stream pack archive to target
-  ansible.builtin.copy:
-    src: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
-    dest: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
-    owner: "{{ cribl_packs_user }}"
-    group: "{{ cribl_packs_group }}"
-    mode: "0644"
-  loop: "{{ cribl_packs_sentinel_stats.results }}"
-  loop_control:
-    label: "{{ item.item.name }} {{ item.item.version }}"
-  when: cribl_packs_target == 'stream' and not item.stat.exists
-
-# Use Cribl's installer so Stream registers the downloaded pack in its package file.
-- name: Install Stream pack with Cribl CLI
-  ansible.builtin.command:
-    argv:
-      - "{{ cribl_packs_install_dir }}/bin/cribl"
-      - pack
-      - install
-      - -f
-      - "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
-  loop: "{{ cribl_packs_sentinel_stats.results }}"
-  loop_control:
-    label: "{{ item.item.name }} {{ item.item.version }}"
-  when: cribl_packs_target == 'stream' and not item.stat.exists
-  become: true
-  become_user: "{{ cribl_packs_user }}"
-  register: cribl_packs_stream_install
-  changed_when: true
-  failed_when: cribl_packs_stream_install.rc != 0
-  notify: Restart cribl stream
-
-# Remove the remote archive after Stream has installed it successfully.
-- name: Remove Stream pack staging file from target
-  ansible.builtin.file:
-    path: "/tmp/cribl-pack-{{ inventory_hostname }}-{{ item.item.name }}-{{ item.item.version }}.crbl"
-    state: absent
-  loop: "{{ cribl_packs_sentinel_stats.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  when: cribl_packs_target == 'stream' and not item.stat.exists
-
-# Remove old version markers so a later rollback cannot appear already installed.
-- name: Find previous Stream version sentinels
-  ansible.builtin.find:
-    paths: "{{ _cribl_packs_pack_root }}/{{ item.item.name }}"
-    patterns: ".*.installed"
-    file_type: file
-  loop: "{{ cribl_packs_sentinel_stats.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
-  when: cribl_packs_target == 'stream' and not item.stat.exists
-  register: cribl_packs_stream_sentinel_files
-
-# Keep only the requested Stream version marker so a later downgrade reinstalls.
-- name: Remove previous Stream version sentinels
-  ansible.builtin.file:
-    path: "{{ item.path }}"
-    state: absent
-  loop: >-
-    {{
-      cribl_packs_stream_sentinel_files.results
-      | selectattr('files', 'defined')
-      | map(attribute='files')
-      | flatten
-    }}
-  loop_control:
-    label: "{{ item.path }}"
-  when: cribl_packs_target == 'stream'
+  notify: "{{ 'Restart cribl edge' if cribl_packs_target == 'edge' else 'Restart cribl stream' }}"
 
 # Record the requested version beside the installed pack for future skip checks.
 - name: Write installed-version sentinel
