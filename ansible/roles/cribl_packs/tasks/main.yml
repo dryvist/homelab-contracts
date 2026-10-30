@@ -236,6 +236,21 @@
       | from_json).dependencies | default({}) | list) | length > 0
   notify: Restart cribl stream
 
+# The staging directory is created root-owned and 0700, and the rename keeps
+# that, so make every pack directory readable by the Cribl service user.
+- name: Set pack directory owner and mode
+  ansible.builtin.file:
+    path: "{{ _cribl_packs_pack_root }}/{{ item.name }}"
+    state: directory
+    owner: "{{ cribl_packs_user }}"
+    group: "{{ cribl_packs_group }}"
+    mode: "u=rwX,g=rX,o=rX"
+    recurse: true
+  loop: "{{ _cribl_packs_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: "{{ 'Restart cribl edge' if cribl_packs_target == 'edge' else 'Restart cribl stream' }}"
+
 # Record the requested version beside the installed pack for future skip checks.
 - name: Write installed-version sentinel
   ansible.builtin.copy:
