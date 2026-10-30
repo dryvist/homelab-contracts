@@ -264,3 +264,42 @@
   become: false
   vars:
     ansible_become: false
+
+# A pack directory without its manifest is not a pack; report where each one
+# stands so a load failure shows the on-disk state in the converge log.
+- name: Stat each installed pack directory
+  ansible.builtin.stat:
+    path: "{{ _cribl_packs_pack_root }}/{{ item.name }}"
+  loop: "{{ _cribl_packs_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: cribl_packs_dir_stats
+
+- name: Stat each installed pack manifest
+  ansible.builtin.stat:
+    path: "{{ _cribl_packs_pack_root }}/{{ item.name }}/package.json"
+  loop: "{{ _cribl_packs_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: cribl_packs_manifest_stats
+
+- name: Report installed pack layout
+  ansible.builtin.debug:
+    msg: >-
+      {{ item.item.name }}: dir={{ item.stat.exists }}
+      owner={{ item.stat.pw_name | default('-') }}
+      mode={{ item.stat.mode | default('-') }}
+      manifest={{ cribl_packs_manifest_stats.results[idx].stat.exists }}
+  loop: "{{ cribl_packs_dir_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+    index_var: idx
+
+- name: Assert each installed pack has a manifest
+  ansible.builtin.assert:
+    that: item.stat.exists
+    fail_msg: "{{ item.item.name }} has no package.json under {{ _cribl_packs_pack_root }}"
+    quiet: true
+  loop: "{{ cribl_packs_manifest_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
