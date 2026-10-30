@@ -527,3 +527,6 @@
           - case_r_msg is search('until its TTL expires')
           - "'writer-revoke-fails' not in case_r_msg"
           - state_r.json.state['secret/data/seed/revoke-fails'].version == 1
+
+- name: Run the generation guard cases
+  ansible.builtin.import_tasks: seed_generated_cases_3.yml

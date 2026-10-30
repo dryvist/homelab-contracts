@@ -172,6 +172,8 @@ Adds missing fields to one KV v2 secret. The interface is in `meta/argument_spec
 ```
 
 - A stored field keeps its value. A missing field gets a generated value, or the field's `value` when given.
+- Set a field's `generate: false` to require a nonempty caller `value` when the field is missing or needs
+  replacement. Valid stored values are kept; the same guard applies in check mode.
 - One check-and-set write: `cas=0` creates the secret, and `cas=<observed version>` merges into an existing one.
   A concurrent writer makes the run fail; nothing is overwritten.
 - `openbao_secrets_seed_rotate_fields` regenerates the named fields. A field's `valid_pattern` regenerates a stored

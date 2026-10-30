@@ -206,6 +206,25 @@
         openbao_secrets_seed_in_check_mode: "{{ openbao_secrets_seed_check_probe.skipped | default(false) | bool }}"
       no_log: true
 
+    # Validate every field before planning any random value or writing the secret.
+    - name: Require a caller value when generation is disabled and a replacement is needed
+      ansible.builtin.assert:
+        that:
+          - item.value | default('') is string
+          - item.value | default('') | trim | length > 0
+        fail_msg: "A caller value is required when generation is disabled for a field that needs replacement."
+      loop: "{{ openbao_secrets_seed_fields }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - not (item.generate | default(true) | bool)
+        - >-
+          ((openbao_secrets_seed_stored[item.name] | default('', true)) | length == 0)
+          or (item.name in openbao_secrets_seed_rotate_fields)
+          or ((item.valid_pattern | default('', true)) | length > 0
+              and not ((openbao_secrets_seed_stored[item.name] | default('', true)) is match(item.valid_pattern)))
+      no_log: true
+
     - name: Start the desired-field accumulator
       ansible.builtin.set_fact:
         openbao_secrets_seed_desired: {}

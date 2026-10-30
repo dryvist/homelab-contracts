@@ -248,13 +248,15 @@
         name: openbao_secrets
         tasks_from: seed_generated
       vars:
-        openbao_secrets_seed_path: "seed/{{ item }}"
+        openbao_secrets_seed_path: "seed/{{ router_case }}"
         openbao_secrets_seed_fields:
           - name: router_key
             length: 24
             prefix: "sk-"
             valid_pattern: '^sk-'
       loop: [router, router-ok]
+      loop_control:
+        loop_var: router_case
 
     - name: F - read the stand-in state
       ansible.builtin.uri:
