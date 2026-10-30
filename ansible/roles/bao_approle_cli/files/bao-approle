@@ -16,7 +16,7 @@ only the OpenBao client token. The address comes from --addr or BAO_ADDR. --foll
 redirects. FLOW_LOCK_API_MAX_TIME sets the login timeout in seconds (default 30).
 revoke-self reads BAO_TOKEN or one token from stdin.
 gh-token uses BAO_TOKEN to mint and print one GitHub installation token.
-revoke-self and gh-token require an https or loopback http BAO_ADDR.
+login, revoke-self and gh-token require an https or loopback http BAO_ADDR.
 EOF
 }
 
@@ -101,6 +101,7 @@ login() {
   [ -n "$role_id" ] || die "BAO_APPROLE_ROLE_ID or --role-id-file is required" "$EX_USAGE"
   [ -n "$secret_id" ] || die "BAO_APPROLE_SECRET_ID or --secret-id-file is required" "$EX_USAGE"
   [ -n "$addr" ] || die "BAO_ADDR or --addr is required" "$EX_USAGE"
+  require_https "$addr"
   require_command jq
   require_command curl
 
