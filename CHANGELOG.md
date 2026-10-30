@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.38.4](https://github.com/dryvist/homelab-contracts/compare/v5.38.3...v5.38.4) (2026-10-30)
+
+
+### Bug Fixes
+
+* **cribl_packs:** drop Stream package file whenever a catalog pack is unlisted ([#284](https://github.com/dryvist/homelab-contracts/issues/284)) ([21b3f73](https://github.com/dryvist/homelab-contracts/commit/21b3f7377948aad125af47e0292c35f0ebf8730a))
+
 ## [5.38.3](https://github.com/dryvist/homelab-contracts/compare/v5.38.2...v5.38.3) (2026-10-30)
 
 
