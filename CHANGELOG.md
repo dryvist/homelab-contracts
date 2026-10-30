@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.40.0](https://github.com/dryvist/homelab-contracts/compare/v5.39.0...v5.40.0) (2026-10-30)
+
+
+### Features
+
+* **inventory:** define shared service desired state ([357e52f](https://github.com/dryvist/homelab-contracts/commit/357e52fe82d348a0bd68bf36b34af50a78a3f5d3))
+
 ## [5.39.0](https://github.com/dryvist/homelab-contracts/compare/v5.38.4...v5.39.0) (2026-10-30)
 
 
