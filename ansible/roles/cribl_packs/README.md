@@ -21,7 +21,9 @@ Each pack installation drops a sentinel file `.<version>.installed` inside the
 pack directory. Re-runs on the same version skip the download. On a version
 change, the role extracts the `.crbl` to a temporary directory, removes the old
 pack directory (and its sentinel), and renames the new one into place. Both
-targets notify their `Restart cribl` handler.
+targets notify their `Restart cribl` handler. After new Stream packs are moved in,
+the role removes `/opt/cribl/package.json`; Cribl rebuilds it from the `default` tree
+on the restart, which is what registers the packs.
 
 ## Installation
 

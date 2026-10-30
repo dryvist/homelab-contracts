@@ -210,7 +210,20 @@
     label: "{{ item.item.item.name }}"
   when: not (item.skipped | default(false))
   changed_when: true
+  register: cribl_packs_moved
   notify: "{{ 'Restart cribl edge' if cribl_packs_target == 'edge' else 'Restart cribl stream' }}"
+
+# Stream only registers packs listed in its package.json; with that file present
+# the start-up scan ignores new directories. Cribl rebuilds it from the default
+# tree when it is absent, so drop it before the restart handler runs.
+- name: Remove Stream package file so the restart re-registers installed packs
+  ansible.builtin.file:
+    path: "{{ cribl_packs_install_dir }}/package.json"
+    state: absent
+  when:
+    - cribl_packs_target == 'stream'
+    - cribl_packs_moved is changed
+  notify: Restart cribl stream
 
 # Record the requested version beside the installed pack for future skip checks.
 - name: Write installed-version sentinel
