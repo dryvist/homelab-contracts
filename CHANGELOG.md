@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.37.3](https://github.com/dryvist/homelab-contracts/compare/v5.37.2...v5.37.3) (2026-10-30)
+
+
+### Bug Fixes
+
+* **bao-approle:** require an https or loopback http address for login ([#274](https://github.com/dryvist/homelab-contracts/issues/274)) ([1c5b628](https://github.com/dryvist/homelab-contracts/commit/1c5b62874800be3c0f6df4dab9a380d51c50838b))
+
 ## [5.37.2](https://github.com/dryvist/homelab-contracts/compare/v5.37.1...v5.37.2) (2026-10-30)
 
 
