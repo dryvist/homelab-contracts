@@ -67,7 +67,7 @@
       "description": "Semantic version of this contract. Consumers fail-fast when the major differs. Emitted by terraform-proxmox inventory_publish.tf; must be '2.x.y' for this schema.",
       "type": "string",
       "pattern": "^2\\.\\d+\\.\\d+$",
-      "examples": ["2.5.0"]
+      "examples": ["2.6.0"]
     },
     "domain": {
       "description": "Internal DNS domain for FQDN resolution (e.g. 'example.com'). MAY be empty: terraform-proxmox supports an empty domain (locals.tf falls back to a bare hostname). The ansible-proxmox-apps loader separately requires a non-empty domain at runtime, since per-node ansible_host is derived as {node-role}.{domain}.",
