@@ -20,6 +20,9 @@
 #   PROXMOX_SSH_KEY_PATH     static private key file, used when no certificate is minted
 #   PROXMOX_SSH_PRIVATE_KEY  static private key content, used only with RUN_ANSIBLE_SSH_AGENT
 #   BAO_TOKEN                caller token; kept, and the runner's own token is revoked instead
+#   OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_ROLE_ID     optional seed-writer AppRole role ID
+#   OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_SECRET_ID   optional seed-writer AppRole secret ID
+#   OPENBAO_SEED_WRITER_TOKEN                           runner-minted token passed to the playbook
 #   NIX_SHELL                flake path; runs ansible-playbook through `nix develop`
 #   ALLOW_STALE_CHECKOUT     1 skips the checkout guard
 #
@@ -55,6 +58,7 @@
 set -euo pipefail
 # Never trace: identities, secret_ids and keys pass through variables below.
 { set +x; } 2>/dev/null
+unset OPENBAO_SEED_WRITER_TOKEN
 
 die() {
   echo "ERROR: $*" >&2
@@ -96,8 +100,24 @@ cleanup() {
 # Login goes through the shared CLI, so the secret_id never appears in a process argument list.
 # --follow-redirects follows HTTP redirects (curl -L).
 bao_login() {
-  FLOW_LOCK_API_MAX_TIME=10 BAO_APPROLE_ROLE_ID="$CONVERGE_ROLE_ID" \
-    BAO_APPROLE_SECRET_ID="$CONVERGE_SECRET_ID" bao-approle login --addr "$BAO_ADDR" --follow-redirects
+  local role_id=$1 secret_id=$2
+  FLOW_LOCK_API_MAX_TIME=10 BAO_APPROLE_ROLE_ID="$role_id" \
+    BAO_APPROLE_SECRET_ID="$secret_id" bao-approle login --addr "${BAO_ADDR:-}" --follow-redirects
+}
+
+mint_seed_writer_token() {
+  local role_id=${OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_ROLE_ID:-}
+  local secret_id=${OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_SECRET_ID:-}
+  local token
+  if [[ -z $role_id || -z $secret_id ]]; then
+    return 0
+  fi
+  # Batch seed-writer tokens cannot be revoked; they expire after 600 seconds.
+  if token=$(bao_login "$role_id" "$secret_id" 2>/dev/null) && [[ -n $token ]]; then
+    export OPENBAO_SEED_WRITER_TOKEN="$token"
+  else
+    echo "WARNING: AppRole login failed for ansible-converge-writer; continuing without OPENBAO_SEED_WRITER_TOKEN." >&2
+  fi
 }
 
 # Sets CONVERGE_ROLE_ID, CONVERGE_SECRET_ID, CONVERGE_SIGN_ROLE and CONVERGE_IDENTITY for the named identity.
@@ -128,7 +148,7 @@ mint_ssh_cert() {
   rm -f "$WORK_DIR/id" "$WORK_DIR/id.pub" "$WORK_DIR/id-cert.pub"
   (umask 077 && ssh-keygen -q -t ed25519 -N '' -C run-ansible -f "$WORK_DIR/id") || return 1
   { set +x; } 2>/dev/null
-  login=$(bao_login) || {
+  login=$(bao_login "$CONVERGE_ROLE_ID" "$CONVERGE_SECRET_ID") || {
     rc=$?
     # curl exit 22: the store answered with an HTTP error, so the login was refused.
     if [[ $rc -eq 22 ]]; then
@@ -487,6 +507,8 @@ main() {
   else
     LOG_FILE="$WORK_DIR/run.log"
   fi
+
+  mint_seed_writer_token
 
   set +e
   run_playbook "$@" 2>&1 | tee "$LOG_FILE"
