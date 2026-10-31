@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.41.0](https://github.com/dryvist/homelab-contracts/compare/v5.40.2...v5.41.0) (2026-10-31)
+
+
+### Features
+
+* **run-ansible:** export a short-lived seed writer token ([#294](https://github.com/dryvist/homelab-contracts/issues/294)) ([8e95e90](https://github.com/dryvist/homelab-contracts/commit/8e95e90666c7dc94cd3c3df086b6837d0e4dd4c7))
+
 ## [5.40.2](https://github.com/dryvist/homelab-contracts/compare/v5.40.1...v5.40.2) (2026-10-30)
 
 
