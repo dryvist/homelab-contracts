@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.42.0](https://github.com/dryvist/homelab-contracts/compare/v5.41.0...v5.42.0) (2026-10-31)
+
+
+### Features
+
+* **inventory:** add agent trust tier and specializations with one-owner validation ([#296](https://github.com/dryvist/homelab-contracts/issues/296)) ([cd29438](https://github.com/dryvist/homelab-contracts/commit/cd294381f9b57fb06e55dc058f07c001b09b1dfc))
+
 ## [5.41.0](https://github.com/dryvist/homelab-contracts/compare/v5.40.2...v5.41.0) (2026-10-31)
 
 
