@@ -17,6 +17,8 @@ setup() {
   unset RUN_ANSIBLE_PIN_PLAYBOOKS RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS RUN_ANSIBLE_EXPORT_CONVERGE_IDENTITY RUN_ANSIBLE_NO_SSH
   unset CONVERGE_ROLE_ID CONVERGE_SECRET_ID CONVERGE_IDENTITY RUN_ANSIBLE_SIGN_ROLE_ANSIBLE_CONVERGE
   unset OPENBAO_APPROLE_ANSIBLE_CONVERGE_ROLE_ID OPENBAO_APPROLE_ANSIBLE_CONVERGE_SECRET_ID
+  unset OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_ROLE_ID OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_SECRET_ID
+  unset OPENBAO_SEED_WRITER_TOKEN FIXTURE_WRITER_SECRET_ID FIXTURE_EXPECTED_SEED_WRITER_TOKEN
   unset RUN_ANSIBLE_LOG_DIR FIXTURE_REFUSED_ROLE FIXTURE_SIGN_FAIL FIXTURE_SIGN_FAIL_ROLE FIXTURE_REVOKE_FAILS FIXTURE_RECAP
   unset RUN_ANSIBLE_FALLBACK_ON_ERROR RUN_ANSIBLE_REQUIRE_RECAP RUN_ANSIBLE_RETIRING_IDENTITIES RUN_ANSIBLE_WARN_NO_ISSUER
   unset OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID OPENBAO_PROVISIONING_TOKEN
@@ -28,8 +30,10 @@ setup() {
   mkdir -p "$TMPDIR"
   export FIXTURE_LOG="$BATS_TEST_TMPDIR/requests.log"
   export FIXTURE_RUN_LOG="$BATS_TEST_TMPDIR/run.log"
+  export FIXTURE_ARGS_LOG="$BATS_TEST_TMPDIR/argv.log"
   export FIXTURE_REVOKE_LEFT="$BATS_TEST_TMPDIR/revoke-left"
   : > "$FIXTURE_LOG"
+  : > "$FIXTURE_ARGS_LOG"
 
   STUB="$BATS_TEST_TMPDIR/stub"
   mkdir -p "$STUB"
@@ -120,9 +124,30 @@ printf 'nix' >> "$FIXTURE_LOG"
 printf ' [%s]' "$@" >> "$FIXTURE_LOG"
 printf '\n' >> "$FIXTURE_LOG"
 SH
+  cat > "$STUB/bao-approle" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ -n ${FIXTURE_WRITER_SECRET_ID:-} && " $* " == *"$FIXTURE_WRITER_SECRET_ID"* ]]; then
+  printf 'secret-id-in-argv\n' >> "$FIXTURE_ARGS_LOG"
+fi
+if [[ ${1:-} != login ]]; then
+  exit 64
+fi
+role=${BAO_APPROLE_ROLE_ID:-}
+printf 'POST %s/v1/auth/approle/login\n' "${BAO_ADDR:-}" >> "$FIXTURE_LOG"
+printf 'LOGIN role=%s\n' "$role" >> "$FIXTURE_LOG"
+if [[ -n ${FIXTURE_REFUSED_ROLE:-} && $role == "$FIXTURE_REFUSED_ROLE" ]]; then
+  printf 'AppRole login rejected: invalid role or secret ID\n' >&2
+  exit 22
+fi
+printf 'token-%s\n' "$role"
+SH
   cat > "$STUB/ansible-playbook" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ -n ${FIXTURE_WRITER_SECRET_ID:-} && " $* " == *"$FIXTURE_WRITER_SECRET_ID"* ]]; then
+  printf 'secret-id-in-argv\n' >> "$FIXTURE_ARGS_LOG"
+fi
 {
   printf 'ansible-playbook'
   printf ' [%s]' "$@"
@@ -133,6 +158,13 @@ set -euo pipefail
   printf 'host_key_checking=%s\n' "${ANSIBLE_HOST_KEY_CHECKING:-}"
   printf 'known_hosts_file=%s\n' "${SSH_KNOWN_HOSTS_FILE:-}"
   printf 'converge=%s:%s:%s\n' "${CONVERGE_IDENTITY:-}" "${CONVERGE_ROLE_ID:-}" "${CONVERGE_SECRET_ID:+set}"
+  if [[ -z ${OPENBAO_SEED_WRITER_TOKEN:-} ]]; then
+    printf 'seed_writer=unset\n'
+  elif [[ ${OPENBAO_SEED_WRITER_TOKEN} == "${FIXTURE_EXPECTED_SEED_WRITER_TOKEN:-}" ]]; then
+    printf 'seed_writer=expected\n'
+  else
+    printf 'seed_writer=unexpected\n'
+  fi
 } >> "$FIXTURE_RUN_LOG"
 printf 'PLAYBOOK-OUTPUT\n'
 printf '%b' "${FIXTURE_RECAP:-}"
@@ -592,6 +624,53 @@ with_origin() {
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
   grep -qx 'converge=ansible:ansible-role:set' "$FIXTURE_RUN_LOG"
+}
+
+@test "ansible-converge-writer credentials export the minted token to the playbook" {
+  signer_env
+  export OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_ROLE_ID=writer-role
+  export OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_SECRET_ID=writer-secret-id
+  export FIXTURE_EXPECTED_SEED_WRITER_TOKEN=token-writer-role
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  grep -Fqx 'LOGIN role=writer-role' "$FIXTURE_LOG"
+  grep -Fqx 'seed_writer=expected' "$FIXTURE_RUN_LOG"
+}
+
+@test "missing seed-writer credentials leave the token unset and the run succeeds" {
+  static_key
+  export OPENBAO_SEED_WRITER_TOKEN=stale-token
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  grep -Fqx 'seed_writer=unset' "$FIXTURE_RUN_LOG"
+  run grep -Fq 'LOGIN role=' "$FIXTURE_LOG"
+  [ "$status" -ne 0 ]
+}
+
+@test "a failed seed-writer login warns and continues without a token" {
+  static_key
+  export BAO_ADDR=https://bao.fixture
+  export OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_ROLE_ID=writer-role
+  export OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_SECRET_ID=writer-secret-id
+  export FIXTURE_REFUSED_ROLE=writer-role
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"WARNING: AppRole login failed for ansible-converge-writer"* ]]
+  grep -Fqx 'seed_writer=unset' "$FIXTURE_RUN_LOG"
+}
+
+@test "the seed-writer secret ID never appears in a stub's argv" {
+  static_key
+  export BAO_ADDR=https://bao.fixture
+  export FIXTURE_WRITER_SECRET_ID=writer-secret-id
+  export OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_ROLE_ID=writer-role
+  export OPENBAO_APPROLE_ANSIBLE_CONVERGE_WRITER_SECRET_ID="$FIXTURE_WRITER_SECRET_ID"
+  export FIXTURE_EXPECTED_SEED_WRITER_TOKEN=token-writer-role
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [ ! -s "$FIXTURE_ARGS_LOG" ]
+  [[ $output != *"$FIXTURE_WRITER_SECRET_ID"* ]]
+  grep -Fqx 'seed_writer=expected' "$FIXTURE_RUN_LOG"
 }
 
 @test "RUN_ANSIBLE_SIGN_ROLE_<NAME> overrides the CA role for that identity only" {
