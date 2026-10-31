@@ -1,0 +1,78 @@
+- name: Validate inventory agent ownership semantics
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Validate the repository example inventory
+      ansible.builtin.include_tasks: validate.yml
+      vars:
+        ownership_inventory_file: "{{ playbook_dir }}/../../examples/ansible_inventory.json"
+
+    - name: Validate the two-agent fixture with disjoint capabilities
+      ansible.builtin.include_tasks: validate.yml
+      vars:
+        ownership_inventory_file: "{{ playbook_dir }}/fixtures/valid.json"
+
+    - name: Report the valid fixture result
+      ansible.builtin.debug:
+        msg: "PASS: valid fixture has two agents with disjoint capabilities and specializations."
+
+    - name: Duplicate-owner fixture is rejected with its slug and both agents
+      block:
+        - name: Run semantic validation on the duplicate-owner fixture
+          ansible.builtin.include_tasks: validate.yml
+          vars:
+            ownership_inventory_file: "{{ playbook_dir }}/fixtures/duplicate-owner.json"
+
+        - name: Fail if the duplicate-owner fixture passed
+          ansible.builtin.fail:
+            msg: "Duplicate-owner fixture unexpectedly passed semantic validation."
+      rescue:
+        - name: Collect the semantic validation diagnostic
+          ansible.builtin.set_fact:
+            _ownership_failure: >-
+              {{ (ansible_failed_result.results | default([ansible_failed_result]))
+                 | selectattr('failed', 'defined') | selectattr('failed')
+                 | map(attribute='msg') | join(' ') }}
+
+        - name: Verify the duplicate-owner diagnostic
+          ansible.builtin.assert:
+            that:
+              - "'openbao-cli' in _ownership_failure"
+              - "'alpha-agent' in _ownership_failure"
+              - "'beta-agent' in _ownership_failure"
+              - "'multiple owners' in _ownership_failure"
+            fail_msg: "Unexpected duplicate-owner result: {{ _ownership_failure }}"
+
+        - name: Report the duplicate-owner fixture result
+          ansible.builtin.debug:
+            msg: "PASS: duplicate-owner fixture fails for openbao-cli owned by alpha-agent and beta-agent."
+
+    - name: Duplicate-specialization fixture is rejected by name
+      block:
+        - name: Run semantic validation on the duplicate-specialization fixture
+          ansible.builtin.include_tasks: validate.yml
+          vars:
+            ownership_inventory_file: "{{ playbook_dir }}/fixtures/duplicate-specialization.json"
+
+        - name: Fail if the duplicate-specialization fixture passed
+          ansible.builtin.fail:
+            msg: "Duplicate-specialization fixture unexpectedly passed semantic validation."
+      rescue:
+        - name: Collect the semantic validation diagnostic
+          ansible.builtin.set_fact:
+            _ownership_failure: >-
+              {{ (ansible_failed_result.results | default([ansible_failed_result]))
+                 | selectattr('failed', 'defined') | selectattr('failed')
+                 | map(attribute='msg') | join(' ') }}
+
+        - name: Verify the duplicate-specialization diagnostic
+          ansible.builtin.assert:
+            that:
+              - "'github-audit' in _ownership_failure"
+              - "'alpha-agent' in _ownership_failure"
+              - "'duplicate specialization' in _ownership_failure"
+            fail_msg: "Unexpected duplicate-specialization result: {{ _ownership_failure }}"
+
+        - name: Report the duplicate-specialization fixture result
+          ansible.builtin.debug:
+            msg: "PASS: duplicate-specialization fixture fails for alpha-agent and github-audit."

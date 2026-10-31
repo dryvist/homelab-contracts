@@ -81,6 +81,6 @@ jobs:
           --lanes ansible/roles/llm_roles/files/lanes.json \
           --router-names "$router_names_dir/servable-aliases.json" \
           --names "$RUNNER_TEMP/lane-alias-contracts.json"
-        for contract in llm_model_catalog llm_router_key_catalog llm_roles agent_callers; do
+        for contract in llm_model_catalog llm_router_key_catalog llm_roles agent_callers inventory_agent_ownership; do
           ANSIBLE_ROLES_PATH=ansible/roles "$RUNNER_TEMP/contracts-gate/bin/ansible-playbook" -i localhost, "tests/$contract/test_contract.yml"
         done
