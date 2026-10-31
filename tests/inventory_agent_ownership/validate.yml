@@ -1,0 +1,14 @@
+- name: Read the inventory contract
+  ansible.builtin.set_fact:
+    _agent_inventory_contract: "{{ lookup('ansible.builtin.file', ownership_inventory_file) | from_json }}"
+
+- name: Initialize semantic ownership state
+  ansible.builtin.set_fact:
+    _agent_capability_owners: {}
+
+- name: Validate each agent's capabilities and specializations
+  ansible.builtin.include_tasks: validate_agent.yml
+  loop: "{{ _agent_inventory_contract.agents | dict2items }}"
+  loop_control:
+    loop_var: inventory_agent
+    label: "{{ inventory_agent.key }}"

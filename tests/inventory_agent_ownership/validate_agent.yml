@@ -1,0 +1,23 @@
+- name: Assert each capability has one owning agent
+  ansible.builtin.assert:
+    that:
+      - item not in _agent_capability_owners
+    fail_msg: >-
+      Capability '{{ item }}' has multiple owners:
+      {{ _agent_capability_owners[item] | default('') }}, {{ inventory_agent.key }}.
+  loop: "{{ inventory_agent.value.owns }}"
+
+- name: Record the capability owner
+  ansible.builtin.set_fact:
+    _agent_capability_owners: "{{ _agent_capability_owners | combine({item: inventory_agent.key}) }}"
+  loop: "{{ inventory_agent.value.owns }}"
+
+- name: Assert specialization names are unique per agent
+  vars:
+    _specialization_names: "{{ inventory_agent.value.specializations | default([]) | map(attribute='name') | list }}"
+  ansible.builtin.assert:
+    that:
+      - _specialization_names | select('equalto', item) | list | length == 1
+    fail_msg: >-
+      Agent '{{ inventory_agent.key }}' has duplicate specialization '{{ item }}'.
+  loop: "{{ _specialization_names | unique }}"

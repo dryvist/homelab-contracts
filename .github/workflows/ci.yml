@@ -24,6 +24,12 @@ jobs:
         run: pip install 'check-jsonschema==0.38.2'
       - name: Validate ansible_inventory example against schema
         run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
+      - name: Validate agent ownership fixtures against schema
+        run: >-
+          check-jsonschema --schemafile schemas/ansible-inventory-v1.json
+          tests/inventory_agent_ownership/fixtures/valid.json
+          tests/inventory_agent_ownership/fixtures/duplicate-owner.json
+          tests/inventory_agent_ownership/fixtures/duplicate-specialization.json
       - name: Validate optional Hindsight service state and prior schema compatibility
         run: |
           jq '.constants.service_state.hindsight_enabled = false' examples/ansible_inventory.json > "$RUNNER_TEMP/hindsight-disabled.json"
