@@ -1,0 +1,49 @@
+{
+  "schema_version": "2.8.0",
+  "domain": "example.invalid",
+  "containers": {},
+  "agents": {
+    "legacy-github-owner": {
+      "container": "legacy-agent",
+      "hostname": "legacy-agent.example.invalid",
+      "display": "Legacy physical owner",
+      "purpose": "Keeps the existing physical-owner shape.",
+      "owns": ["github"],
+      "router_key_class": "standard"
+    },
+    "github-specialist": {
+      "display": "GitHub specialist",
+      "purpose": "Claims the same tool domain as the legacy owner.",
+      "trust_tier": "trusted",
+      "owns": ["github"],
+      "router_key_class": "standard",
+      "native_binding_ref": "fixture-github-native-definition",
+      "specializations": []
+    }
+  },
+  "hermes_agents": {},
+  "vms": {},
+  "docker_vms": {},
+  "splunk_vm": {
+    "splunk-example": {
+      "vmid": 999999998,
+      "hostname": "splunk-example.example.invalid",
+      "ip": "192.0.2.55",
+      "node": "node-example-1",
+      "ansible_connection": "ssh"
+    }
+  },
+  "constants": {
+    "service_ports": { "example_service": 10001 },
+    "syslog_ports": { "example_syslog": 10002 },
+    "netflow_ports": { "example_netflow": 10003 },
+    "notification_ports": { "example_notification": 10004 },
+    "vector_db_ports": { "example_vector_db": 10005 }
+  },
+  "ingress": [],
+  "ingress_vip": "",
+  "ingress_hosts": [],
+  "host_services": {},
+  "nodes": {},
+  "node_storage": {}
+}

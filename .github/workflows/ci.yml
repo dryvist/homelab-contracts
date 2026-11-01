@@ -30,6 +30,43 @@ jobs:
           tests/inventory_agent_ownership/fixtures/valid.json
           tests/inventory_agent_ownership/fixtures/duplicate-owner.json
           tests/inventory_agent_ownership/fixtures/duplicate-specialization.json
+          tests/inventory_agent_ownership/fixtures/logical-owners.json
+          tests/inventory_agent_ownership/fixtures/duplicate-mixed-owner.json
+      - name: Reject incomplete logical owner and physical identity shapes
+        run: |
+          jq '.agents["github-repository-specialist"].specializations = []' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/logical-empty-specializations.json"
+          check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/logical-empty-specializations.json"
+          jq 'del(.agents["github-repository-specialist"].specializations)' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/logical-missing-specializations.json"
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/logical-missing-specializations.json"; then
+            echo "Logical owner without specializations unexpectedly validated" >&2
+            exit 1
+          fi
+          jq 'del(.agents["github-repository-specialist"].native_binding_ref)' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/logical-missing-binding.json"
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/logical-missing-binding.json"; then
+            echo "Logical owner without native_binding_ref unexpectedly validated" >&2
+            exit 1
+          fi
+          jq 'del(.agents["github-repository-specialist"].trust_tier)' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/logical-missing-trust-tier.json"
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/logical-missing-trust-tier.json"; then
+            echo "Logical owner without trust_tier unexpectedly validated" >&2
+            exit 1
+          fi
+          jq '.agents["github-repository-specialist"].native_binding_ref = "   "' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/logical-blank-binding.json"
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/logical-blank-binding.json"; then
+            echo "Logical owner with a blank native_binding_ref unexpectedly validated" >&2
+            exit 1
+          fi
+          jq '.agents["github-repository-specialist"].container = "fixture-container"' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/partial-physical-identity.json"
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/partial-physical-identity.json"; then
+            echo "Agent with only one physical identity field unexpectedly validated" >&2
+            exit 1
+          fi
       - name: Validate optional Hindsight service state and prior schema compatibility
         run: |
           jq '.constants.service_state.hindsight_enabled = false' examples/ansible_inventory.json > "$RUNNER_TEMP/hindsight-disabled.json"

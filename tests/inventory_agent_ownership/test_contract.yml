@@ -16,6 +16,15 @@
       ansible.builtin.debug:
         msg: "PASS: valid fixture has two agents with disjoint capabilities and specializations."
 
+    - name: Validate the logical owner fixture
+      ansible.builtin.include_tasks: validate.yml
+      vars:
+        ownership_inventory_file: "{{ playbook_dir }}/fixtures/logical-owners.json"
+
+    - name: Report the logical owner fixture result
+      ansible.builtin.debug:
+        msg: "PASS: logical GitHub, Vikunja, and Slack owners have distinct domains and native binding references."
+
     - name: Duplicate-owner fixture is rejected with its slug and both agents
       block:
         - name: Run semantic validation on the duplicate-owner fixture
@@ -46,6 +55,37 @@
         - name: Report the duplicate-owner fixture result
           ansible.builtin.debug:
             msg: "PASS: duplicate-owner fixture fails for openbao-cli owned by alpha-agent and beta-agent."
+
+    - name: Mixed physical and logical duplicate-owner fixture is rejected
+      block:
+        - name: Run semantic validation on the mixed duplicate-owner fixture
+          ansible.builtin.include_tasks: validate.yml
+          vars:
+            ownership_inventory_file: "{{ playbook_dir }}/fixtures/duplicate-mixed-owner.json"
+
+        - name: Fail if the mixed duplicate-owner fixture passed
+          ansible.builtin.fail:
+            msg: "Mixed physical and logical duplicate-owner fixture unexpectedly passed semantic validation."
+      rescue:
+        - name: Collect the semantic validation diagnostic
+          ansible.builtin.set_fact:
+            _ownership_failure: >-
+              {{ (ansible_failed_result.results | default([ansible_failed_result]))
+                 | selectattr('failed', 'defined') | selectattr('failed')
+                 | map(attribute='msg') | join(' ') }}
+
+        - name: Verify the mixed duplicate-owner diagnostic
+          ansible.builtin.assert:
+            that:
+              - "'github' in _ownership_failure"
+              - "'legacy-github-owner' in _ownership_failure"
+              - "'github-specialist' in _ownership_failure"
+              - "'multiple owners' in _ownership_failure"
+            fail_msg: "Unexpected mixed duplicate-owner result: {{ _ownership_failure }}"
+
+        - name: Report the mixed duplicate-owner fixture result
+          ansible.builtin.debug:
+            msg: "PASS: mixed duplicate-owner fixture fails for github owned by legacy-github-owner and github-specialist."
 
     - name: Duplicate-specialization fixture is rejected by name
       block:
