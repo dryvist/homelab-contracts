@@ -274,7 +274,7 @@
       "allOf": [
         {
           "if": { "not": { "required": ["container"] } },
-          "then": { "required": ["native_binding_ref", "trust_tier"] }
+          "then": { "required": ["native_binding_ref", "trust_tier", "specializations"] }
         }
       ],
       "properties": {

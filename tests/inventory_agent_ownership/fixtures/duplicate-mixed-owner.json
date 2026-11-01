@@ -17,7 +17,8 @@
       "trust_tier": "trusted",
       "owns": ["github"],
       "router_key_class": "standard",
-      "native_binding_ref": "fixture-github-native-definition"
+      "native_binding_ref": "fixture-github-native-definition",
+      "specializations": []
     }
   },
   "hermes_agents": {},
