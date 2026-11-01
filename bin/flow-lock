@@ -193,7 +193,7 @@ mint_approle_token() {
   [[ "$approle_name" =~ ^[A-Za-z0-9_-]+$ ]] \
     || die "invalid AppRole name: $approle_name" "$EX_USAGE"
   local issuer_token role_response secret_response status body role_id secret_id
-  local secret_id_accessor client_token secret_id_num_uses
+  local secret_id_accessor client_token secret_id_num_uses pair_prefix
   bao_issuer_token
   issuer_token="$BAO_ISSUER_TOKEN_CACHED"
 
@@ -201,6 +201,11 @@ mint_approle_token() {
     || die "could not read the $approle_name role id from OpenBao"
   status="$(printf '%s\n' "$role_response" | awk 'END { print }')"
   body="$(printf '%s' "$role_response" | sed '$d')"
+  if [ "$status" = "403" ]; then
+    # The issuer policy reads role IDs only for per-call roles; any other role answers 403.
+    pair_prefix="$(printf '%s' "$approle_name" | tr 'a-z-' 'A-Z_')"
+    die "$approle_name is a stored/rotated identity; log in with its Doppler pair OPENBAO_APPROLE_${pair_prefix}_ROLE_ID/_SECRET_ID instead" "$EX_USAGE"
+  fi
   [ "$status" = "200" ] || die "$approle_name role-id read failed (HTTP $status)"
   role_id="$(jq -er '.data.role_id' <<<"$body" 2>/dev/null)" \
     || die "$approle_name role-id response did not contain a role id"

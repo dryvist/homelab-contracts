@@ -127,6 +127,10 @@ case "$path" in
     response="$(fixture_secret_id_response reconcile-secret reconcile-accessor)"
     status=200
     ;;
+  auth/approle/role/rotated-example/role-id)
+    response='{"errors":["permission denied"]}'
+    status=403
+    ;;
   auth/approle/role/flow-lock/secret-id-accessor/destroy|auth/approle/role/openbao-reconcile/secret-id-accessor/destroy)
     if [ "${FLOW_LOCK_FIXTURE_DESTROY_ALREADY_GONE:-}" = 1 ]; then
       response='{"errors":["1 error occurred:\n\t* failed to find accessor entry for secret_id_accessor: \"fixture-accessor\""]}'
@@ -424,6 +428,20 @@ DESTROY_RECONCILE=$'POST\tauth/approle/role/openbao-reconcile/secret-id-accessor
 
   [ "$status" -eq 64 ]
   [ ! -s "$FLOW_LOCK_API_LOG" ]
+}
+
+@test "approle-token names the Doppler pair when the role is not issuer-eligible" {
+  fake_flow_lock_openbao
+  export BAO_ADDR=https://fixture
+  export OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID=issuer-role-id
+  export OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID=issuer-secret
+
+  run "$FLOW_LOCK" approle-token rotated-example
+
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"rotated-example is a stored/rotated identity"* ]]
+  [[ "$output" == *"OPENBAO_APPROLE_ROTATED_EXAMPLE_ROLE_ID/_SECRET_ID"* ]]
+  [ "$(grep -c 'secret-id' "$FLOW_LOCK_API_LOG")" -eq 0 ]
 }
 
 @test "flow-lock status treats a supplied BAO_TOKEN as issuer authority" {
