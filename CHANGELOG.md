@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.43.0](https://github.com/dryvist/homelab-contracts/compare/v5.42.0...v5.43.0) (2026-11-01)
+
+
+### Features
+
+* add logical agent ownership ([7b96abb](https://github.com/dryvist/homelab-contracts/commit/7b96abbbbfcaf8f39f65bc534774b20d01746ea9))
+* add logical agent ownership to the inventory contract ([#299](https://github.com/dryvist/homelab-contracts/issues/299)) ([485c71b](https://github.com/dryvist/homelab-contracts/commit/485c71b4bed30978138cce1a6519e25367ee769d))
+
+
+### Bug Fixes
+
+* require logical owner specializations ([e0af0f2](https://github.com/dryvist/homelab-contracts/commit/e0af0f212b3c7d3ae262c12cfc806d828c58aa4a))
+* wrap inventory fixture validation commands ([b46d597](https://github.com/dryvist/homelab-contracts/commit/b46d5970613706bc9ef50c03934e25bb469c1cc4))
+
 ## [5.42.0](https://github.com/dryvist/homelab-contracts/compare/v5.41.0...v5.42.0) (2026-10-31)
 
 
