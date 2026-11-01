@@ -24,7 +24,7 @@ jobs:
         run: pip install 'check-jsonschema==0.38.2'
       - name: Validate ansible_inventory example against schema
         run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json examples/ansible_inventory.json
-      - name: Validate agent ownership fixtures against schema
+      - name: Validate ownership fixtures, including a local router key class
         run: >-
           check-jsonschema --schemafile schemas/ansible-inventory-v1.json
           tests/inventory_agent_ownership/fixtures/valid.json
@@ -65,6 +65,14 @@ jobs:
             tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/partial-physical-identity.json"
           if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/partial-physical-identity.json"; then
             echo "Agent with only one physical identity field unexpectedly validated" >&2
+            exit 1
+          fi
+      - name: Reject unknown logical owner router key class
+        run: |
+          jq '.agents["github-repository-specialist"].router_key_class = "unknown"' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/unknown-router-key-class.json"
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/unknown-router-key-class.json"; then
+            echo "Unknown router_key_class unexpectedly validated" >&2
             exit 1
           fi
       - name: Validate optional Hindsight service state and prior schema compatibility
