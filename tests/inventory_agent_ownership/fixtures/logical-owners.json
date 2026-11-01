@@ -1,0 +1,66 @@
+{
+  "schema_version": "2.8.0",
+  "domain": "example.invalid",
+  "containers": {},
+  "agents": {
+    "github-repository-specialist": {
+      "display": "GitHub specialist",
+      "purpose": "Owns the GitHub tool domain.",
+      "trust_tier": "trusted",
+      "owns": ["github", "github-repository-tools"],
+      "specializations": [
+        { "name": "repository-review", "description": "Reviews repository state." },
+        { "name": "ci-rerun", "description": "Reruns in-scope CI." }
+      ],
+      "router_key_class": "standard",
+      "native_binding_ref": "fixture-github-native-definition"
+    },
+    "vikunja-specialist": {
+      "display": "Vikunja specialist",
+      "purpose": "Owns the task-tracker tool domain.",
+      "trust_tier": "trusted",
+      "owns": ["vikunja"],
+      "specializations": [
+        { "name": "task-triage", "description": "Creates and reads scoped tasks." }
+      ],
+      "router_key_class": "standard",
+      "native_binding_ref": "fixture-vikunja-native-definition"
+    },
+    "slack-specialist": {
+      "display": "Slack specialist",
+      "purpose": "Owns the Slack tool domain.",
+      "trust_tier": "trusted",
+      "owns": ["slack"],
+      "specializations": [
+        { "name": "thread-response", "description": "Replies in an authorized thread." }
+      ],
+      "router_key_class": "standard",
+      "native_binding_ref": "fixture-slack-native-definition"
+    }
+  },
+  "hermes_agents": {},
+  "vms": {},
+  "docker_vms": {},
+  "splunk_vm": {
+    "splunk-example": {
+      "vmid": 999999998,
+      "hostname": "splunk-example.example.invalid",
+      "ip": "192.0.2.55",
+      "node": "node-example-1",
+      "ansible_connection": "ssh"
+    }
+  },
+  "constants": {
+    "service_ports": { "example_service": 10001 },
+    "syslog_ports": { "example_syslog": 10002 },
+    "netflow_ports": { "example_netflow": 10003 },
+    "notification_ports": { "example_notification": 10004 },
+    "vector_db_ports": { "example_vector_db": 10005 }
+  },
+  "ingress": [],
+  "ingress_vip": "",
+  "ingress_hosts": [],
+  "host_services": {},
+  "nodes": {},
+  "node_storage": {}
+}
