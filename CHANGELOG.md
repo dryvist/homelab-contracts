@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.44.1](https://github.com/dryvist/homelab-contracts/compare/v5.44.0...v5.44.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* name the Doppler pair when approle-token refuses a stored role ([#303](https://github.com/dryvist/homelab-contracts/issues/303)) ([69d5c73](https://github.com/dryvist/homelab-contracts/commit/69d5c7390b5c7115c3bf3a419d5826619a506b6c))
+
 ## [5.44.0](https://github.com/dryvist/homelab-contracts/compare/v5.43.0...v5.44.0) (2026-11-01)
 
 
