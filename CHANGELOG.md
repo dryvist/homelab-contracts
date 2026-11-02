@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.45.1](https://github.com/dryvist/homelab-contracts/compare/v5.45.0...v5.45.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* **cribl:** drop the retired Mac Edge pack from the edge_macos list ([#307](https://github.com/dryvist/homelab-contracts/issues/307)) ([821873e](https://github.com/dryvist/homelab-contracts/commit/821873e8cad0790876ae8102e9f7810481e6109a))
+
 ## [5.45.0](https://github.com/dryvist/homelab-contracts/compare/v5.44.1...v5.45.0) (2026-11-02)
 
 
