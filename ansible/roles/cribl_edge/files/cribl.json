@@ -4,7 +4,6 @@
   "packs": {
     "edge_linux": ["cc-edge-copilot-otel", "cc-edge-vscode-io"],
     "edge_macos": [
-      "cc-edge-the-mac-pack-io",
       "cc-edge-codex-io",
       "cc-edge-gemini-antigravity-io",
       "cc-edge-macos-diagnostic-reports-io",
