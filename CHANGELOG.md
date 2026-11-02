@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.44.0](https://github.com/dryvist/homelab-contracts/compare/v5.43.0...v5.44.0) (2026-11-01)
+
+
+### Features
+
+* **agents:** allow the local router key class ([#301](https://github.com/dryvist/homelab-contracts/issues/301)) ([a2c17a9](https://github.com/dryvist/homelab-contracts/commit/a2c17a9dd3acc6dfb63b6e2173e8497b6dae6cbd))
+
 ## [5.43.0](https://github.com/dryvist/homelab-contracts/compare/v5.42.0...v5.43.0) (2026-11-01)
 
 
