@@ -75,6 +75,11 @@ jobs:
             echo "Unknown router_key_class unexpectedly validated" >&2
             exit 1
           fi
+      - name: Accept a public logical owner router key class
+        run: |
+          jq '.agents["github-repository-specialist"].router_key_class = "public"' \
+            tests/inventory_agent_ownership/fixtures/logical-owners.json > "$RUNNER_TEMP/public-router-key-class.json"
+          check-jsonschema --schemafile schemas/ansible-inventory-v1.json "$RUNNER_TEMP/public-router-key-class.json"
       - name: Validate optional Hindsight service state and prior schema compatibility
         run: |
           jq '.constants.service_state.hindsight_enabled = false' examples/ansible_inventory.json > "$RUNNER_TEMP/hindsight-disabled.json"
