@@ -147,6 +147,21 @@
       loop_control:
         label: "{{ item.name }}"
 
+    - name: GPT-oss-120b resident profile keeps the config.json context window
+      ansible.builtin.assert:
+        that:
+          - item.profiles.mlx.context_window == 131072
+          - item.profiles.mlx.max_output_tokens == 32768
+          - item.profiles.mlx.queue_size is integer
+          - item.profiles.mlx.decode_tokens_per_second is number
+      loop: >-
+        {{ llm_model_catalog_models
+           | selectattr('name', 'equalto',
+                        'mlx-community/gpt-oss-120b-MXFP4-Q8')
+           | list }}
+      loop_control:
+        label: "{{ item.name }}"
+
     - name: K2 Horizon profiles keep the 64k context and 32k output limits
       ansible.builtin.assert:
         that:
