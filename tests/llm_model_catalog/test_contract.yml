@@ -147,7 +147,7 @@
       loop_control:
         label: "{{ item.name }}"
 
-    - name: gpt-oss-120b resident profile keeps the config.json context window
+    - name: GPT-oss-120b resident profile keeps the config.json context window
       ansible.builtin.assert:
         that:
           - item.profiles.mlx.context_window == 131072
