@@ -1,0 +1,31 @@
+---
+# Contract for the run-env document list: the three OpenBao documents every
+# Semaphore converge run reads, one plain path per line, in read order.
+#
+# Run: ansible-playbook -i localhost, tests/run_env_documents/test_contract.yml
+
+- name: Run-env document list contract
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    _list_path: "{{ playbook_dir }}/../../ansible/files/run-env-documents.txt"
+    _documents: "{{ lookup('ansible.builtin.file', _list_path).splitlines() }}"
+    _expected:
+      - config/platform/ansible/env
+      - secret/platform/ansible/env
+      - secrets-external/platform/ansible/env
+  tasks:
+    - name: The list names exactly the three run-env documents, in order
+      ansible.builtin.assert:
+        that:
+          - _documents == _expected
+        fail_msg: "run-env-documents.txt must list {{ _expected }} in order; got {{ _documents }}."
+
+    - name: Every entry is a plain document path
+      ansible.builtin.assert:
+        quiet: true
+        that:
+          - item is match('^[a-z][a-z-]*/[a-z0-9/-]+$')
+        fail_msg: "{{ item }} is not a plain document path."
+      loop: "{{ _documents }}"

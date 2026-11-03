@@ -184,6 +184,8 @@ jobs:
         env:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/llm_model_catalog/test_contract.yml
+      - name: Verify the run-env document list contract
+        run: ansible-playbook -i localhost, tests/run_env_documents/test_contract.yml
       - name: Verify the llm_router_key_catalog contract
         env:
           ANSIBLE_ROLES_PATH: ansible/roles

@@ -1,0 +1,3 @@
+config/platform/ansible/env
+secret/platform/ansible/env
+secrets-external/platform/ansible/env
