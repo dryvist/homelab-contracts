@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.48.0](https://github.com/dryvist/homelab-contracts/compare/v5.47.0...v5.48.0) (2026-11-03)
+
+
+### Features
+
+* **llm_model_catalog:** add the Kimi K2.7 Code and Grok 4.7 OpenCode Go models ([#313](https://github.com/dryvist/homelab-contracts/issues/313)) ([77065f1](https://github.com/dryvist/homelab-contracts/commit/77065f13a8b72c2902aa171ce6de0e2d3e47fdf3))
+
 ## [5.47.0](https://github.com/dryvist/homelab-contracts/compare/v5.46.0...v5.47.0) (2026-11-03)
 
 
