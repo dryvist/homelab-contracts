@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.47.0](https://github.com/dryvist/homelab-contracts/compare/v5.46.0...v5.47.0) (2026-11-03)
+
+
+### Features
+
+* **llm_model_catalog:** add 22 OpenCode Go model names ([#311](https://github.com/dryvist/homelab-contracts/issues/311)) ([100fcc4](https://github.com/dryvist/homelab-contracts/commit/100fcc46d37ec99a35dcd02bb03f40e29893e1bd))
+
 ## [5.46.0](https://github.com/dryvist/homelab-contracts/compare/v5.45.1...v5.46.0) (2026-11-03)
 
 
