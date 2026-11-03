@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.49.0](https://github.com/dryvist/homelab-contracts/compare/v5.48.0...v5.49.0) (2026-11-03)
+
+
+### Features
+
+* **contracts:** publish the run-env document list ([#315](https://github.com/dryvist/homelab-contracts/issues/315)) ([9e480ac](https://github.com/dryvist/homelab-contracts/commit/9e480ac95ef432321aa14e28acbde1a28dec4a9e))
+
 ## [5.48.0](https://github.com/dryvist/homelab-contracts/compare/v5.47.0...v5.48.0) (2026-11-03)
 
 
