@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.46.0](https://github.com/dryvist/homelab-contracts/compare/v5.45.1...v5.46.0) (2026-11-03)
+
+
+### Features
+
+* **catalog:** add gpt-oss-120b MLX resident profile ([#309](https://github.com/dryvist/homelab-contracts/issues/309)) ([893df6c](https://github.com/dryvist/homelab-contracts/commit/893df6c4bb7dd4d678230fc6a35de5904d962b40))
+
 ## [5.45.1](https://github.com/dryvist/homelab-contracts/compare/v5.45.0...v5.45.1) (2026-11-02)
 
 
