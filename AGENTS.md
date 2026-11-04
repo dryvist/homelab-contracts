@@ -34,7 +34,7 @@ This repo does **not** own:
 - Ansible playbooks, repo-specific roles, or inventories (live in
   `dryvist/ansible-proxmox` and `dryvist/ansible-proxmox-apps`)
 - OpenTofu modules (live in `dryvist/tofu-proxmox`)
-- The OpenBao deployment itself (role lives in `dryvist/ansible-proxmox-apps`)
+- The OpenBao deployment itself (role lives in `dryvist/ansible-secrets-management`)
 - Business logic of any kind — `bin/` tools are pure contract enforcement
   (lease, creds injection, validation); anything flow-specific stays downstream
 
@@ -90,7 +90,8 @@ release-please drives version bumps from these prefixes. Major bumps are human-i
 | Repo | Relationship |
 | --- | --- |
 | `dryvist/ansible-proxmox` | Consumes `inventory_resolve` via `requirements.yml` git source; validates inventory in CI |
-| `dryvist/ansible-proxmox-apps` | Same as above; also owns the OpenBao deployment role the lease lives on |
+| `dryvist/ansible-proxmox-apps` | Same as above |
+| `dryvist/ansible-secrets-management` | Owns the OpenBao deployment role the lease lives on |
 | `dryvist/tofu-proxmox` | Defines `pipeline_constants` and writes them into the inventory; Terrakube serializes workspace runs |
 
 ## ADRs
