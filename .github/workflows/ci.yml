@@ -32,6 +32,14 @@ jobs:
           tests/inventory_agent_ownership/fixtures/duplicate-specialization.json
           tests/inventory_agent_ownership/fixtures/logical-owners.json
           tests/inventory_agent_ownership/fixtures/duplicate-mixed-owner.json
+      - name: Validate ingress routes that carry every dashboard and tile field
+        run: check-jsonschema --schemafile schemas/ansible-inventory-v1.json tests/ingress_route_fields/fixtures/emitted-routes.json
+      - name: Reject an ingress route whose ui field is not a boolean
+        run: |
+          if check-jsonschema --schemafile schemas/ansible-inventory-v1.json tests/ingress_route_fields/fixtures/wrong-ui-type.json; then
+            echo "wrong-ui-type fixture was accepted" >&2
+            exit 1
+          fi
       - name: Reject incomplete logical owner and physical identity shapes
         run: |
           jq '.agents["github-repository-specialist"].specializations = []' \

@@ -392,7 +392,18 @@
           "type": "string",
           "pattern": "^[0-9]+(ms|s|m|h)$",
           "description": "How long the ingress waits for this backend's response headers before answering 504, as a Go duration (Traefik responseHeaderTimeout). Omitted: the ingress default. \"0s\": no limit, for a backend that bounds its own request lifetime (an LLM router with a per-attempt timeout) and legitimately computes for minutes before its first byte."
-        }
+        },
+        "hostname": { "type": "string", "minLength": 1, "description": "Frontend host label. Defaults to the route name." },
+        "path_prefix": { "type": ["string", "null"], "minLength": 1, "description": "Path prefix this route serves, or null." },
+        "priority": { "type": ["integer", "null"], "description": "Router priority, or null for the default." },
+        "owner": { "type": ["string", "null"], "minLength": 1, "description": "Serving guest name, or null for a route with no container backend." },
+        "sso": { "type": "boolean", "description": "Authelia forwardAuth gate." },
+        "source_ranges": { "type": ["array", "null"], "items": { "type": "string", "minLength": 1 }, "description": "Source networks allowed to reach this route, or null." },
+        "group": { "type": "string", "minLength": 1, "description": "Dashboard group label." },
+        "ui": { "type": "boolean", "description": "Route is shown on human-facing dashboards." },
+        "desc": { "type": "string", "description": "Tile description. Empty string when unknown." },
+        "title": { "type": "string", "minLength": 1, "description": "Board tile title." },
+        "section": { "type": ["string", "null"], "description": "Section header for a guest that serves 2 or more routes, or null." }
       },
       "anyOf": [
         { "required": ["ip"] },
