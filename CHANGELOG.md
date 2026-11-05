@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.51.0](https://github.com/dryvist/homelab-contracts/compare/v5.50.0...v5.51.0) (2026-11-05)
+
+
+### Features
+
+* **lanes:** add recorder-medium to the lane vocabulary ([#320](https://github.com/dryvist/homelab-contracts/issues/320)) ([57ba9b8](https://github.com/dryvist/homelab-contracts/commit/57ba9b8d266097b1add5ea1f3b39b16612bd658c))
+
 ## [5.50.0](https://github.com/dryvist/homelab-contracts/compare/v5.49.0...v5.50.0) (2026-11-05)
 
 
