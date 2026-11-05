@@ -28,6 +28,14 @@ on:
         required: false
         type: string
         default: ""
+      router-names-file:
+        description: >-
+          Optional servable-aliases.json path, relative to the caller checkout (or
+          to the downloaded artifact), used instead of router-contract-ref. The
+          router repository sets it to the file generated from its own head.
+        required: false
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -59,6 +67,12 @@ jobs:
             .github/scripts/lane-alias-parity.py
           sparse-checkout-cone-mode: false
 
+      - name: Reject two router names sources
+        if: inputs.router-contract-ref != '' && inputs.router-names-file != ''
+        run: |
+          echo "set router-contract-ref or router-names-file, not both" >&2
+          exit 2
+
       - name: Download router names contract
         if: inputs.router-contract-ref != ''
         env:
@@ -85,6 +99,7 @@ jobs:
         env:
           NAMES_FILES: ${{ inputs.names-files }}
           ROUTER_CONTRACT_REF: ${{ inputs.router-contract-ref }}
+          ROUTER_NAMES_FILE: ${{ inputs.router-names-file }}
         run: |
           set -euo pipefail
           names_args=()
@@ -100,6 +115,8 @@ jobs:
           router_names_args=()
           if [[ -n "$ROUTER_CONTRACT_REF" ]]; then
             router_names_args+=(--router-names "$RUNNER_TEMP/router-names/servable-aliases.json")
+          elif [[ -n "$ROUTER_NAMES_FILE" ]]; then
+            router_names_args+=(--router-names "$ROUTER_NAMES_FILE")
           fi
           python3 .homelab-contracts/.github/scripts/lane-alias-parity.py \
             --lanes .homelab-contracts/ansible/roles/llm_roles/files/lanes.json \
