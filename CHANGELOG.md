@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.52.0](https://github.com/dryvist/homelab-contracts/compare/v5.51.0...v5.52.0) (2026-11-05)
+
+
+### Features
+
+* **alias-parity:** accept a router names file in place of a release ref ([#323](https://github.com/dryvist/homelab-contracts/issues/323)) ([61a6fc1](https://github.com/dryvist/homelab-contracts/commit/61a6fc1004f174964db1a8dfbfba5f57e8d44bd5))
+
 ## [5.51.0](https://github.com/dryvist/homelab-contracts/compare/v5.50.0...v5.51.0) (2026-11-05)
 
 
