@@ -1,0 +1,285 @@
+{
+  "schema_version": "2.5.0",
+  "domain": "example.com",
+  "containers": {
+    "example-static": {
+      "vmid": 200,
+      "hostname": "example-static",
+      "ip": "192.0.2.10",
+      "mac": null,
+      "reserved_ip": null,
+      "node": "node-1",
+      "ansible_connection": "community.proxmox.proxmox_pct_remote",
+      "ansible_pct_vmid": 200,
+      "tags": [
+        "example"
+      ],
+      "pool_id": "example"
+    },
+    "example-dhcp": {
+      "vmid": 201,
+      "hostname": "example-dhcp",
+      "ip": "app-01.example.com",
+      "mac": null,
+      "reserved_ip": "192.0.2.11",
+      "node": "node-2",
+      "ansible_connection": "community.proxmox.proxmox_pct_remote",
+      "ansible_pct_vmid": 201,
+      "tags": [
+        "example",
+        "ingress"
+      ],
+      "pool_id": "example"
+    },
+    "agent-example-1": {
+      "vmid": 999999999,
+      "hostname": "agent-example-1.example.test",
+      "ip": "agent-example-1.example.test",
+      "mac": null,
+      "reserved_ip": null,
+      "node": "node-example-1",
+      "ansible_connection": "community.proxmox.proxmox_pct_remote",
+      "ansible_pct_vmid": 999999999,
+      "tags": [
+        "example"
+      ],
+      "pool_id": "example"
+    }
+  },
+  "agents": {
+    "splunk-example": {
+      "container": "agent-example-1",
+      "hostname": "agent-example-1.example.test",
+      "display": "Splunk Example",
+      "purpose": "Example observability assistant",
+      "owns": [
+        "splunk-example"
+      ],
+      "router_key_class": "standard",
+      "slack": {
+        "home_channel": "example-home",
+        "requests_channel": "example-requests"
+      }
+    }
+  },
+  "hermes_agents": {
+    "splunk-example": {
+      "api_url": "http://agent-example-1.example.test:10002/v1",
+      "model_name": "splunk-example"
+    }
+  },
+  "vms": {
+    "example-vm": {
+      "vmid": 210,
+      "hostname": "example-vm",
+      "ip": "192.0.2.12",
+      "node": "node-1",
+      "ansible_connection": "ssh",
+      "tags": [
+        "example"
+      ],
+      "pool_id": "example"
+    },
+    "example-dhcp-vm": {
+      "vmid": 212,
+      "hostname": "example-dhcp-vm",
+      "ip": "vm-01.example.com",
+      "mac": null,
+      "reserved_ip": "192.0.2.15",
+      "node": "node-2",
+      "ansible_connection": "ssh",
+      "tags": [
+        "example"
+      ],
+      "pool_id": "example"
+    }
+  },
+  "docker_vms": {
+    "example-docker": {
+      "vmid": 211,
+      "hostname": "example-docker",
+      "ip": "192.0.2.13",
+      "node": "node-2",
+      "ansible_connection": "ssh",
+      "tags": [
+        "docker",
+        "example"
+      ],
+      "pool_id": "example"
+    }
+  },
+  "splunk_vm": {
+    "splunk": {
+      "vmid": 220,
+      "hostname": "example-splunk",
+      "ip": "192.0.2.14",
+      "node": "node-1",
+      "ansible_connection": "ssh"
+    }
+  },
+  "constants": {
+    "service_ports": {
+      "example_service_web": 10001,
+      "example_api": 10002
+    },
+    "syslog_ports": {
+      "default": 10010,
+      "example_family": 11010
+    },
+    "netflow_ports": {
+      "example_netflow": 10020
+    },
+    "notification_ports": {
+      "example_smtp": 10030
+    },
+    "vector_db_ports": {
+      "example_http": 10040,
+      "example_grpc": 10041
+    },
+    "media_ports": {
+      "example_media_web": 10050
+    },
+    "syslog_port_map": {
+      "example_family": {
+        "standard": 10010,
+        "high": 11010,
+        "index": "example",
+        "sourcetype": "example:family"
+      }
+    },
+    "ai_log_routing": {
+      "example_source": {
+        "port": 10060,
+        "index": "example",
+        "sourcetype": "example:source"
+      }
+    },
+    "custom_example_ports": {
+      "example_custom": 10070
+    }
+  },
+  "workstation_connections": {
+    "proxman": {
+      "url": "https://cluster.example.com",
+      "type": "pve",
+      "auth_method": "traditional",
+      "credential_mount": "secret",
+      "credential_path": "apps/cluster-client"
+    }
+  },
+  "ingress": [
+    {
+      "name": "example-ui",
+      "fqdn": "cluster.example.com",
+      "host_aliases": [
+        "hypervisor.example.com"
+      ],
+      "tls_domains": [
+        "cluster.example.com",
+        "hypervisor.example.com"
+      ],
+      "ip": "192.0.2.20",
+      "port": 10001
+    },
+    {
+      "name": "splunk",
+      "ip": "192.0.2.30",
+      "port": 10002,
+      "scheme": "https",
+      "insecure_tls": true
+    },
+    {
+      "name": "example-pool",
+      "backends": [
+        "192.0.2.40",
+        "192.0.2.41"
+      ],
+      "port": 10003,
+      "sticky": true,
+      "health_check": true,
+      "health_check_path": "/health",
+      "response_header_timeout": "0s"
+    },
+    {
+      "name": "example-apex",
+      "apex": true,
+      "backends": [
+        "node-1.example.com",
+        "node-2.example.com"
+      ],
+      "port": 10004,
+      "scheme": "https",
+      "insecure_tls": true,
+      "sticky": true,
+      "health_check": true
+    },
+    {
+      "name": "example-app",
+      "hostname": "example-app",
+      "path_prefix": "/app",
+      "priority": 100,
+      "ip": "192.0.2.50",
+      "port": 10020,
+      "owner": "example-guest",
+      "sso": true,
+      "source_ranges": [
+        "192.0.2.0/24"
+      ],
+      "group": "apps",
+      "ui": "yes",
+      "desc": "Example app",
+      "title": "Example app",
+      "section": "example-guest"
+    }
+  ],
+  "ingress_vip": "192.0.2.2",
+  "ingress_hosts": [
+    "192.0.2.40",
+    "192.0.2.41"
+  ],
+  "host_services": {},
+  "nodes": {
+    "node-1": {
+      "role": "node-1",
+      "hardware": "example-server",
+      "commissioned": true,
+      "tags": [
+        "nvidia-gpu"
+      ]
+    },
+    "node-2": {
+      "role": "node-2",
+      "hardware": null,
+      "commissioned": false
+    }
+  },
+  "node_storage": {
+    "node-1": {
+      "pools": {
+        "rpool": {
+          "type": "zfspool",
+          "raid": "mirror",
+          "protected": true,
+          "register": true,
+          "content": [
+            "images",
+            "rootdir"
+          ],
+          "datasets": {
+            "data": {
+              "quota": "100G",
+              "mountpoint": "/rpool/data",
+              "nfs_export": null,
+              "properties": {
+                "compression": "zstd"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "desired_state": {
+    "etag": "d41d8cd98f00b204e9800998ecf8427e"
+  }
+}
