@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.50.0](https://github.com/dryvist/homelab-contracts/compare/v5.49.0...v5.50.0) (2026-11-05)
+
+
+### Features
+
+* **contracts:** add the ingress route fields the proxmox-stack module emits ([#318](https://github.com/dryvist/homelab-contracts/issues/318)) ([3b7187f](https://github.com/dryvist/homelab-contracts/commit/3b7187fc881ac080e8562630216c5a997051c723))
+
 ## [5.49.0](https://github.com/dryvist/homelab-contracts/compare/v5.48.0...v5.49.0) (2026-11-03)
 
 
