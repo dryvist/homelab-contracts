@@ -22,8 +22,8 @@ status: started
 ## 2. Artifact evidence
 
 - Repository: `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4`.
-- Immutable artifact revision:
-  [da5b2650a835292c678994a1fa3fb653250fb508](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4/commit/da5b2650a835292c678994a1fa3fb653250fb508).
+- Immutable artifact revision: `da5b2650a835292c678994a1fa3fb653250fb508`.
+  [Revision evidence](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4/commit/da5b2650a835292c678994a1fa3fb653250fb508).
 - [File listing](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4/tree/main)
   reports 75.1 GB for the repository and shard names such as
   `model-00001-of-00088.safetensors`. Complete shard manifest and exact

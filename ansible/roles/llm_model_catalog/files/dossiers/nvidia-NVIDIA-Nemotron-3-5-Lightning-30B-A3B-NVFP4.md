@@ -20,8 +20,8 @@ status: started
 ## 2. Artifact evidence
 
 - Repository: `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4`.
-- Immutable artifact revision:
-  [bee7596271d1495f6992ae224aefde4410e816b8](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/commit/bee7596271d1495f6992ae224aefde4410e816b8).
+- Immutable artifact revision: `bee7596271d1495f6992ae224aefde4410e816b8`.
+  [Revision evidence](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/commit/bee7596271d1495f6992ae224aefde4410e816b8).
 - [File listing](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/tree/main)
   reports 21.6 GB for the repository and shard names such as
   `model-00001-of-00052.safetensors`. Complete manifest and exact
