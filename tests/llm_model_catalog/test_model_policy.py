@@ -5,6 +5,7 @@ import datetime
 import json
 from pathlib import Path
 import re
+import tempfile
 import unittest
 from unittest import mock
 
@@ -43,6 +44,22 @@ def validate_policy(policy, catalog, role_map, root=ROOT):
         path = root / dossier
         require(path.is_file() and bool(path.read_text().strip()),
                 f"missing dossier: {model_id}")
+        benchmarks = re.finditer(
+            r"^- Benchmark: [^;\n]+; score: -?\d+(?:\.\d+)?; "
+            r"date: (\d{4}-\d{2}-\d{2}); source: https?://[^\s;]+\s*$",
+            path.read_text(), re.MULTILINE)
+        evidenced = False
+        for benchmark in benchmarks:
+            if "UNVERIFIED" in benchmark.group().upper():
+                continue
+            try:
+                measured = datetime.date.fromisoformat(benchmark[1])
+            except ValueError:
+                continue
+            if measured <= today:
+                evidenced = True
+                break
+        require(evidenced, f"missing dated benchmark evidence: {model_id}")
 
     entries = {}
     for entry in catalog["llm_model_catalog_models"]:
@@ -112,12 +129,21 @@ class PolicyRegressionTest(unittest.TestCase):
         self.clock = clock.start()
         self.addCleanup(clock.stop)
         self.clock.now.return_value = self.instant
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.dossier = self.root / FILES / "dossiers/example-upstream.md"
+        self.dossier.parent.mkdir(parents=True)
+        self.benchmark = (
+            "- Benchmark: Example v1; score: 61.36; date: 2026-11-06; "
+            "source: https://example.test/results")
+        self.dossier.write_text(self.benchmark + "\n")
         self.policy = {
             "version": 1, "as_of": "2026-11-06", "max_age_days": 365,
             "models": [{
                 "id": "example/quant", "upstream_id": "example/upstream",
                 "upstream_created": "2025-11-06",
-                "dossier": str(FILES / "dossiers/Qwen-Qwen3-8-27B.md"),
+                "dossier": str(FILES / "dossiers/example-upstream.md"),
             }],
             "deny": [{"id": "example/old", "reason": "undated"}],
             "exempt_hosted": [{"id": "provider/auto", "reason": "hosted provider"}],
@@ -132,7 +158,7 @@ class PolicyRegressionTest(unittest.TestCase):
                                 "unbound": {"model": None}}, "hosts": {}}
 
     def check(self):
-        validate_policy(self.policy, self.catalog, self.roles)
+        validate_policy(self.policy, self.catalog, self.roles, root=self.root)
 
     def test_boundary_alias_deny_inventory_and_hosted_selector(self):
         self.check()
@@ -155,7 +181,7 @@ class PolicyRegressionTest(unittest.TestCase):
                 else:
                     roles["models"]["unassigned"] = {"id": "example/new"}
                 with self.assertRaisesRegex(ValueError, "missing policy entry"):
-                    validate_policy(self.policy, catalog, roles)
+                    validate_policy(self.policy, catalog, roles, root=self.root)
 
     def test_reject_missing_or_invalid_upstream_date(self):
         for value in (None, "", "2026-02-30", "2026-11-07", "2025-11-05"):
@@ -182,7 +208,7 @@ class PolicyRegressionTest(unittest.TestCase):
                 else:
                     roles["hosts"]["server"] = {"roles": {"fast": {"model": "old"}}}
                 with self.assertRaisesRegex(ValueError, "denied role model"):
-                    validate_policy(self.policy, self.catalog, roles)
+                    validate_policy(self.policy, self.catalog, roles, root=self.root)
 
     def test_reject_denied_alias_and_upstream(self):
         for name in ("alias", "example/quant", "example/upstream"):
@@ -190,7 +216,7 @@ class PolicyRegressionTest(unittest.TestCase):
                 policy = copy.deepcopy(self.policy)
                 policy["deny"].append({"id": name, "reason": "denied"})
                 with self.assertRaisesRegex(ValueError, "denied"):
-                    validate_policy(policy, self.catalog, self.roles)
+                    validate_policy(policy, self.catalog, self.roles, root=self.root)
 
     def test_reject_absent_empty_unsafe_or_missing_dossier(self):
         for value in (None, "", "../outside.md", str(FILES / "dossiers/absent.md")):
@@ -201,13 +227,49 @@ class PolicyRegressionTest(unittest.TestCase):
                     self.policy["models"][0]["dossier"] = value
                 self.check()
 
+    def test_reject_dossier_without_dated_benchmark_evidence(self):
+        for text in (
+            "# Model dossiers\n\n- [Example](https://example.test/results)",
+            "## Evaluation\n\n- Expected quality: UNVERIFIED",
+            self.benchmark.replace("Example v1", "UNVERIFIED"),
+            self.benchmark.replace("61.36", "UNVERIFIED"),
+            self.benchmark.replace("2026-11-06", "UNVERIFIED"),
+            self.benchmark.replace("2026-11-06", "2026-02-30"),
+            self.benchmark.replace("2026-11-06", "2026-11-07"),
+            self.benchmark.replace("https://example.test/results", "UNVERIFIED"),
+            self.benchmark.replace("https://example.test/results", "results.md"),
+            self.benchmark.replace("; date: 2026-11-06", ""),
+            self.benchmark.replace("; source: https://example.test/results", ""),
+            self.benchmark.replace("; score: 61.36", ""),
+            self.benchmark.replace("; date:", "\n- date:"),
+        ):
+            with self.subTest(text=text):
+                self.dossier.write_text(text)
+                with self.assertRaisesRegex(ValueError, "missing dated benchmark"):
+                    self.check()
+
+    def test_index_is_not_benchmark_evidence(self):
+        index = self.dossier.with_name("index.md")
+        index.write_text((ROOT / FILES / "dossiers/index.md").read_text())
+        self.policy["models"][0]["dossier"] = str(FILES / "dossiers/index.md")
+        with self.assertRaisesRegex(ValueError, "missing dated benchmark"):
+            self.check()
+
+    def test_verified_benchmark_can_coexist_with_unverified_gaps(self):
+        self.dossier.write_text(
+            "## 4. Evaluation and comparison\n\n"
+            "- Benchmark: Other; score: UNVERIFIED; date: 2026-11-06; "
+            "source: https://example.test/other\n"
+            + self.benchmark + "\n- Local latency: UNVERIFIED\n")
+        self.check()
+
     def test_reject_duplicate_ids_and_overlapping_exemptions(self):
         for group in ("models", "deny", "exempt_hosted"):
             with self.subTest(group=group):
                 policy = copy.deepcopy(self.policy)
                 policy[group].append(copy.deepcopy(policy[group][0]))
                 with self.assertRaisesRegex(ValueError, "duplicate"):
-                    validate_policy(policy, self.catalog, self.roles)
+                    validate_policy(policy, self.catalog, self.roles, root=self.root)
         self.policy["exempt_hosted"].append({"id": "example/quant"})
         with self.assertRaisesRegex(ValueError, "overlaps"):
             self.check()
