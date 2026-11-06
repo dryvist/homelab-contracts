@@ -60,6 +60,13 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: OmniDocBench v1.5; score: 93.23; date: 2026-06-22; source: https://arxiv.org/html/2606.23050v1
+```
+
+- Publication date: report v1 header; Table 1 reports the upstream model.
+  Observed 2026-11-06; conversion fidelity and local results remain UNVERIFIED.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - Documents: OCRBench and OmniDocBench/olmOCR, text error, tables,

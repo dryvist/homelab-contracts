@@ -60,6 +60,13 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: Terminal-Bench 2.1 avg@1; score: 37.1; date: 2026-10-28; source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/blob/1f09ddcc1a0ea45751ae0dfe2af20d533168c46f/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - Classification/extraction: task-matched accuracy, schema validity, class

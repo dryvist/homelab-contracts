@@ -60,6 +60,13 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: typed-decisions accuracy; score: 0.796; date: 2026-10-10; source: https://huggingface.co/manjunathshiva/opendecider-nano/blob/9a8174b70ed8b088ccaacea13c01e32ae4d631b1/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/manjunathshiva/opendecider-nano/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - Classification/extraction: task-matched accuracy, schema validity, class

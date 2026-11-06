@@ -104,6 +104,13 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: HMMT Feb 2026; score: 77.8; date: 2026-11-04; source: https://huggingface.co/IFM/K2-Horizon-7B/blob/1ad5223c80f635ede5fb926f6304dc7228246a4b/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/IFM/K2-Horizon-7B/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - Classification/extraction: task-matched accuracy, schema validity, class

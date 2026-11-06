@@ -63,9 +63,16 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: MTEB multilingual v2; score: 61.36; date: 2026-10-28; source: https://huggingface.co/google/embeddinggemma-2/blob/f9972ac22e696a105c482202646979e33e4b5a1e/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/google/embeddinggemma-2/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+
 - [Official card](https://huggingface.co/google/embeddinggemma-2), observed
   2026-11-06: MTEB multilingual v2 61.36; MTEB Code v1 78.68.
-  Individual evaluation/publication day: UNVERIFIED. These upstream results
+  Individual evaluation day: UNVERIFIED. These upstream results
   do not establish MXFP8 conversion fidelity.
 - Card architecture: 740M total parameters and multimodal encoders.
   It documents an 8,192-token operating window and 768-dimensional output,

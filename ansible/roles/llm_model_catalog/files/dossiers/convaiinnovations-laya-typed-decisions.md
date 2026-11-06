@@ -59,6 +59,13 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: typed-decisions accuracy; score: 0.766; date: 2026-09-24; source: https://huggingface.co/convaiinnovations/laya-typed-decisions/blob/1a793eb568e6718f15941d08f85432581df534e3/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/convaiinnovations/laya-typed-decisions/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - Classification/extraction: task-matched accuracy, schema validity, class

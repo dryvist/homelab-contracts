@@ -59,6 +59,13 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: Terminal-Bench 2.1 IQ2; score: 50.98; date: 2026-10-19; source: https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/blob/567021037ff88364143e24ea05e6abd0f72086ff/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - Classification/extraction: task-matched accuracy, schema validity, class

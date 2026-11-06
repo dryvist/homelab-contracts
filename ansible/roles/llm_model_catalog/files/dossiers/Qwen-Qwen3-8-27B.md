@@ -80,6 +80,14 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: Terminal-Bench 2.1; score: 73.0; date: 2026-11-05; source: https://huggingface.co/Qwen/Qwen3.8-27B/blob/8c0b3d30f3ae96f5c7f774de704bf0ada83e422a/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/Qwen/Qwen3.8-27B/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+- Publisher scaffold: Terminus; full-precision upstream result.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - General chat: dated Arena category, LiveBench/Artificial Analysis version,

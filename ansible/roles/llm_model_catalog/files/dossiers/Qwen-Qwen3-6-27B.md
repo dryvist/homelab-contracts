@@ -61,6 +61,13 @@ status: started
 
 ## 4. Evaluation and comparison
 
+```text
+- Benchmark: MMLU-Pro upstream; score: 86.2; date: 2026-04-24; source: https://huggingface.co/Qwen/Qwen3.6-27B/blob/6a9e13bd6fc8f0983b9b99948120bc37f49c13e9/README.md
+```
+
+- Publication date: the cited card revision in [publisher history](https://huggingface.co/Qwen/Qwen3.6-27B/commits/main/README.md).
+  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+
 - Candidate/incumbent comparison under matched settings: UNVERIFIED.
 - Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - Classification/extraction: task-matched accuracy, schema validity, class
