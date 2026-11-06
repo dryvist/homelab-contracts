@@ -43,8 +43,8 @@ DOSSIER_FIELDS = {
 }
 
 
-def validate_dossier(text, model_id):
-    """Require the R3 section-5 evidence areas and populated evidence fields."""
+def dossier_sections(text, model_id):
+    """Read dossier sections, rejecting ambiguous duplicate headings."""
     sections = {}
     heading = None
     for line in text.splitlines():
@@ -55,16 +55,33 @@ def validate_dossier(text, model_id):
             sections[heading] = []
         elif heading is not None:
             sections[heading].append(line)
+    return {heading: "\n".join(lines) for heading, lines in sections.items()}
+
+
+def validate_dossier(text, model_id, root=ROOT):
+    """Validate local evidence and explicitly referenced shared defaults."""
+    sections = dossier_sections(text, model_id)
+    reference = "[Shared evidence](_shared/runtime-and-evaluation.md)"
+    shared = {}
+    if reference in text:
+        path = root / FILES / "dossiers/_shared/runtime-and-evaluation.md"
+        shared = dossier_sections(path.read_text(), model_id)
     for heading, fields in DOSSIER_FIELDS.items():
         if heading not in sections:
             raise ValueError(f"missing dossier section: {model_id}: {heading}")
-        body = "\n".join(sections[heading])
+        body = sections[heading]
         if re.search(r"\bUNVERIFIED\b", body, re.IGNORECASE):
             raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
         for field in fields:
-            pattern = rf"^- {re.escape(field)}:[ \t]*\S[^\n]*$"
-            if not re.search(pattern, body, re.MULTILINE):
+            pattern = (rf"^- {re.escape(field)}:[ \t]*(?:\n[ \t]+)?\S[^\n]*"
+                       r"(?:\n[ \t]+\S[^\n]*)*")
+            evidence = re.search(pattern, body, re.MULTILINE)
+            if evidence is None and reference in body:
+                evidence = re.search(pattern, shared.get(heading, ""), re.MULTILINE)
+            if evidence is None:
                 raise ValueError(f"missing dossier field: {model_id}: {field}")
+            if re.search(r"\bUNVERIFIED\b", evidence.group(), re.IGNORECASE):
+                raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
 
 
 def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
@@ -154,7 +171,8 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
         require(model_id in hosted or model_id in models,
                 f"ineligible role model: {model_id}")
         if model_id in models:
-            validate_dossier((root / models[model_id]["dossier"]).read_text(), model_id)
+            validate_dossier((root / models[model_id]["dossier"]).read_text(),
+                             model_id, root)
 
 
 class CommittedPolicyTest(unittest.TestCase):

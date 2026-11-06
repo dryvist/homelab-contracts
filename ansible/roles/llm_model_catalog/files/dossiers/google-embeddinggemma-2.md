@@ -45,30 +45,20 @@ status: started
 
 ## 3. Runtime and memory
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 - Runtime: mlx-vlm.
 - Tagged runtime/container revision: `3d87e88402f307efbf68e568971aa887ee7d9ed0`.
-- Hardware path: local accelerator; exact runtime qualification UNVERIFIED.
-- Endpoint contract: /v1/embeddings.
-- Precision kernels, tokenizer/chat template compatibility, reasoning parser,
-  tool parser, and unsupported features: UNVERIFIED.
-- Analytical memory lower bound: selected weight bytes above divided by
-  1,073,741,824. This assumes weights alone and excludes key/value cache,
-  recurrent state, vision workspace, graph/compiler workspace, drafter, and
-  co-resident models. Full estimate and comparable measured peak: UNVERIFIED.
-- Intended input/output length and concurrency: UNVERIFIED for a matched trial;
-  catalog serving limits are configuration values, not measured capacity.
+- Endpoint behavior and unsupported features: /v1/embeddings; unsupported features
+  UNVERIFIED.
 
 ## 4. Evaluation and comparison
 
-- Candidate/incumbent comparison under matched settings: UNVERIFIED.
-- Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 - Retrieval: task-matched MTEB/code retrieval, ViDoRe, dimensions,
   truncation, index compatibility, and re-embedding plan: UNVERIFIED.
 
 ## 5. Trial status
 
-- Dossier started; trial authorization pending completed evidence.
-- Acceptance thresholds, matched incumbent baseline, and expected-result
-  statement: UNVERIFIED; set them before a trial or replacement.
-- The policy records dated identity and age eligibility. It does not certify
-  runtime support, memory fit, quality, or replacement readiness.
+[Shared evidence](_shared/runtime-and-evaluation.md)
