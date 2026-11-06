@@ -82,18 +82,7 @@ status: started
 
 ## 3. Runtime and memory
 
-- Runtime: MLX or llama.cpp according to the selected artifact.
-- Tagged runtime/container revision: UNVERIFIED.
-- Hardware path: local accelerator; exact runtime qualification UNVERIFIED.
-- Endpoint contract: UNVERIFIED.
-- Precision kernels, tokenizer/chat template compatibility, reasoning parser,
-  tool parser, and unsupported features: UNVERIFIED.
-- Analytical memory lower bound: selected weight bytes above divided by
-  1,073,741,824. This assumes weights alone and excludes key/value cache,
-  recurrent state, vision workspace, graph/compiler workspace, drafter, and
-  co-resident models. Full estimate and comparable measured peak: UNVERIFIED.
-- Intended input/output length and concurrency: UNVERIFIED for a matched trial;
-  catalog serving limits are configuration values, not measured capacity.
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ## 4. Evaluation and comparison
 
@@ -109,8 +98,9 @@ status: started
     256K context. These are publisher results for the upstream weights.
 - These upstream rows do not measure the selected MLX quant's fidelity or
   establish task-matched runtime, memory, or promotion evidence.
-- Candidate/incumbent comparison under matched settings: UNVERIFIED.
-- Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
+
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 - General chat: upstream preference, index, and instruction-following results
   above; selected-quant agent-task evidence remains UNVERIFIED.
 - Coding: SWE-bench split/scaffold, Terminal-Bench version/scaffold,
@@ -122,8 +112,4 @@ status: started
 
 ## 5. Trial status
 
-- Dossier started; trial authorization pending completed evidence.
-- Acceptance thresholds, matched incumbent baseline, and expected-result
-  statement: UNVERIFIED; set them before a trial or replacement.
-- The policy records dated identity and age eligibility. It does not certify
-  runtime support, memory fit, quality, or replacement readiness.
+[Shared evidence](_shared/runtime-and-evaluation.md)
