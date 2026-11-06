@@ -6,3 +6,4 @@
   and guard dossiers with source links, observation dates, and completion fields.
 * **Update**: Added EmbeddingGemma 2 release and evaluation evidence.
 * **Creation**: Indexed dossier files and recorded admission status.
+* **Update**: Documented the dated benchmark entry format used by policy admission.
