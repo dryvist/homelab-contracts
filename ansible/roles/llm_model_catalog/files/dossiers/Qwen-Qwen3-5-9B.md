@@ -16,7 +16,7 @@ status: started
 - License: apache-2.0. [License evidence](https://huggingface.co/Qwen/Qwen3.5-9B/tree/c202236235762e1c871ad0ccb60c8ee5ba337b9a).
   Additional restrictions: UNVERIFIED.
 - Architecture: Qwen3_5ForConditionalGeneration.
-- Intended task: Small requests, judging, and recording.
+- Intended task: Classification, evaluation, and summarization.
 - Role-assigned artifacts: `mlx-community/Qwen3.5-9B-OptiQ-4bit`.
 - Official evidence: upstream Hub metadata and card. Conversion evidence is
   third-party unless the artifact and upstream publishers match.
