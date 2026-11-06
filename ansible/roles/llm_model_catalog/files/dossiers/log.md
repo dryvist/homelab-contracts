@@ -2,6 +2,8 @@
 
 ## 2026-11-06
 
+* **Update**: Benchmark source URLs can continue on an indented line;
+  numeric scores, dates, and source evidence remain required.
 * **Update**: Individual catalog dossiers reference shared runtime, evaluation,
   classification, and trial fields with model-specific overrides.
 * **Update**: Recorded publisher benchmarks, pinned sources, and publication

@@ -36,10 +36,11 @@ comparison, incumbent revision, and numeric acceptance thresholds.
 Rounded storage estimates are not runtime capacity measurements.
 
 Policy admission requires at least 1 dated benchmark entry with a numeric
-score and source URL, recorded on a single line in this form:
+score and source URL, with an optional indented source continuation:
 
 ```text
-- Benchmark: NAME VERSION; score: NUMBER; date: YYYY-MM-DD; source: https://SOURCE
+- Benchmark: NAME VERSION; score: NUMBER; date: YYYY-MM-DD;
+  source: https://SOURCE
 ```
 
 The date records evaluation or publication, and cannot be in the future.
