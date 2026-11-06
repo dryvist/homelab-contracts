@@ -1,0 +1,34 @@
+---
+name: model policy
+
+'on':
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  model-policy:
+    name: validate model policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7
+        with:
+          python-version: '3.15'
+      - name: Install check-jsonschema
+        run: pip install 'check-jsonschema==0.38.2'
+      - name: Validate the shared model policy schema
+        run: >-
+          check-jsonschema --schemafile schemas/model-policy-v1.json
+          ansible/roles/llm_model_catalog/files/model-policy.json
+      - name: Verify model policy and its regression cases
+        run: >-
+          python -m unittest discover
+          -s tests/llm_model_catalog -p 'test_*.py' -v
