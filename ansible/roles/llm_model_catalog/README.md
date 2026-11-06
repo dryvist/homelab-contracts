@@ -72,6 +72,9 @@ Calibration provenance is required for calibrated methods; calibration-free
 methods record "not applicable" with their method and source. Every required
 field rejects missing or `UNVERIFIED` evidence, including continuation lines.
 Each selected artifact supplies its own facts within its dossier subsection.
+When the catalog pins `hf_revision`, a converted artifact revision, or a source
+checkpoint revision, that selection requires the same immutable artifact
+revision in its dossier. Aliases and catalog references retain the selected pin.
 
 The converter's upstream revision is optional. When it is not published, the
 dossier records `base_model` and "not published by converter". Weight-download

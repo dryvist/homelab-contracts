@@ -36,7 +36,8 @@ def dossier_sections(text, model_id):
     return {heading: "\n".join(lines) for heading, lines in sections.items()}
 
 
-def validate_dossier(text, model_id, root=ROOT, *, admission_only=False):
+def validate_dossier(text, model_id, root=ROOT, *, admission_only=False,
+                     expected_revision=None):
     """Validate local evidence and explicitly referenced shared defaults."""
     sections = dossier_sections(text, model_id)
     reference = "[Shared evidence](_shared/runtime-and-evaluation.md)"
@@ -59,6 +60,12 @@ def validate_dossier(text, model_id, root=ROOT, *, admission_only=False):
                         or (admission_only and len(bodies) != 1)):
                     raise ValueError(f"missing or duplicate artifact evidence: {model_id}")
         for body in bodies:
+            if heading == "2. Artifact evidence" and expected_revision is not None:
+                revision = re.search(
+                    r"^- Immutable artifact revision:[ \t]*`([a-f0-9]{40})`",
+                    body, re.MULTILINE)
+                if revision is None or revision[1] != expected_revision:
+                    raise ValueError(f"artifact revision mismatch: {model_id}")
             for field in required_fields(fields, admission_only=admission_only):
                 pattern = (rf"^- {re.escape(field)}:[ \t]*(?:\n[ \t]+)?\S[^\n]*"
                            r"(?:\n[ \t]+\S[^\n]*)*")
@@ -120,15 +127,21 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
             require(name not in entries, f"duplicate catalog name: {name}")
             entries[name] = entry
 
-    def identity(name, seen=()):
+    def catalog_entry(name, seen=()):
         require(name not in seen, f"catalog reference cycle: {name}")
         if name not in entries:
-            return name
+            return {}
         entry = entries[name]
         if "catalog_model" in entry:
             target = entry["catalog_model"]
             require(target in entries, f"unknown catalog reference: {target}")
-            return identity(target, (*seen, name))
+            return catalog_entry(target, (*seen, name))
+        return entry
+
+    def identity(name):
+        entry = catalog_entry(name)
+        if not entry:
+            return name
         stage0 = entry.get("stage0", {})
         artifact = stage0.get("serving", {}).get("converted_artifact", {})
         model_id = (entry.get("hf_repo") or artifact.get("repo_id")
@@ -167,8 +180,15 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
         require(model_id in hosted or model_id in models,
                 f"ineligible role model: {model_id}")
         if model_id in models:
+            entry = catalog_entry(name)
+            stage0 = entry.get("stage0", {})
+            artifact = (stage0.get("serving", {}).get("converted_artifact")
+                        or stage0.get("source_checkpoint", {}))
+            revision = (entry.get("hf_revision") if entry.get("hf_repo")
+                        else artifact.get("revision"))
             validate_dossier((root / models[model_id]["dossier"]).read_text(),
-                             model_id, root, admission_only=True)
+                             model_id, root, admission_only=True,
+                             expected_revision=revision)
 
 
 class CommittedPolicyTest(unittest.TestCase):

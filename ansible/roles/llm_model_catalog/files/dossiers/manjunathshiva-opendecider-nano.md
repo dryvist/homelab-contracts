@@ -28,22 +28,22 @@ status: started
 
 ### manjunathshiva/opendecider-nano
 
-- [Artifact metadata](https://huggingface.co/api/models/manjunathshiva/opendecider-nano?blobs=true),
+- [Artifact metadata at the catalog pin](https://huggingface.co/api/models/manjunathshiva/opendecider-nano/revision/10c4b349f63d28186a46eacb6478cfce29c488e8?blobs=true),
   observed 2026-11-06; artifact repository created 2026-09-27.
 - Artifact repository: `manjunathshiva/opendecider-nano`.
 - Artifact publisher: `manjunathshiva` (`author`).
-- Immutable artifact revision: `1e1f0a7322e446c5ae9bbe840df11680f18a752a` (`sha`).
-  [Pinned files](https://huggingface.co/manjunathshiva/opendecider-nano/tree/1e1f0a7322e446c5ae9bbe840df11680f18a752a).
+- Immutable artifact revision: `10c4b349f63d28186a46eacb6478cfce29c488e8` (`sha`).
+  [Pinned files](https://huggingface.co/manjunathshiva/opendecider-nano/tree/10c4b349f63d28186a46eacb6478cfce29c488e8).
 - Artifact created date: 2026-09-27T07:36:16.000Z (`createdAt`).
 - Evidence observed date: 2026-11-06,
-  [Hub API](https://huggingface.co/api/models/manjunathshiva/opendecider-nano?blobs=true).
+  [Hub API at the catalog pin](https://huggingface.co/api/models/manjunathshiva/opendecider-nano/revision/10c4b349f63d28186a46eacb6478cfce29c488e8?blobs=true).
 - Quantization recipe: none; native bf16 encoder and decision head,
-  [pinned config](https://huggingface.co/manjunathshiva/opendecider-nano/blob/1e1f0a7322e446c5ae9bbe840df11680f18a752a/config.json),
+  [pinned config](https://huggingface.co/manjunathshiva/opendecider-nano/blob/10c4b349f63d28186a46eacb6478cfce29c488e8/config.json),
   observed 2026-11-06.
 - Calibration provenance: not applicable to weight quantization; this is the
   original bf16 checkpoint. Teacher probability calibration is a training
   detail, described in the
-  [publisher card](https://huggingface.co/manjunathshiva/opendecider-nano/blob/1e1f0a7322e446c5ae9bbe840df11680f18a752a/README.md),
+  [publisher card](https://huggingface.co/manjunathshiva/opendecider-nano/blob/10c4b349f63d28186a46eacb6478cfce29c488e8/README.md),
   observed 2026-11-06.
 - Upstream source revision: native checkpoint, no converter; artifact API
   `base_model` identifies `jhu-clsp/ettin-encoder-400m` as the training backbone.
