@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,13 +28,13 @@ def validate_policy(policy, catalog, role_map, root=ROOT):
     require(not (models.keys() & denied.keys()), "model is denied")
     require(not (hosted.keys() & (models.keys() | denied.keys())),
             "hosted exemption overlaps self-hosted policy")
-    as_of = datetime.date.fromisoformat(policy["as_of"])
+    today = datetime.datetime.now(datetime.timezone.utc).date()
     require(0 < policy["max_age_days"] <= 365, "invalid maximum age")
     for model_id, model in models.items():
         require(model["upstream_id"] not in denied, f"denied upstream: {model_id}")
         require(bool(model.get("upstream_created")), f"undated: {model_id}")
         created = datetime.date.fromisoformat(model["upstream_created"])
-        require(0 <= (as_of - created).days <= policy["max_age_days"],
+        require(0 <= (today - created).days <= policy["max_age_days"],
                 f"upstream age: {model_id}")
         dossier = model.get("dossier", "")
         require(bool(re.fullmatch(
@@ -106,6 +107,11 @@ class CommittedPolicyTest(unittest.TestCase):
 
 class PolicyRegressionTest(unittest.TestCase):
     def setUp(self):
+        self.instant = datetime.datetime(2026, 11, 6, tzinfo=datetime.timezone.utc)
+        clock = mock.patch(f"{__name__}.datetime.datetime")
+        self.clock = clock.start()
+        self.addCleanup(clock.stop)
+        self.clock.now.return_value = self.instant
         self.policy = {
             "version": 1, "as_of": "2026-11-06", "max_age_days": 365,
             "models": [{
@@ -130,6 +136,15 @@ class PolicyRegressionTest(unittest.TestCase):
 
     def test_boundary_alias_deny_inventory_and_hosted_selector(self):
         self.check()
+        self.clock.now.assert_called_once_with(datetime.timezone.utc)
+
+    def test_policy_snapshot_does_not_freeze_model_age(self):
+        self.clock.now.return_value = self.instant + datetime.timedelta(days=1)
+        for as_of in ("2026-11-06", "2026-11-07", "2027-11-06"):
+            with self.subTest(as_of=as_of):
+                self.policy["as_of"] = as_of
+                with self.assertRaisesRegex(ValueError, "upstream age"):
+                    self.check()
 
     def test_reject_missing_catalog_or_role_model(self):
         for target in ("catalog", "role"):
