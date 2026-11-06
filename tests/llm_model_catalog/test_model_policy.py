@@ -86,6 +86,8 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
     assignments = list(role_map["roles"].values())
     for host in role_map["hosts"].values():
         assignments.extend(host.get("roles", {}).values())
+        for selection in ("resident", "swap"):
+            assignments.extend({"model": key} for key in host.get(selection, []))
     for assignment in assignments:
         key = assignment["model"]
         if key is None:
@@ -204,6 +206,18 @@ class PolicyRegressionTest(unittest.TestCase):
                 policy["deny"].append({"id": name, "reason": "denied"})
                 with self.assertRaisesRegex(ValueError, "denied"):
                     validate_policy(policy, self.catalog, self.roles, today=self.today)
+
+    def test_host_resident_and_swap_use_role_eligibility(self):
+        for selection in ("resident", "swap"):
+            with self.subTest(selection=selection):
+                self.roles["hosts"] = {"server": {selection: ["active"]}}
+                self.check()
+                for key, message in (("old", "denied role model"),
+                                     ("absent", "unknown role model")):
+                    self.roles["models"]["old"] = {"id": "example/old"}
+                    self.roles["hosts"]["server"][selection] = [key]
+                    with self.assertRaisesRegex(ValueError, message):
+                        self.check()
 
     def test_reject_absent_empty_unsafe_or_missing_dossier(self):
         for value in (None, "", "../outside.md", str(FILES / "dossiers/absent.md")):
