@@ -1,0 +1,375 @@
+{
+  "version": 1,
+  "as_of": "2026-11-06",
+  "max_age_days": 365,
+  "deny": [
+    {
+      "id": "bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF",
+      "reason": "upstream_created 2025-08-05; age exceeds 365 days; https://huggingface.co/api/models/Qwen/Qwen3-4B-Instruct-2507"
+    },
+    {
+      "id": "nomic-ai/nomic-embed-text-v1.5-GGUF",
+      "reason": "upstream_created 2024-02-10; age exceeds 365 days; https://huggingface.co/api/models/nomic-ai/nomic-embed-text-v1.5"
+    },
+    {
+      "id": "mlx-community/gpt-oss-120b-MXFP4-Q8",
+      "reason": "upstream_created 2025-08-04; age exceeds 365 days; https://huggingface.co/api/models/openai/gpt-oss-120b"
+    },
+    {
+      "id": "mlx-community/Qwen3-Coder-30B-A3B-Instruct-4bit",
+      "reason": "upstream_created 2025-07-31; age exceeds 365 days; https://huggingface.co/api/models/Qwen/Qwen3-Coder-30B-A3B-Instruct"
+    },
+    {
+      "id": "mlx-community/Qwen3-Next-80B-A3B-Thinking-4bit",
+      "reason": "upstream_created 2025-09-09; age exceeds 365 days; https://huggingface.co/api/models/Qwen/Qwen3-Next-80B-A3B-Thinking"
+    },
+    {
+      "id": "mlx-community/Qwen3-Next-80B-A3B-Instruct-4bit",
+      "reason": "upstream_created 2025-09-09; age exceeds 365 days; https://huggingface.co/api/models/Qwen/Qwen3-Next-80B-A3B-Instruct"
+    },
+    {
+      "id": "gpustack/bge-m3-GGUF",
+      "reason": "upstream_created 2024-01-27; age exceeds 365 days; https://huggingface.co/api/models/BAAI/bge-m3"
+    },
+    {
+      "id": "gpustack/bge-reranker-v2-m3-GGUF",
+      "reason": "upstream_created 2024-03-15; age exceeds 365 days; https://huggingface.co/api/models/BAAI/bge-reranker-v2-m3"
+    },
+    {
+      "id": "qwen3-coder-30b",
+      "reason": "undated"
+    }
+  ],
+  "models": [
+    {
+      "id": "nativ-community/embeddinggemma-2-mxfp8",
+      "upstream_id": "google/embeddinggemma-2",
+      "upstream_created": "2026-09-14",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/google-embeddinggemma-2.md"
+    },
+    {
+      "id": "manjunathshiva/opendecider-nano",
+      "upstream_id": "manjunathshiva/opendecider-nano",
+      "upstream_created": "2026-09-27",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/manjunathshiva-opendecider-nano.md"
+    },
+    {
+      "id": "convaiinnovations/laya-typed-decisions",
+      "upstream_id": "convaiinnovations/laya-typed-decisions",
+      "upstream_created": "2026-09-18",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/convaiinnovations-laya-typed-decisions.md"
+    },
+    {
+      "id": "unsloth/Qwen3.5-9B-GGUF",
+      "upstream_id": "Qwen/Qwen3.5-9B",
+      "upstream_created": "2026-02-27",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-5-9B.md"
+    },
+    {
+      "id": "bartowski/Qwen_Qwen3.6-35B-A3B-GGUF",
+      "upstream_id": "Qwen/Qwen3.6-35B-A3B",
+      "upstream_created": "2026-04-15",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-6-35B-A3B.md"
+    },
+    {
+      "id": "unsloth/Qwen3.8-27B-GGUF",
+      "upstream_id": "Qwen/Qwen3.8-27B",
+      "upstream_created": "2026-08-05",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-8-27B.md"
+    },
+    {
+      "id": "nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF",
+      "upstream_id": "nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16",
+      "upstream_created": "2026-10-09",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/nvidia-NVIDIA-Nemotron-3-5-Bolt-74B-A9B-BF16.md"
+    },
+    {
+      "id": "mlx-community/Qwen3.8-27B-4bit",
+      "upstream_id": "Qwen/Qwen3.8-27B",
+      "upstream_created": "2026-08-05",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-8-27B.md"
+    },
+    {
+      "id": "mlx-community/MiMo-V2.6-Distill-Qwen-9B-OptiQ-4bit",
+      "upstream_id": "XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B",
+      "upstream_created": "2026-09-21",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/XiaomiMiMo-MiMo-V2-6-Distill-Qwen-9B.md"
+    },
+    {
+      "id": "IFM/K2-Horizon-7B-GGUF",
+      "upstream_id": "IFM/K2-Horizon-7B",
+      "upstream_created": "2026-09-01",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/IFM-K2-Horizon-7B.md"
+    },
+    {
+      "id": "mlx-community/K2-Horizon-7B-4bit",
+      "upstream_id": "IFM/K2-Horizon-7B",
+      "upstream_created": "2026-09-01",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/IFM-K2-Horizon-7B.md"
+    },
+    {
+      "id": "mlx-community/K2-Horizon-7B-oQ6e",
+      "upstream_id": "IFM/K2-Horizon-7B",
+      "upstream_created": "2026-09-01",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/IFM-K2-Horizon-7B.md"
+    },
+    {
+      "id": "mlx-community/Qwen3.6-35B-A3B-4bit",
+      "upstream_id": "Qwen/Qwen3.6-35B-A3B",
+      "upstream_created": "2026-04-15",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-6-35B-A3B.md"
+    },
+    {
+      "id": "mlx-community/Qwen3.5-9B-MLX-4bit",
+      "upstream_id": "Qwen/Qwen3.5-9B",
+      "upstream_created": "2026-02-27",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-5-9B.md"
+    },
+    {
+      "id": "mlx-community/Unlimited-OCR-bf16",
+      "upstream_id": "baidu/Unlimited-OCR",
+      "upstream_created": "2026-06-19",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/baidu-Unlimited-OCR.md"
+    },
+    {
+      "id": "mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit",
+      "upstream_id": "Qwen/Qwen3.6-35B-A3B",
+      "upstream_created": "2026-04-15",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-6-35B-A3B.md"
+    },
+    {
+      "id": "mlx-community/Qwen3.5-9B-OptiQ-4bit",
+      "upstream_id": "Qwen/Qwen3.5-9B",
+      "upstream_created": "2026-02-27",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-5-9B.md"
+    },
+    {
+      "id": "mlx-community/Qwen3.6-27B-mxfp4",
+      "upstream_id": "Qwen/Qwen3.6-27B",
+      "upstream_created": "2026-04-21",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-6-27B.md"
+    }
+  ],
+  "exempt_hosted": [
+    {
+      "id": "opencode/glm-5.3-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "opencode/minimax-m3",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "opencode/longcat-2.5-preview-free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "opencode/cat-jam-free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "opencode/muse-spark-1.3-contributor",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "mimo-v2.6-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "deepseek-v4.1-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-alibaba",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-alibaba-qwen3.5-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-alibaba-qwen3.6-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-gemini",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-gemini-3.5-flash-lite",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-gemini-3.7-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-openrouter-kimi-k2.6",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-openrouter-glm-5.2",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-openrouter-glm-5.3-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "hermes-cloud-openrouter-glm-5.3-flash-b",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "codex-subscription-model",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "codex-api-model",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "codex-ci-model",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "zai-glm-4.5-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "zai-glm-5.3-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "best-free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "minimax/minimax-m2.5",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "z-ai/glm-5.3-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "minimax/minimax-m3",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "openrouter/free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "openrouter/auto",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-deepseek-pro",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-glm-5.2",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-glm-5.3",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-glm-5.3-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-muse-1.2",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-gpt-5.6-luna",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-gpt-6-luna",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-claude-haiku-5-5",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-hy3",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-hy4-preview",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-kimi-k3",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-kimi-k3.1-pro",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-mimo-pro",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-minimax-m3.1-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-longcat-2.0",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-step-5-preview",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-beam-free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-qwen3.8-max",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-qwen3.8-flash",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-qwen3.7-plus",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-iceman-free",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-gemini-4-argon",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-kimi-k2.7-code",
+      "reason": "hosted provider"
+    },
+    {
+      "id": "go-grok-4.7",
+      "reason": "hosted provider"
+    }
+  ]
+}
