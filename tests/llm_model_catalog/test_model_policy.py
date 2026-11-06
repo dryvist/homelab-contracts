@@ -6,13 +6,14 @@ import json
 from pathlib import Path
 import re
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
 FILES = Path("ansible/roles/llm_model_catalog/files")
 
 
-def validate_policy(policy, catalog, role_map, root=ROOT):
+def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
     """Require explicit coverage and eligible, documented role assignments."""
     def require(condition, message):
         if not condition:
@@ -28,12 +29,15 @@ def validate_policy(policy, catalog, role_map, root=ROOT):
     require(not (hosted.keys() & (models.keys() | denied.keys())),
             "hosted exemption overlaps self-hosted policy")
     as_of = datetime.date.fromisoformat(policy["as_of"])
+    if today is None:
+        today = datetime.datetime.now(datetime.timezone.utc).date()
+    require(0 <= (today - as_of).days <= 30, "stale or future policy as_of")
     require(0 < policy["max_age_days"] <= 365, "invalid maximum age")
     for model_id, model in models.items():
         require(model["upstream_id"] not in denied, f"denied upstream: {model_id}")
         require(bool(model.get("upstream_created")), f"undated: {model_id}")
         created = datetime.date.fromisoformat(model["upstream_created"])
-        require(0 <= (as_of - created).days <= policy["max_age_days"],
+        require(0 <= (today - created).days <= policy["max_age_days"],
                 f"upstream age: {model_id}")
         dossier = model.get("dossier", "")
         require(bool(re.fullmatch(
@@ -106,6 +110,7 @@ class CommittedPolicyTest(unittest.TestCase):
 
 class PolicyRegressionTest(unittest.TestCase):
     def setUp(self):
+        self.today = datetime.date(2026, 11, 6)
         self.policy = {
             "version": 1, "as_of": "2026-11-06", "max_age_days": 365,
             "models": [{
@@ -126,7 +131,30 @@ class PolicyRegressionTest(unittest.TestCase):
                                 "unbound": {"model": None}}, "hosts": {}}
 
     def check(self):
-        validate_policy(self.policy, self.catalog, self.roles)
+        validate_policy(self.policy, self.catalog, self.roles, today=self.today)
+
+    def test_default_clock_uses_today_in_utc(self):
+        instant = datetime.datetime(2026, 11, 7, tzinfo=datetime.timezone.utc)
+        with mock.patch(f"{__name__}.datetime.datetime") as clock:
+            clock.now.return_value = instant
+            with self.assertRaisesRegex(ValueError, "upstream age"):
+                validate_policy(self.policy, self.catalog, self.roles)
+            clock.now.assert_called_once_with(datetime.timezone.utc)
+
+    def test_policy_freshness_boundary(self):
+        self.policy["as_of"] = (self.today - datetime.timedelta(days=30)).isoformat()
+        self.check()
+        for age in (31, -1):
+            with self.subTest(age=age), self.assertRaisesRegex(
+                    ValueError, "stale or future policy as_of"):
+                self.policy["as_of"] = (
+                    self.today - datetime.timedelta(days=age)).isoformat()
+                self.check()
+
+    def test_policy_snapshot_does_not_freeze_model_age(self):
+        self.today += datetime.timedelta(days=1)
+        with self.assertRaisesRegex(ValueError, "upstream age"):
+            self.check()
 
     def test_boundary_alias_deny_inventory_and_hosted_selector(self):
         self.check()
@@ -140,7 +168,7 @@ class PolicyRegressionTest(unittest.TestCase):
                 else:
                     roles["models"]["unassigned"] = {"id": "example/new"}
                 with self.assertRaisesRegex(ValueError, "missing policy entry"):
-                    validate_policy(self.policy, catalog, roles)
+                    validate_policy(self.policy, catalog, roles, today=self.today)
 
     def test_reject_missing_or_invalid_upstream_date(self):
         for value in (None, "", "2026-02-30", "2026-11-07", "2025-11-05"):
@@ -167,7 +195,7 @@ class PolicyRegressionTest(unittest.TestCase):
                 else:
                     roles["hosts"]["server"] = {"roles": {"fast": {"model": "old"}}}
                 with self.assertRaisesRegex(ValueError, "denied role model"):
-                    validate_policy(self.policy, self.catalog, roles)
+                    validate_policy(self.policy, self.catalog, roles, today=self.today)
 
     def test_reject_denied_alias_and_upstream(self):
         for name in ("alias", "example/quant", "example/upstream"):
@@ -175,7 +203,7 @@ class PolicyRegressionTest(unittest.TestCase):
                 policy = copy.deepcopy(self.policy)
                 policy["deny"].append({"id": name, "reason": "denied"})
                 with self.assertRaisesRegex(ValueError, "denied"):
-                    validate_policy(policy, self.catalog, self.roles)
+                    validate_policy(policy, self.catalog, self.roles, today=self.today)
 
     def test_reject_absent_empty_unsafe_or_missing_dossier(self):
         for value in (None, "", "../outside.md", str(FILES / "dossiers/absent.md")):
@@ -192,7 +220,7 @@ class PolicyRegressionTest(unittest.TestCase):
                 policy = copy.deepcopy(self.policy)
                 policy[group].append(copy.deepcopy(policy[group][0]))
                 with self.assertRaisesRegex(ValueError, "duplicate"):
-                    validate_policy(policy, self.catalog, self.roles)
+                    validate_policy(policy, self.catalog, self.roles, today=self.today)
         self.policy["exempt_hosted"].append({"id": "example/quant"})
         with self.assertRaisesRegex(ValueError, "overlaps"):
             self.check()
