@@ -5,12 +5,66 @@ import datetime
 import json
 from pathlib import Path
 import re
+import tempfile
 import unittest
 from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
 FILES = Path("ansible/roles/llm_model_catalog/files")
+DOSSIER_FIELDS = {
+    "1. Upstream evidence": (
+        "Upstream repository and immutable revision", "Release date",
+        "License and restrictions", "Architecture", "Intended task",
+        "Official versus third-party evidence", "Lane rationale",
+    ),
+    "2. Artifact evidence": (
+        "Artifact repository and immutable revision", "Filename/shards and bytes",
+        "Conversion date and source revision", "Quantization recipe",
+        "Calibration provenance", "Observed download date", "Transformation",
+    ),
+    "3. Runtime and memory": (
+        "Tagged runtime/container revision", "Supported architecture and hardware path",
+        "Precision kernels", "Tokenizer/chat template", "Reasoning and tool parsers",
+        "Endpoint behavior and unsupported features",
+        "Weights, cache/state, vision, graph/compiler, drafter, and co-resident bytes",
+        "Input/output length and concurrency", "Analytical estimate and assumptions",
+        "Comparable published peak",
+    ),
+    "4. Evaluation and comparison": (
+        "Applicable use cases", "Dated task-matched benchmarks and versions",
+        "Settings, scaffold, and reasoning budget", "Quant fidelity",
+        "Candidate/incumbent comparison", "Expected results",
+    ),
+    "5. Trial status": (
+        "Dated promotion decision", "Predeclared acceptance criteria",
+        "Unresolved fields",
+    ),
+}
+
+
+def validate_dossier(text, model_id):
+    """Require the R3 section-5 evidence areas and populated evidence fields."""
+    sections = {}
+    heading = None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            heading = line[3:].strip()
+            if heading in sections:
+                raise ValueError(f"duplicate dossier section: {model_id}: {heading}")
+            sections[heading] = []
+        elif heading is not None:
+            sections[heading].append(line)
+    for heading, fields in DOSSIER_FIELDS.items():
+        if heading not in sections:
+            raise ValueError(f"missing dossier section: {model_id}: {heading}")
+        body = "\n".join(sections[heading])
+        if re.search(r"\bUNVERIFIED\b", body, re.IGNORECASE):
+            raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
+        for field in fields:
+            pattern = rf"^- {re.escape(field)}:[ \t]*\S[^\n]*$"
+            if not re.search(pattern, body, re.MULTILINE):
+                raise ValueError(f"missing dossier field: {model_id}: {field}")
 
 
 def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
@@ -99,6 +153,8 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
                 f"denied role model: {model_id}")
         require(model_id in hosted or model_id in models,
                 f"ineligible role model: {model_id}")
+        if model_id in models:
+            validate_dossier((root / models[model_id]["dossier"]).read_text(), model_id)
 
 
 class CommittedPolicyTest(unittest.TestCase):
@@ -113,12 +169,22 @@ class CommittedPolicyTest(unittest.TestCase):
 class PolicyRegressionTest(unittest.TestCase):
     def setUp(self):
         self.today = datetime.date(2026, 11, 6)
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.dossier = self.root / FILES / "dossiers/example-upstream.md"
+        self.dossier.parent.mkdir(parents=True)
+        self.complete_dossier = "\n\n".join(
+            f"## {heading}\n\n" + "\n".join(
+                f"- {field}: synthetic regression evidence" for field in fields)
+            for heading, fields in DOSSIER_FIELDS.items())
+        self.dossier.write_text(self.complete_dossier)
         self.policy = {
             "version": 1, "as_of": "2026-11-06", "max_age_days": 365,
             "models": [{
                 "id": "example/quant", "upstream_id": "example/upstream",
                 "upstream_created": "2025-11-06",
-                "dossier": str(FILES / "dossiers/Qwen-Qwen3-8-27B.md"),
+                "dossier": str(FILES / "dossiers/example-upstream.md"),
             }],
             "deny": [{"id": "example/old", "reason": "undated"}],
             "exempt_hosted": [{"id": "provider/auto", "reason": "hosted provider"}],
@@ -133,14 +199,15 @@ class PolicyRegressionTest(unittest.TestCase):
                                 "unbound": {"model": None}}, "hosts": {}}
 
     def check(self):
-        validate_policy(self.policy, self.catalog, self.roles, today=self.today)
+        validate_policy(self.policy, self.catalog, self.roles,
+                        root=self.root, today=self.today)
 
     def test_default_clock_uses_today_in_utc(self):
         instant = datetime.datetime(2026, 11, 7, tzinfo=datetime.timezone.utc)
         with mock.patch(f"{__name__}.datetime.datetime") as clock:
             clock.now.return_value = instant
             with self.assertRaisesRegex(ValueError, "upstream age"):
-                validate_policy(self.policy, self.catalog, self.roles)
+                validate_policy(self.policy, self.catalog, self.roles, root=self.root)
             clock.now.assert_called_once_with(datetime.timezone.utc)
 
     def test_policy_freshness_boundary(self):
@@ -170,7 +237,8 @@ class PolicyRegressionTest(unittest.TestCase):
                 else:
                     roles["models"]["unassigned"] = {"id": "example/new"}
                 with self.assertRaisesRegex(ValueError, "missing policy entry"):
-                    validate_policy(self.policy, catalog, roles, today=self.today)
+                    validate_policy(self.policy, catalog, roles,
+                                    root=self.root, today=self.today)
 
     def test_reject_missing_or_invalid_upstream_date(self):
         for value in (None, "", "2026-02-30", "2026-11-07", "2025-11-05"):
@@ -197,7 +265,8 @@ class PolicyRegressionTest(unittest.TestCase):
                 else:
                     roles["hosts"]["server"] = {"roles": {"fast": {"model": "old"}}}
                 with self.assertRaisesRegex(ValueError, "denied role model"):
-                    validate_policy(self.policy, self.catalog, roles, today=self.today)
+                    validate_policy(self.policy, self.catalog, roles,
+                                    root=self.root, today=self.today)
 
     def test_reject_denied_alias_and_upstream(self):
         for name in ("alias", "example/quant", "example/upstream"):
@@ -205,7 +274,8 @@ class PolicyRegressionTest(unittest.TestCase):
                 policy = copy.deepcopy(self.policy)
                 policy["deny"].append({"id": name, "reason": "denied"})
                 with self.assertRaisesRegex(ValueError, "denied"):
-                    validate_policy(policy, self.catalog, self.roles, today=self.today)
+                    validate_policy(policy, self.catalog, self.roles,
+                                    root=self.root, today=self.today)
 
     def test_host_resident_and_swap_use_role_eligibility(self):
         for selection in ("resident", "swap"):
@@ -228,13 +298,53 @@ class PolicyRegressionTest(unittest.TestCase):
                     self.policy["models"][0]["dossier"] = value
                 self.check()
 
+    def test_reject_missing_dossier_sections_and_fields(self):
+        for heading, fields in DOSSIER_FIELDS.items():
+            with self.subTest(heading=heading):
+                self.dossier.write_text(self.complete_dossier.replace(
+                    f"## {heading}", "## Unrelated section"))
+                with self.assertRaisesRegex(ValueError, "missing dossier section"):
+                    self.check()
+            for field in fields:
+                with self.subTest(field=field):
+                    self.dossier.write_text(self.complete_dossier.replace(
+                        f"- {field}: synthetic regression evidence", f"- {field}:"))
+                    with self.assertRaisesRegex(ValueError, "missing dossier field"):
+                        self.check()
+
+    def test_reject_unverified_evidence_for_every_selection(self):
+        for selection in ("global", "override", "resident", "swap"):
+            self.roles["roles"] = {}
+            self.roles["hosts"] = {"server": {}}
+            if selection == "global":
+                self.roles["roles"] = {"default": {"model": "active"}}
+            elif selection == "override":
+                self.roles["hosts"]["server"]["roles"] = {
+                    "fast": {"model": "active"}}
+            else:
+                self.roles["hosts"]["server"][selection] = ["active"]
+            for fields in DOSSIER_FIELDS.values():
+                for field in fields:
+                    with self.subTest(selection=selection, field=field):
+                        self.dossier.write_text(self.complete_dossier.replace(
+                            f"- {field}: synthetic regression evidence",
+                            f"- {field}:\n  UNVERIFIED"))
+                        with self.assertRaisesRegex(ValueError, "unverified dossier"):
+                            self.check()
+
+    def test_unassigned_dossier_can_remain_in_progress(self):
+        self.roles["roles"] = {}
+        self.dossier.write_text("## 1. Upstream evidence\n\n- Release date: UNVERIFIED")
+        self.check()
+
     def test_reject_duplicate_ids_and_overlapping_exemptions(self):
         for group in ("models", "deny", "exempt_hosted"):
             with self.subTest(group=group):
                 policy = copy.deepcopy(self.policy)
                 policy[group].append(copy.deepcopy(policy[group][0]))
                 with self.assertRaisesRegex(ValueError, "duplicate"):
-                    validate_policy(policy, self.catalog, self.roles, today=self.today)
+                    validate_policy(policy, self.catalog, self.roles,
+                                    root=self.root, today=self.today)
         self.policy["exempt_hosted"].append({"id": "example/quant"})
         with self.assertRaisesRegex(ValueError, "overlaps"):
             self.check()
