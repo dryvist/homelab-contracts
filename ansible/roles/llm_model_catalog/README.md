@@ -62,7 +62,7 @@ UTC date and requires `as_of` to be within the preceding 30 days.
 Global roles, host role overrides, and host resident and swap selections use
 the same eligibility checks. Selected self-hosted models require all 5 dossier
 sections and their populated evidence fields. The field names are defined in
-[`DOSSIER_FIELDS`](../../../tests/llm_model_catalog/test_model_policy.py).
+[`DOSSIER_FIELDS`](../../../../tests/llm_model_catalog/test_model_policy.py).
 Each required section rejects `UNVERIFIED` evidence, including continuation
 lines. Dossiers for unassigned catalog models can remain in progress.
 
