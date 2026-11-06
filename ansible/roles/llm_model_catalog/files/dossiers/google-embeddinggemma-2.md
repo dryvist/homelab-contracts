@@ -59,7 +59,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: MTEB multilingual v2; score: 61.36; date: 2026-10-28; source: https://huggingface.co/google/embeddinggemma-2/blob/f9972ac22e696a105c482202646979e33e4b5a1e/README.md
+- Benchmark: MTEB multilingual v2; score: 61.36; date: 2026-10-28;
+  source: https://huggingface.co/google/embeddinggemma-2/blob/f9972ac22e696a105c482202646979e33e4b5a1e/README.md
 ```
 
 - [Card publication history](https://huggingface.co/google/embeddinggemma-2/commits/main/README.md).

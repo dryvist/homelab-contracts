@@ -52,7 +52,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: Terminal-Bench 2.1 avg@1; score: 37.1; date: 2026-10-28; source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/blob/1f09ddcc1a0ea45751ae0dfe2af20d533168c46f/README.md
+- Benchmark: Terminal-Bench 2.1 avg@1; score: 37.1; date: 2026-10-28;
+  source: https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/blob/1f09ddcc1a0ea45751ae0dfe2af20d533168c46f/README.md
 ```
 
 - [Card publication history](https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/commits/main/README.md).

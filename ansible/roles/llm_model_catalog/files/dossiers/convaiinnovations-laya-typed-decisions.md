@@ -55,7 +55,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: typed-decisions accuracy; score: 0.766; date: 2026-09-24; source: https://huggingface.co/convaiinnovations/laya-typed-decisions/blob/1a793eb568e6718f15941d08f85432581df534e3/README.md
+- Benchmark: typed-decisions accuracy; score: 0.766; date: 2026-09-24;
+  source: https://huggingface.co/convaiinnovations/laya-typed-decisions/blob/1a793eb568e6718f15941d08f85432581df534e3/README.md
 ```
 
 - [Card publication history](https://huggingface.co/convaiinnovations/laya-typed-decisions/commits/main/README.md).

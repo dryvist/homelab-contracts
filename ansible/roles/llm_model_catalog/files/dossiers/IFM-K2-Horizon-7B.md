@@ -96,7 +96,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: HMMT Feb 2026; score: 77.8; date: 2026-11-04; source: https://huggingface.co/IFM/K2-Horizon-7B/blob/1ad5223c80f635ede5fb926f6304dc7228246a4b/README.md
+- Benchmark: HMMT Feb 2026; score: 77.8; date: 2026-11-04;
+  source: https://huggingface.co/IFM/K2-Horizon-7B/blob/1ad5223c80f635ede5fb926f6304dc7228246a4b/README.md
 ```
 
 - [Card publication history](https://huggingface.co/IFM/K2-Horizon-7B/commits/main/README.md).

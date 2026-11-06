@@ -52,7 +52,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: OmniDocBench v1.5; score: 93.23; date: 2026-06-22; source: https://arxiv.org/html/2606.23050v1
+- Benchmark: OmniDocBench v1.5; score: 93.23; date: 2026-06-22;
+  source: https://arxiv.org/html/2606.23050v1
 ```
 
 - Publication date: report v1 header; Table 1 reports the upstream model.

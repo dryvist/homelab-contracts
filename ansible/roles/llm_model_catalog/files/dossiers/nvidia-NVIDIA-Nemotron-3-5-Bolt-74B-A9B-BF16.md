@@ -51,7 +51,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: Terminal-Bench 2.1 IQ2; score: 50.98; date: 2026-10-19; source: https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/blob/567021037ff88364143e24ea05e6abd0f72086ff/README.md
+- Benchmark: Terminal-Bench 2.1 IQ2; score: 50.98; date: 2026-10-19;
+  source: https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/blob/567021037ff88364143e24ea05e6abd0f72086ff/README.md
 ```
 
 - [Card publication history](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/commits/main/README.md).

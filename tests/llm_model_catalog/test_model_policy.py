@@ -46,7 +46,8 @@ def validate_policy(policy, catalog, role_map, root=ROOT):
                 f"missing dossier: {model_id}")
         benchmarks = re.finditer(
             r"^- Benchmark: [^;\n]+; score: -?\d+(?:\.\d+)?; "
-            r"date: (\d{4}-\d{2}-\d{2}); source: https?://[^\s;]+\s*$",
+            r"date: (\d{4}-\d{2}-\d{2});[ \t]*(?:\n[ \t]+)?"
+            r"source: https?://[^\s;]+\s*$",
             path.read_text(), re.MULTILINE)
         evidenced = False
         for benchmark in benchmarks:
@@ -254,6 +255,24 @@ class PolicyRegressionTest(unittest.TestCase):
         self.policy["models"][0]["dossier"] = str(FILES / "dossiers/index.md")
         with self.assertRaisesRegex(ValueError, "missing dated benchmark"):
             self.check()
+
+    def test_accept_wrapped_benchmark_source(self):
+        self.dossier.write_text(self.benchmark.replace("; source:", ";\n  source:"))
+        self.check()
+
+    def test_wrapped_source_requires_complete_evidence(self):
+        wrapped = self.benchmark.replace("; source:", ";\n  source:")
+        for text in (
+            wrapped.replace("61.36", "UNVERIFIED"),
+            wrapped.replace("2026-11-06", "UNVERIFIED"),
+            wrapped.replace("https://example.test/results", "UNVERIFIED"),
+            wrapped.replace("\n  source:", "\n- source:"),
+            wrapped.replace("\n  source:", "\n\n  source:"),
+        ):
+            with self.subTest(text=text):
+                self.dossier.write_text(text)
+                with self.assertRaisesRegex(ValueError, "missing dated benchmark"):
+                    self.check()
 
     def test_verified_benchmark_can_coexist_with_unverified_gaps(self):
         self.dossier.write_text(

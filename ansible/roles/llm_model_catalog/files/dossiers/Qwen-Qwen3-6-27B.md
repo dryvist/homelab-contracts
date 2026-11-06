@@ -53,7 +53,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: MMLU-Pro upstream; score: 86.2; date: 2026-04-24; source: https://huggingface.co/Qwen/Qwen3.6-27B/blob/6a9e13bd6fc8f0983b9b99948120bc37f49c13e9/README.md
+- Benchmark: MMLU-Pro upstream; score: 86.2; date: 2026-04-24;
+  source: https://huggingface.co/Qwen/Qwen3.6-27B/blob/6a9e13bd6fc8f0983b9b99948120bc37f49c13e9/README.md
 ```
 
 - [Card publication history](https://huggingface.co/Qwen/Qwen3.6-27B/commits/main/README.md).

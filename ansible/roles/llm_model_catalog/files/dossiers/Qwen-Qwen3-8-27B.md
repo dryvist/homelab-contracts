@@ -72,7 +72,8 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
-- Benchmark: Terminal-Bench 2.1; score: 73.0; date: 2026-11-05; source: https://huggingface.co/Qwen/Qwen3.8-27B/blob/8c0b3d30f3ae96f5c7f774de704bf0ada83e422a/README.md
+- Benchmark: Terminal-Bench 2.1; score: 73.0; date: 2026-11-05;
+  source: https://huggingface.co/Qwen/Qwen3.8-27B/blob/8c0b3d30f3ae96f5c7f774de704bf0ada83e422a/README.md
 ```
 
 - [Card publication history](https://huggingface.co/Qwen/Qwen3.8-27B/commits/main/README.md).
