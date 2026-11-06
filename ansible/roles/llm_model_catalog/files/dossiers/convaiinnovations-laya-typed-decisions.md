@@ -44,38 +44,24 @@ status: started
 
 ## 3. Runtime and memory
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 - Runtime: laya-serve.
-- Tagged runtime/container revision: UNVERIFIED.
 - Hardware path: CPU reference server.
 - Endpoint contract: /v1/systemone.
-- Precision kernels, tokenizer/chat template compatibility, reasoning parser,
-  tool parser, and unsupported features: UNVERIFIED.
-- Analytical memory lower bound: selected weight bytes above divided by
-  1,073,741,824. This assumes weights alone and excludes key/value cache,
-  recurrent state, vision workspace, graph/compiler workspace, drafter, and
-  co-resident models. Full estimate and comparable measured peak: UNVERIFIED.
-- Intended input/output length and concurrency: UNVERIFIED for a matched trial;
-  catalog serving limits are configuration values, not measured capacity.
 
 ## 4. Evaluation and comparison
+
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
 - Benchmark: typed-decisions accuracy; score: 0.766; date: 2026-09-24; source: https://huggingface.co/convaiinnovations/laya-typed-decisions/blob/1a793eb568e6718f15941d08f85432581df534e3/README.md
 ```
 
-- Publication date: the cited card revision in [publisher history](https://huggingface.co/convaiinnovations/laya-typed-decisions/commits/main/README.md).
-  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+- [Card publication history](https://huggingface.co/convaiinnovations/laya-typed-decisions/commits/main/README.md).
 
-- Candidate/incumbent comparison under matched settings: UNVERIFIED.
-- Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
-- Classification/extraction: task-matched accuracy, schema validity, class
-  balance, languages, calibration, abstention, false positives/negatives,
-  and latency: UNVERIFIED.
+- Classification/extraction: see the [shared task evidence](_shared/runtime-and-evaluation.md#classification-and-extraction).
 
 ## 5. Trial status
 
-- Dossier started; trial authorization pending completed evidence.
-- Acceptance thresholds, matched incumbent baseline, and expected-result
-  statement: UNVERIFIED; set them before a trial or replacement.
-- The policy records dated identity and age eligibility. It does not certify
-  runtime support, memory fit, quality, or replacement readiness.
+[Shared evidence](_shared/runtime-and-evaluation.md)

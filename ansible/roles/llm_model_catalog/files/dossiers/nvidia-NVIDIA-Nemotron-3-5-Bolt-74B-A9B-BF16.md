@@ -44,38 +44,20 @@ status: started
 
 ## 3. Runtime and memory
 
-- Runtime: MLX or llama.cpp according to the selected artifact.
-- Tagged runtime/container revision: UNVERIFIED.
-- Hardware path: local accelerator; exact runtime qualification UNVERIFIED.
-- Endpoint contract: UNVERIFIED.
-- Precision kernels, tokenizer/chat template compatibility, reasoning parser,
-  tool parser, and unsupported features: UNVERIFIED.
-- Analytical memory lower bound: selected weight bytes above divided by
-  1,073,741,824. This assumes weights alone and excludes key/value cache,
-  recurrent state, vision workspace, graph/compiler workspace, drafter, and
-  co-resident models. Full estimate and comparable measured peak: UNVERIFIED.
-- Intended input/output length and concurrency: UNVERIFIED for a matched trial;
-  catalog serving limits are configuration values, not measured capacity.
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ## 4. Evaluation and comparison
+
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
 - Benchmark: Terminal-Bench 2.1 IQ2; score: 50.98; date: 2026-10-19; source: https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/blob/567021037ff88364143e24ea05e6abd0f72086ff/README.md
 ```
 
-- Publication date: the cited card revision in [publisher history](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/commits/main/README.md).
-  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+- [Card publication history](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/commits/main/README.md).
 
-- Candidate/incumbent comparison under matched settings: UNVERIFIED.
-- Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
-- Classification/extraction: task-matched accuracy, schema validity, class
-  balance, languages, calibration, abstention, false positives/negatives,
-  and latency: UNVERIFIED.
+- Classification/extraction: see the [shared task evidence](_shared/runtime-and-evaluation.md#classification-and-extraction).
 
 ## 5. Trial status
 
-- Dossier started; trial authorization pending completed evidence.
-- Acceptance thresholds, matched incumbent baseline, and expected-result
-  statement: UNVERIFIED; set them before a trial or replacement.
-- The policy records dated identity and age eligibility. It does not certify
-  runtime support, memory fit, quality, or replacement readiness.
+[Shared evidence](_shared/runtime-and-evaluation.md)

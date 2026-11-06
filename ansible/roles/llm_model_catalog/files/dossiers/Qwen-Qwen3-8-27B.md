@@ -65,31 +65,19 @@ status: started
 
 ## 3. Runtime and memory
 
-- Runtime: MLX or llama.cpp according to the selected artifact.
-- Tagged runtime/container revision: UNVERIFIED.
-- Hardware path: local accelerator; exact runtime qualification UNVERIFIED.
-- Endpoint contract: UNVERIFIED.
-- Precision kernels, tokenizer/chat template compatibility, reasoning parser,
-  tool parser, and unsupported features: UNVERIFIED.
-- Analytical memory lower bound: selected weight bytes above divided by
-  1,073,741,824. This assumes weights alone and excludes key/value cache,
-  recurrent state, vision workspace, graph/compiler workspace, drafter, and
-  co-resident models. Full estimate and comparable measured peak: UNVERIFIED.
-- Intended input/output length and concurrency: UNVERIFIED for a matched trial;
-  catalog serving limits are configuration values, not measured capacity.
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ## 4. Evaluation and comparison
+
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
 - Benchmark: Terminal-Bench 2.1; score: 73.0; date: 2026-11-05; source: https://huggingface.co/Qwen/Qwen3.8-27B/blob/8c0b3d30f3ae96f5c7f774de704bf0ada83e422a/README.md
 ```
 
-- Publication date: the cited card revision in [publisher history](https://huggingface.co/Qwen/Qwen3.8-27B/commits/main/README.md).
-  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+- [Card publication history](https://huggingface.co/Qwen/Qwen3.8-27B/commits/main/README.md).
 - Publisher scaffold: Terminus; full-precision upstream result.
 
-- Candidate/incumbent comparison under matched settings: UNVERIFIED.
-- Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
 - General chat: dated Arena category, LiveBench/Artificial Analysis version,
   instruction following, and agent-task evidence: UNVERIFIED.
 - Coding: SWE-bench split/scaffold, Terminal-Bench version/scaffold,
@@ -101,8 +89,4 @@ status: started
 
 ## 5. Trial status
 
-- Dossier started; trial authorization pending completed evidence.
-- Acceptance thresholds, matched incumbent baseline, and expected-result
-  statement: UNVERIFIED; set them before a trial or replacement.
-- The policy records dated identity and age eligibility. It does not certify
-  runtime support, memory fit, quality, or replacement readiness.
+[Shared evidence](_shared/runtime-and-evaluation.md)

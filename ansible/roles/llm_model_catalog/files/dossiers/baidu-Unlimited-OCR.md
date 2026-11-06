@@ -45,20 +45,11 @@ status: started
 
 ## 3. Runtime and memory
 
-- Runtime: MLX or llama.cpp according to the selected artifact.
-- Tagged runtime/container revision: UNVERIFIED.
-- Hardware path: local accelerator; exact runtime qualification UNVERIFIED.
-- Endpoint contract: UNVERIFIED.
-- Precision kernels, tokenizer/chat template compatibility, reasoning parser,
-  tool parser, and unsupported features: UNVERIFIED.
-- Analytical memory lower bound: selected weight bytes above divided by
-  1,073,741,824. This assumes weights alone and excludes key/value cache,
-  recurrent state, vision workspace, graph/compiler workspace, drafter, and
-  co-resident models. Full estimate and comparable measured peak: UNVERIFIED.
-- Intended input/output length and concurrency: UNVERIFIED for a matched trial;
-  catalog serving limits are configuration values, not measured capacity.
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ## 4. Evaluation and comparison
+
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
 - Benchmark: OmniDocBench v1.5; score: 93.23; date: 2026-06-22; source: https://arxiv.org/html/2606.23050v1
@@ -67,16 +58,10 @@ status: started
 - Publication date: report v1 header; Table 1 reports the upstream model.
   Observed 2026-11-06; conversion fidelity and local results remain UNVERIFIED.
 
-- Candidate/incumbent comparison under matched settings: UNVERIFIED.
-- Expected quality, quantization fidelity, latency, and throughput: UNVERIFIED.
-- Documents: OCRBench and OmniDocBench/olmOCR, text error, tables,
-  formulas, reading order, layout, languages, and long-document results:
-  UNVERIFIED.
+- Documents: report Table 1 supplies the upstream OmniDocBench v1.5 result.
+  OCRBench, matched conversion results, target languages, and local
+  long-document performance: UNVERIFIED.
 
 ## 5. Trial status
 
-- Dossier started; trial authorization pending completed evidence.
-- Acceptance thresholds, matched incumbent baseline, and expected-result
-  statement: UNVERIFIED; set them before a trial or replacement.
-- The policy records dated identity and age eligibility. It does not certify
-  runtime support, memory fit, quality, or replacement readiness.
+[Shared evidence](_shared/runtime-and-evaluation.md)

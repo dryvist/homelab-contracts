@@ -47,33 +47,26 @@ status: started
 
 ## 3. Runtime and memory
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 - Runtime: mlx-vlm.
 - Catalog runtime revision: `3d87e88402f307efbf68e568971aa887ee7d9ed0`;
   live qualification: UNVERIFIED.
-- Hardware path: local accelerator; exact runtime qualification UNVERIFIED.
 - Endpoint contract: /v1/embeddings.
-- Precision kernels, tokenizer/chat template compatibility, reasoning parser,
-  tool parser, and unsupported features: UNVERIFIED.
-- Analytical memory lower bound: selected weight bytes above divided by
-  1,073,741,824. This assumes weights alone and excludes key/value cache,
-  recurrent state, vision workspace, graph/compiler workspace, drafter, and
-  co-resident models. Full estimate and comparable measured peak: UNVERIFIED.
-- Intended input/output length and concurrency: UNVERIFIED for a matched trial;
-  catalog serving limits are configuration values, not measured capacity.
 
 ## 4. Evaluation and comparison
+
+[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ```text
 - Benchmark: MTEB multilingual v2; score: 61.36; date: 2026-10-28; source: https://huggingface.co/google/embeddinggemma-2/blob/f9972ac22e696a105c482202646979e33e4b5a1e/README.md
 ```
 
-- Publication date: the cited card revision in [publisher history](https://huggingface.co/google/embeddinggemma-2/commits/main/README.md).
-  Observed 2026-11-06; evaluation run date remains UNVERIFIED.
+- [Card publication history](https://huggingface.co/google/embeddinggemma-2/commits/main/README.md).
 
 - [Official card](https://huggingface.co/google/embeddinggemma-2), observed
   2026-11-06: MTEB multilingual v2 61.36; MTEB Code v1 78.68.
-  Individual evaluation day: UNVERIFIED. These upstream results
-  do not establish MXFP8 conversion fidelity.
+  Individual evaluation day and MXFP8 conversion fidelity: UNVERIFIED.
 - Card architecture: 740M total parameters and multimodal encoders.
   It documents an 8,192-token operating window and 768-dimensional output,
   with 512/256/128-dimensional truncation followed by re-normalization.
@@ -91,11 +84,8 @@ status: started
 
 ## 5. Trial status
 
-- Dossier started; trial authorization pending completed evidence.
-- Acceptance thresholds, matched incumbent baseline, and expected-result
-  statement: UNVERIFIED; set them before a trial or replacement.
-- The policy records dated identity and age eligibility. It does not certify
-  runtime support, memory fit, quality, or replacement readiness.
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 - No new policy entry is added. The inherited MXFP8 entry is unchanged;
   upstream BF16 admission remains pending completed evidence.
 - Completion gaps: live artifact provenance/bytes, restrictions review,
