@@ -66,6 +66,10 @@ sections and their populated evidence fields. The field names are defined in
 Each required section rejects `UNVERIFIED` evidence, including continuation
 lines. Dossiers for unassigned catalog models can remain in progress.
 
+Dossier front matter accepts `status: started` or `status: complete`. Every
+complete model dossier passes the same evidence gate, including models without
+role assignments. Shared evidence fragments supply defaults to model dossiers.
+
 The evidence fields cover upstream identity, artifacts, runtime support,
 memory budgets, task-matched evaluations, and promotion criteria. Benchmark
 evidence records applicable use cases, dated results and versions, matched
