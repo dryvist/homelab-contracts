@@ -55,30 +55,35 @@ status: started
 ### mlx-community/Qwen3.8-27B-4bit
 
 - [Artifact metadata](https://huggingface.co/api/models/mlx-community/Qwen3.8-27B-4bit?blobs=true),
-  observed 2026-11-06; artifact repository created 2026-08-14.
-- Artifact revision: `10c35caafbb80f7dc6a7a432cdd11af10a6d4818`.
+  observed 2026-11-06; artifact repository created
+  2026-08-14T15:29:59.000Z (`createdAt`).
+- Artifact repository and immutable revision: `mlx-community/Qwen3.8-27B-4bit`,
+  `10c35caafbb80f7dc6a7a432cdd11af10a6d4818`.
   [Pinned files](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/tree/10c35caafbb80f7dc6a7a432cdd11af10a6d4818).
 - Listed files match the observed artifact revision.
-- Weight files:
+- Filename/shards and bytes:
   - `model-00001-of-00003.safetensors`: 5343268662 bytes.
   - `model-00002-of-00003.safetensors`: 5354185130 bytes.
   - `model-00003-of-00003.safetensors`: 5357087557 bytes.
 - Listed weight total: 16054541349 bytes
   (14.95 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion source: `Qwen/Qwen3.8-27B`, using `mlx-vlm` 0.6.8,
-  [artifact publisher card](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/raw/main/README.md),
-  observed 2026-11-06. The [upload history](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/commits/main)
-  shows an August 14 upload; the exact conversion time and immutable source
-  revision are UNVERIFIED.
+- Conversion date and source revision: publisher reports `Qwen/Qwen3.8-27B`
+  converted with `mlx-vlm` 0.6.8 in the
+  [original upload card](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/blob/3e6447f082e89cc7f0bc6e5441afd38dfce760ff/README.md),
+  observed 2026-11-06. The [complete artifact history](https://huggingface.co/api/models/mlx-community/Qwen3.8-27B-4bit/commits/main),
+  observed 2026-11-06, dates upload commit
+  `3e6447f082e89cc7f0bc6e5441afd38dfce760ff` to
+  2026-08-14T15:52:00.000Z. This is the upload time; the conversion timestamp
+  and immutable upstream revision used for conversion remain UNVERIFIED.
 - Quantization recipe: 4-bit affine, group size 64,
-  [artifact configuration](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/resolve/main/config.json),
-  observed 2026-11-06 at artifact revision above. Calibration provenance:
-  UNVERIFIED; the card and configuration do not identify calibration data.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
+  [pinned artifact configuration](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/blob/10c35caafbb80f7dc6a7a432cdd11af10a6d4818/config.json),
+  observed 2026-11-06.
+- Calibration provenance: UNVERIFIED; the publisher card and configuration
+  do not identify calibration data (observed 2026-11-06).
+- Observed download date: UNVERIFIED (metadata only; no weights downloaded).
+- Transformation: publisher reports conversion to MLX; pruning, merging,
+  distillation, or safety modification evidence: UNVERIFIED.
 
 ## 3. Runtime and memory
 
