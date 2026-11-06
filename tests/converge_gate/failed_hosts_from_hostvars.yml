@@ -27,7 +27,7 @@
 
     - name: Give one host a non-empty failure fact
       ansible.builtin.set_fact:
-        site_isolated_failures: [n8n_docker, openproject_docker]
+        site_isolated_failures: [n8n_docker]
       delegate_to: host-with-failures
       delegate_facts: true
 
