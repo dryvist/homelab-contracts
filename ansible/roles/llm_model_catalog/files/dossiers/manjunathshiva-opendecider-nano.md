@@ -11,6 +11,9 @@ status: started
 - Observed: 2026-11-06. [Hub metadata](https://huggingface.co/api/models/manjunathshiva/opendecider-nano).
 - Upstream repository created: 2026-09-27 (Hub `createdAt`).
   Release date: UNVERIFIED. Conversion dates do not renew upstream age.
+- Upstream creation or release date: 2026-09-27T07:36:16.000Z (`createdAt`),
+  [Hub API](https://huggingface.co/api/models/manjunathshiva/opendecider-nano),
+  observed 2026-11-06.
 - Observed immutable upstream revision: `1e1f0a7322e446c5ae9bbe840df11680f18a752a`.
   [Pinned upstream card](https://huggingface.co/manjunathshiva/opendecider-nano/blob/1e1f0a7322e446c5ae9bbe840df11680f18a752a/README.md).
 - License: apache-2.0. [License evidence](https://huggingface.co/manjunathshiva/opendecider-nano/tree/1e1f0a7322e446c5ae9bbe840df11680f18a752a).
@@ -18,8 +21,6 @@ status: started
 - Architecture: ModernBertModel.
 - Intended task: System One classification and typed decisions.
 - Role-assigned artifacts: `manjunathshiva/opendecider-nano`.
-- Official evidence: upstream Hub metadata and card. Conversion evidence is
-  third-party unless the artifact and upstream publishers match.
 
 ## 2. Artifact evidence
 
@@ -29,15 +30,28 @@ status: started
 
 - [Artifact metadata](https://huggingface.co/api/models/manjunathshiva/opendecider-nano?blobs=true),
   observed 2026-11-06; artifact repository created 2026-09-27.
-- Artifact revision: `10c4b349f63d28186a46eacb6478cfce29c488e8`.
-  [Pinned files](https://huggingface.co/manjunathshiva/opendecider-nano/tree/10c4b349f63d28186a46eacb6478cfce29c488e8).
-- Listed file sizes describe the current Hub revision; pinned sizes: UNVERIFIED.
+- Artifact repository: `manjunathshiva/opendecider-nano`.
+- Artifact publisher: `manjunathshiva` (`author`).
+- Immutable artifact revision: `1e1f0a7322e446c5ae9bbe840df11680f18a752a` (`sha`).
+  [Pinned files](https://huggingface.co/manjunathshiva/opendecider-nano/tree/1e1f0a7322e446c5ae9bbe840df11680f18a752a).
+- Artifact created date: 2026-09-27T07:36:16.000Z (`createdAt`).
+- Evidence observed date: 2026-11-06,
+  [Hub API](https://huggingface.co/api/models/manjunathshiva/opendecider-nano?blobs=true).
+- Quantization recipe: none; native bf16 encoder and decision head,
+  [pinned config](https://huggingface.co/manjunathshiva/opendecider-nano/blob/1e1f0a7322e446c5ae9bbe840df11680f18a752a/config.json),
+  observed 2026-11-06.
+- Calibration provenance: not applicable to weight quantization; this is the
+  original bf16 checkpoint. Teacher probability calibration is a training
+  detail, described in the
+  [publisher card](https://huggingface.co/manjunathshiva/opendecider-nano/blob/1e1f0a7322e446c5ae9bbe840df11680f18a752a/README.md),
+  observed 2026-11-06.
+- Upstream source revision: native checkpoint, no converter; artifact API
+  `base_model` identifies `jhu-clsp/ettin-encoder-400m` as the training backbone.
 - Weight files:
   - `head.safetensors`: 2105802 bytes.
   - `model.safetensors`: 789580328 bytes.
 - Listed weight total: 791686130 bytes
-  (0.74 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
+  (0.74 GiB).
 - Artifact type: source checkpoint.
 
 ## 3. Runtime and memory
@@ -45,17 +59,4 @@ status: started
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 - Runtime: opendecider[serve].
-- Supported architecture and hardware path: CPU reference server; architecture
-  qualification UNVERIFIED.
-- Endpoint behavior and unsupported features: /v1/systemone; unsupported features
-  UNVERIFIED.
-
-## 4. Evaluation and comparison
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-- Classification/extraction: see the [shared task evidence](_shared/runtime-and-evaluation.md#classification-and-extraction).
-
-## 5. Trial status
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
+- CPU serving: [shared qualification evidence](_shared/runtime-and-evaluation.md#cpu-decision-models).

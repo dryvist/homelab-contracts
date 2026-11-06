@@ -16,10 +16,6 @@ status: started
 - License: apache-2.0. [License evidence](https://huggingface.co/Qwen/Qwen3.6-35B-A3B/tree/995ad96eacd98c81ed38be0c5b274b04031597b0).
   Additional restrictions: UNVERIFIED.
 - Architecture: Qwen3_5MoeForConditionalGeneration.
-- Intended task: Catalogued self-hosted inference; role assignment absent.
-- Role-assigned artifacts: none.
-- Official evidence: upstream Hub metadata and card. Conversion evidence is
-  third-party unless the artifact and upstream publishers match.
 
 ## 2. Artifact evidence
 
@@ -35,8 +31,7 @@ status: started
 - Weight files:
   - `Qwen_Qwen3.6-35B-A3B-Q4_K_M.gguf`: 22285080192 bytes.
 - Listed weight total: 22285080192 bytes
-  (20.75 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
+  (20.75 GiB).
 
 ### mlx-community/Qwen3.6-35B-A3B-4bit
 
@@ -51,8 +46,7 @@ status: started
   - `model-00003-of-00004.safetensors`: 5368324139 bytes.
   - `model-00004-of-00004.safetensors`: 4377211365 bytes.
 - Listed weight total: 20402204271 bytes
-  (19.00 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
+  (19.00 GiB).
 
 ### mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit
 
@@ -70,19 +64,4 @@ status: started
   - `optiq/mtp.safetensors`: 487458979 bytes.
   - `optiq/optiq_vision.safetensors`: 893179469 bytes.
 - Listed weight total: 23516214244 bytes
-  (21.90 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
-
-## 3. Runtime and memory
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-## 4. Evaluation and comparison
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-- Classification/extraction: see the [shared task evidence](_shared/runtime-and-evaluation.md#classification-and-extraction).
-
-## 5. Trial status
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
+  (21.90 GiB).

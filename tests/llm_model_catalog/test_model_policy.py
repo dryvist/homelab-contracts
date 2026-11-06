@@ -12,35 +12,13 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 FILES = Path("ansible/roles/llm_model_catalog/files")
-DOSSIER_FIELDS = {
-    "1. Upstream evidence": (
-        "Upstream repository and immutable revision", "Release date",
-        "License and restrictions", "Architecture", "Intended task",
-        "Official versus third-party evidence", "Lane rationale",
-    ),
-    "2. Artifact evidence": (
-        "Artifact repository and immutable revision", "Filename/shards and bytes",
-        "Conversion date and source revision", "Quantization recipe",
-        "Calibration provenance", "Observed download date", "Transformation",
-    ),
-    "3. Runtime and memory": (
-        "Tagged runtime/container revision", "Supported architecture and hardware path",
-        "Precision kernels", "Tokenizer/chat template", "Reasoning and tool parsers",
-        "Endpoint behavior and unsupported features",
-        "Weights, cache/state, vision, graph/compiler, drafter, and co-resident bytes",
-        "Input/output length and concurrency", "Analytical estimate and assumptions",
-        "Comparable published peak",
-    ),
-    "4. Evaluation and comparison": (
-        "Applicable use cases", "Dated task-matched benchmarks and versions",
-        "Settings, scaffold, and reasoning budget", "Quant fidelity",
-        "Candidate/incumbent comparison", "Expected results",
-    ),
-    "5. Trial status": (
-        "Dated promotion decision", "Predeclared acceptance criteria",
-        "Unresolved fields",
-    ),
-}
+DOSSIER_FIELDS = json.loads(Path(__file__).with_name("dossier-fields.json").read_text())
+
+
+def required_fields(fields, *, admission_only=False):
+    """Keep admission and complete-evidence requirements in one contract."""
+    return [field for field, gate in fields.items()
+            if gate == "admission" or (gate == "complete" and not admission_only)]
 
 
 def dossier_sections(text, model_id):
@@ -58,7 +36,7 @@ def dossier_sections(text, model_id):
     return {heading: "\n".join(lines) for heading, lines in sections.items()}
 
 
-def validate_dossier(text, model_id, root=ROOT):
+def validate_dossier(text, model_id, root=ROOT, *, admission_only=False):
     """Validate local evidence and explicitly referenced shared defaults."""
     sections = dossier_sections(text, model_id)
     reference = "[Shared evidence](_shared/runtime-and-evaluation.md)"
@@ -67,21 +45,39 @@ def validate_dossier(text, model_id, root=ROOT):
         path = root / FILES / "dossiers/_shared/runtime-and-evaluation.md"
         shared = dossier_sections(path.read_text(), model_id)
     for heading, fields in DOSSIER_FIELDS.items():
-        if heading not in sections:
+        if heading not in sections and heading not in shared:
             raise ValueError(f"missing dossier section: {model_id}: {heading}")
-        body = sections[heading]
-        if re.search(r"\bUNVERIFIED\b", body, re.IGNORECASE):
-            raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
-        for field in fields:
-            pattern = (rf"^- {re.escape(field)}:[ \t]*(?:\n[ \t]+)?\S[^\n]*"
-                       r"(?:\n[ \t]+\S[^\n]*)*")
-            evidence = re.search(pattern, body, re.MULTILINE)
-            if evidence is None and reference in body:
-                evidence = re.search(pattern, shared.get(heading, ""), re.MULTILINE)
-            if evidence is None:
-                raise ValueError(f"missing dossier field: {model_id}: {field}")
-            if re.search(r"\bUNVERIFIED\b", evidence.group(), re.IGNORECASE):
-                raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
+        body = sections.get(heading, "")
+        bodies = [body]
+        if heading == "2. Artifact evidence":
+            artifacts = re.findall(r"^### ([^\n]+)\n(.*?)(?=^### |\Z)",
+                                   body, re.MULTILINE | re.DOTALL)
+            if artifacts:
+                bodies = [evidence for name, evidence in artifacts
+                          if not admission_only or name == model_id]
+                if (len({name for name, _ in artifacts}) != len(artifacts)
+                        or (admission_only and len(bodies) != 1)):
+                    raise ValueError(f"missing or duplicate artifact evidence: {model_id}")
+        for body in bodies:
+            for field in required_fields(fields, admission_only=admission_only):
+                pattern = (rf"^- {re.escape(field)}:[ \t]*(?:\n[ \t]+)?\S[^\n]*"
+                           r"(?:\n[ \t]+\S[^\n]*)*")
+                evidence = re.search(pattern, body, re.MULTILINE)
+                if evidence is None and reference in text:
+                    evidence = re.search(pattern, shared.get(heading, ""), re.MULTILINE)
+                if evidence is None:
+                    raise ValueError(f"missing dossier field: {model_id}: {field}")
+                if re.search(r"\bUNVERIFIED\b", evidence.group(), re.IGNORECASE):
+                    raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
+            if not admission_only:
+                # Optional converter metadata cannot block complete evidence.
+                for field, gate in fields.items():
+                    if gate == "optional":
+                        body = re.sub(
+                            rf"^- {re.escape(field)}:[^\n]*(?:\n[ \t]+[^\n]*)*",
+                            "", body, flags=re.MULTILINE)
+                if re.search(r"\bUNVERIFIED\b", body, re.IGNORECASE):
+                    raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
 
 
 def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
@@ -172,7 +168,7 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
                 f"ineligible role model: {model_id}")
         if model_id in models:
             validate_dossier((root / models[model_id]["dossier"]).read_text(),
-                             model_id, root)
+                             model_id, root, admission_only=True)
 
 
 class CommittedPolicyTest(unittest.TestCase):
@@ -323,7 +319,7 @@ class PolicyRegressionTest(unittest.TestCase):
                     f"## {heading}", "## Unrelated section"))
                 with self.assertRaisesRegex(ValueError, "missing dossier section"):
                     self.check()
-            for field in fields:
+            for field in required_fields(fields, admission_only=True):
                 with self.subTest(field=field):
                     self.dossier.write_text(self.complete_dossier.replace(
                         f"- {field}: synthetic regression evidence", f"- {field}:"))
@@ -342,7 +338,7 @@ class PolicyRegressionTest(unittest.TestCase):
             else:
                 self.roles["hosts"]["server"][selection] = ["active"]
             for fields in DOSSIER_FIELDS.values():
-                for field in fields:
+                for field in required_fields(fields, admission_only=True):
                     with self.subTest(selection=selection, field=field):
                         self.dossier.write_text(self.complete_dossier.replace(
                             f"- {field}: synthetic regression evidence",

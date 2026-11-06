@@ -14,6 +14,8 @@ status: started
 - Upstream repository created: 2026-08-05T08:22:59.000Z (`createdAt`),
   [Hub metadata](https://huggingface.co/api/models/Qwen/Qwen3.8-27B),
   observed 2026-11-06. Conversion dates do not renew upstream age.
+- Upstream creation or release date: 2026-08-05T08:22:59.000Z (`createdAt`),
+  [Hub API](https://huggingface.co/api/models/Qwen/Qwen3.8-27B), observed 2026-11-06.
 - Release date: 2026-08-14, [official release news](https://github.com/QwenLM/Qwen3.8#news),
   observed 2026-11-06. Repository creation precedes public release.
 - License and restrictions: Apache-2.0; redistribution requires retaining the
@@ -45,8 +47,7 @@ status: started
 - Weight files:
   - `Qwen3.8-27B-UD-IQ3_XXS.gguf`: 10934860704 bytes.
 - Listed weight total: 10934860704 bytes
-  (10.18 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
+  (10.18 GiB).
 
 ### mlx-community/Qwen3.8-27B-4bit
 
@@ -56,34 +57,29 @@ status: started
 - Artifact repository and immutable revision: `mlx-community/Qwen3.8-27B-4bit`,
   `10c35caafbb80f7dc6a7a432cdd11af10a6d4818`.
   [Pinned files](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/tree/10c35caafbb80f7dc6a7a432cdd11af10a6d4818).
+- Artifact repository: `mlx-community/Qwen3.8-27B-4bit`.
+- Artifact publisher: `mlx-community` (`author`).
+- Immutable artifact revision: `10c35caafbb80f7dc6a7a432cdd11af10a6d4818` (`sha`).
+- Artifact created date: 2026-08-14T15:29:59.000Z (`createdAt`).
+- Evidence observed date: 2026-11-06,
+  [Hub API](https://huggingface.co/api/models/mlx-community/Qwen3.8-27B-4bit?blobs=true).
 - Listed files match the observed artifact revision.
 - Filename/shards and bytes:
   - `model-00001-of-00003.safetensors`: 5343268662 bytes.
   - `model-00002-of-00003.safetensors`: 5354185130 bytes.
   - `model-00003-of-00003.safetensors`: 5357087557 bytes.
 - Listed weight total: 16054541349 bytes
-  (14.95 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
-- Conversion date and source revision: publisher reports `Qwen/Qwen3.8-27B`
-  converted with `mlx-vlm` 0.6.8 in the
-  [original upload card](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/blob/3e6447f082e89cc7f0bc6e5441afd38dfce760ff/README.md),
-  observed 2026-11-06. The [complete artifact history](https://huggingface.co/api/models/mlx-community/Qwen3.8-27B-4bit/commits/main),
-  observed 2026-11-06, dates upload commit
-  `3e6447f082e89cc7f0bc6e5441afd38dfce760ff` to
-  2026-08-14T15:52:00.000Z. This is the upload time; the conversion timestamp
-  and immutable upstream revision used for conversion remain UNVERIFIED.
+  (14.95 GiB).
+- Upstream source revision: not published by converter; `base_model` is
+  `Qwen/Qwen3.8-27B`. The [pinned publisher card](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/blob/10c35caafbb80f7dc6a7a432cdd11af10a6d4818/README.md)
+  reports conversion with `mlx-vlm` 0.6.8, observed 2026-11-06.
 - Quantization recipe: 4-bit affine, group size 64,
   [pinned artifact configuration](https://huggingface.co/mlx-community/Qwen3.8-27B-4bit/blob/10c35caafbb80f7dc6a7a432cdd11af10a6d4818/config.json),
   observed 2026-11-06.
-- Calibration provenance: UNVERIFIED; the publisher card and configuration
-  do not identify calibration data (observed 2026-11-06).
-- Observed download date: UNVERIFIED (metadata only; no weights downloaded).
+- Calibration provenance: not applicable; plain MLX affine 4-bit,
+  group size 64 in the pinned configuration above, observed 2026-11-06.
 - Transformation: publisher reports conversion to MLX; pruning, merging,
   distillation, or safety modification evidence: UNVERIFIED.
-
-## 3. Runtime and memory
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
 
 ## 4. Evaluation and comparison
 
@@ -110,7 +106,3 @@ status: started
   reasoning/output allowance, and prefill cost: UNVERIFIED.
 - Tool calling: BFCL and tau-bench, malformed/parallel/irrelevant calls,
   multi-turn reliability, and serving parser results: UNVERIFIED.
-
-## 5. Trial status
-
-[Shared evidence](_shared/runtime-and-evaluation.md)

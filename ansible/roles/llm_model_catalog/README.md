@@ -60,15 +60,31 @@ and hosted-provider exemptions. CI measures upstream age against the current
 UTC date and requires `as_of` to be within the preceding 30 days.
 
 Global roles, host role overrides, and host resident and swap selections use
-the same eligibility checks. Selected self-hosted models require all 5 dossier
-sections and their populated evidence fields. The field names are defined in
-[`DOSSIER_FIELDS`](../../../../tests/llm_model_catalog/test_model_policy.py).
-Each required section rejects `UNVERIFIED` evidence, including continuation
-lines. Dossiers for unassigned catalog models can remain in progress.
+the same eligibility checks. The single
+[dossier field contract](../../../../tests/llm_model_catalog/dossier-fields.json)
+marks each field as `admission`, `complete`, or `optional`.
+
+Admission requires an upstream creation or release date, artifact repository,
+publisher, immutable Hub `sha`, artifact `createdAt`, observation date, and a
+quantization method from the artifact's own configuration or metadata. The
+artifact identity, publisher, revision, and creation date cite the Hub API.
+Calibration provenance is required for calibrated methods; calibration-free
+methods record "not applicable" with their method and source. Every required
+field rejects missing or `UNVERIFIED` evidence, including continuation lines.
+Each selected artifact supplies its own facts within its dossier subsection.
+
+The converter's upstream revision is optional. When it is not published, the
+dossier records `base_model` and "not published by converter". Weight-download
+dates belong to deployment records. Repository creation dates do not claim a
+conversion timestamp.
 
 Dossier front matter accepts `status: started` or `status: complete`. Every
-complete model dossier passes the same evidence gate, including models without
-role assignments. Shared evidence fragments supply defaults to model dossiers.
+complete model dossier passes the full evidence gate, including models without
+role assignments and every artifact in the dossier. Started dossiers can pass
+admission while runtime, evaluation, and trial evidence remains unfinished.
+Shared evidence supplies sections and field defaults through one
+`[Shared evidence](_shared/runtime-and-evaluation.md)` reference; local fields
+override only their matching defaults.
 
 The evidence fields cover upstream identity, artifacts, runtime support,
 memory budgets, task-matched evaluations, and promotion criteria. Benchmark

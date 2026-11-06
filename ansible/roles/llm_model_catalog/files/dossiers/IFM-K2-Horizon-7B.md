@@ -16,10 +16,6 @@ status: started
 - License: apache-2.0. [License evidence](https://huggingface.co/IFM/K2-Horizon-7B/tree/1ad5223c80f635ede5fb926f6304dc7228246a4b).
   Additional restrictions: UNVERIFIED.
 - Architecture: K2HorizonForCausalLM.
-- Intended task: Catalogued self-hosted inference; role assignment absent.
-- Role-assigned artifacts: none.
-- Official evidence: upstream Hub metadata and card. Conversion evidence is
-  third-party unless the artifact and upstream publishers match.
 
 ## 2. Artifact evidence
 
@@ -40,8 +36,7 @@ status: started
   - `K2-Horizon-7B-Q6_K.gguf`: 7394548096 bytes.
   - `K2-Horizon-7B-Q8_0.gguf`: 9573964160 bytes.
 - Listed weight total: 53372942592 bytes
-  (49.71 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
+  (49.71 GiB).
 
 ### mlx-community/K2-Horizon-7B-4bit
 
@@ -54,8 +49,7 @@ status: started
   - `model-00001-of-00002.safetensors`: 5366857275 bytes.
   - `model-00002-of-00002.safetensors`: 1816975229 bytes.
 - Listed weight total: 7183832504 bytes
-  (6.69 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
+  (6.69 GiB).
 
 ### mlx-community/K2-Horizon-7B-oQ6e
 
@@ -68,19 +62,4 @@ status: started
   - `model-00001-of-00002.safetensors`: 5029044275 bytes.
   - `model-00002-of-00002.safetensors`: 2507633767 bytes.
 - Listed weight total: 7536678042 bytes
-  (7.02 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
-
-## 3. Runtime and memory
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-## 4. Evaluation and comparison
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-- Classification/extraction: see the [shared task evidence](_shared/runtime-and-evaluation.md#classification-and-extraction).
-
-## 5. Trial status
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
+  (7.02 GiB).

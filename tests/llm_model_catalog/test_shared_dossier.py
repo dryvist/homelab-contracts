@@ -14,7 +14,7 @@ class SharedDossierTest(unittest.TestCase):
                        / "_shared/runtime-and-evaluation.md")
         self.shared.parent.mkdir()
         sections = policy.dossier_sections(self.fixture.complete_dossier, "example")
-        self.shared_headings = list(policy.DOSSIER_FIELDS)[2:]
+        self.shared_headings = list(policy.DOSSIER_FIELDS)[1:]
         self.shared_text = "\n\n".join(
             f"## {heading}\n{sections[heading]}"
             for heading in self.shared_headings)
@@ -28,12 +28,19 @@ class SharedDossierTest(unittest.TestCase):
 
     def test_complete_shared_evidence(self):
         self.fixture.check()
+        policy.validate_dossier(self.local_text, "example", self.fixture.root)
 
-    def test_reference_is_required_in_each_inheriting_section(self):
+    def test_reference_is_required_for_inherited_sections(self):
         self.fixture.dossier.write_text(self.local_text.replace(
-            "[Shared evidence](_shared/runtime-and-evaluation.md)", "", 1))
+            "[Shared evidence](_shared/runtime-and-evaluation.md)", ""))
         with self.assertRaisesRegex(ValueError, "missing dossier field"):
             self.fixture.check()
+
+    def test_shared_sections_are_inherited_once(self):
+        sections = policy.dossier_sections(self.fixture.complete_dossier, "example")
+        text = (f"## 1. Upstream evidence\n{sections['1. Upstream evidence']}\n\n"
+                "[Shared evidence](_shared/runtime-and-evaluation.md)")
+        policy.validate_dossier(text, "example", self.fixture.root)
 
     def test_missing_shared_file_fails_closed(self):
         self.shared.rename(self.shared.with_name("absent.md"))
@@ -42,7 +49,7 @@ class SharedDossierTest(unittest.TestCase):
 
     def test_missing_and_unverified_inherited_fields_fail_closed(self):
         for heading in self.shared_headings:
-            for field in policy.DOSSIER_FIELDS[heading]:
+            for field in policy.required_fields(policy.DOSSIER_FIELDS[heading]):
                 for replacement, message in (
                         (f"- {field}:", "missing dossier field"),
                         (f"- {field}:\n  UNVERIFIED", "unverified dossier evidence")):
@@ -50,11 +57,12 @@ class SharedDossierTest(unittest.TestCase):
                         self.shared.write_text(self.shared_text.replace(
                             f"- {field}: synthetic regression evidence", replacement))
                         with self.assertRaisesRegex(ValueError, message):
-                            self.fixture.check()
+                            policy.validate_dossier(
+                                self.local_text, "example", self.fixture.root)
 
     def test_local_evidence_overrides_only_its_shared_field(self):
         heading = self.shared_headings[0]
-        field = policy.DOSSIER_FIELDS[heading][0]
+        field = policy.required_fields(policy.DOSSIER_FIELDS[heading])[0]
         self.shared.write_text(self.shared_text.replace(
             f"- {field}: synthetic regression evidence", f"- {field}: UNVERIFIED"))
         self.fixture.dossier.write_text(self.local_text.replace(
@@ -67,4 +75,5 @@ class SharedDossierTest(unittest.TestCase):
     def test_local_unverified_evidence_is_not_hidden_by_shared_defaults(self):
         self.fixture.dossier.write_text(self.local_text + "\n- Note: UNVERIFIED\n")
         with self.assertRaisesRegex(ValueError, "unverified dossier evidence"):
-            self.fixture.check()
+            policy.validate_dossier(self.fixture.dossier.read_text(),
+                                    "example", self.fixture.root)

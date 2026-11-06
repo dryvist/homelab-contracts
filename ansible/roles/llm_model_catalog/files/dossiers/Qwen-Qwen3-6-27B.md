@@ -16,10 +16,6 @@ status: started
 - License: apache-2.0. [License evidence](https://huggingface.co/Qwen/Qwen3.6-27B/tree/6a9e13bd6fc8f0983b9b99948120bc37f49c13e9).
   Additional restrictions: UNVERIFIED.
 - Architecture: Qwen3_5ForConditionalGeneration.
-- Intended task: Catalogued self-hosted inference; role assignment absent.
-- Role-assigned artifacts: none.
-- Official evidence: upstream Hub metadata and card. Conversion evidence is
-  third-party unless the artifact and upstream publishers match.
 
 ## 2. Artifact evidence
 
@@ -37,19 +33,4 @@ status: started
   - `model-00002-of-00003.safetensors`: 5349386469 bytes.
   - `model-00003-of-00003.safetensors`: 4515944397 bytes.
 - Listed weight total: 15214058212 bytes
-  (14.17 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
-
-## 3. Runtime and memory
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-## 4. Evaluation and comparison
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-- Classification/extraction: see the [shared task evidence](_shared/runtime-and-evaluation.md#classification-and-extraction).
-
-## 5. Trial status
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
+  (14.17 GiB).

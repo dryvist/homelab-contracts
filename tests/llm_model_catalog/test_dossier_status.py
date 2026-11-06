@@ -51,7 +51,7 @@ class DossierStatusTest(unittest.TestCase):
 
     def test_complete_unverified_required_field_fails(self):
         for fields in policy.DOSSIER_FIELDS.values():
-            for field in fields:
+            for field in policy.required_fields(fields):
                 with self.subTest(field=field):
                     self.write("complete", self.fixture.complete_dossier.replace(
                         f"- {field}: synthetic regression evidence",

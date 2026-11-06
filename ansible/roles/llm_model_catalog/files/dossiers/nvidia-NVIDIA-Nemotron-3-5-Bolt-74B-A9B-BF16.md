@@ -16,10 +16,6 @@ status: started
 - License: openmdw-1.1. [License evidence](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/tree/e09a4cedb1787db1760375ee5539f222cae0c672).
   Additional restrictions: UNVERIFIED.
 - Architecture: NemotronH_Omni_Reasoning_V3.
-- Intended task: Catalogued self-hosted inference; role assignment absent.
-- Role-assigned artifacts: none.
-- Official evidence: upstream Hub metadata and card. Conversion evidence is
-  third-party unless the artifact and upstream publishers match.
 
 ## 2. Artifact evidence
 
@@ -35,19 +31,4 @@ status: started
 - Weight files:
   - `NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB.gguf`: 22018326528 bytes.
 - Listed weight total: 22018326528 bytes
-  (20.51 GiB); tokenizer, configuration,
-  cache, and runtime allocations are additional.
-
-## 3. Runtime and memory
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-## 4. Evaluation and comparison
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
-
-- Classification/extraction: see the [shared task evidence](_shared/runtime-and-evaluation.md#classification-and-extraction).
-
-## 5. Trial status
-
-[Shared evidence](_shared/runtime-and-evaluation.md)
+  (20.51 GiB).
