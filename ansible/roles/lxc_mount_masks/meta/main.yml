@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: JacobPEvans
+  description: Mask failed mount units in LXC guests
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+  galaxy_tags:
+    - lxc
+    - systemd
+dependencies: []
