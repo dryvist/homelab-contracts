@@ -28,7 +28,7 @@ status: started
 
 ### manjunathshiva/opendecider-nano
 
-- [Artifact metadata at the catalog pin](https://huggingface.co/api/models/manjunathshiva/opendecider-nano/revision/10c4b349f63d28186a46eacb6478cfce29c488e8?blobs=true),
+- [Pinned artifact API](https://huggingface.co/api/models/manjunathshiva/opendecider-nano/revision/10c4b349f63d28186a46eacb6478cfce29c488e8?blobs=true),
   observed 2026-11-06; artifact repository created 2026-09-27.
 - Artifact repository: `manjunathshiva/opendecider-nano`.
 - Artifact publisher: `manjunathshiva` (`author`).
