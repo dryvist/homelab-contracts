@@ -1,0 +1,50 @@
+---
+- name: Detect the container type
+  ansible.builtin.command: systemd-detect-virt --container
+  register: _lxc_mount_masks_virt
+  changed_when: false
+  failed_when: _lxc_mount_masks_virt.rc not in [0, 1]
+  check_mode: false
+  when: lxc_mount_masks_enabled | bool
+
+- name: Manage failed LXC mount units
+  when:
+    - lxc_mount_masks_enabled | bool
+    - ansible_virtualization_type | default('') == 'lxc' or _lxc_mount_masks_virt.stdout | default('') == 'lxc'
+  block:
+    # A failed unit is the systemd signal that this specific mount could not be used.
+    - name: Inspect mount unit state
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - show
+          - --property=ActiveState
+          - --value
+          - "{{ item }}"
+      loop: "{{ lxc_mount_masks_units }}"
+      register: _lxc_mount_masks_states
+      changed_when: false
+      check_mode: false
+
+    - name: Mask failed mount units
+      ansible.builtin.systemd_service:
+        name: "{{ item.item }}"
+        masked: true
+      loop: "{{ _lxc_mount_masks_states.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: item.stdout == 'failed'
+
+    - name: Clear mount unit failures
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - reset-failed
+          - "{{ item.item }}"
+      loop: "{{ _lxc_mount_masks_states.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when:
+        - item.stdout == 'failed'
+        - not ansible_check_mode
+      changed_when: true

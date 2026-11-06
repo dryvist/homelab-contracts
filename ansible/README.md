@@ -18,6 +18,7 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `ssh_ca_trust` | Guest-side pinned-fingerprint SSH CA trust | `ansible-proxmox-apps`, `ansible-servarr` |
 | `syslog_forwarder` | Forward host + service logs to the central syslog pipeline | `ansible-proxmox-apps`, `ansible-servarr` |
 | `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, `ansible-servarr` |
+| `lxc_mount_masks` | Mask failed mount units in LXC guests | Guest plays opting into the role |
 | `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
 | `bao_approle_cli` | Install the shared OpenBao AppRole CLI on Debian guests | Shared CLI consumers |
 | `llm_model_catalog` | Shared JSON model limits and optional GGUF artifacts | `ansible-proxmox`, `ansible-proxmox-ai`, `nix-ai` |

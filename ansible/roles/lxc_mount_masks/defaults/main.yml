@@ -1,0 +1,6 @@
+---
+lxc_mount_masks_enabled: true
+lxc_mount_masks_units:
+  - tmp.mount
+  - dev-mqueue.mount
+  - run-lock.mount
