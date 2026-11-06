@@ -53,6 +53,24 @@ HuggingFace's own LFS blob metadata at run time, pinned against the exact
 `hf_revision` each entry declares — never a hand-copied literal that could
 drift from what HuggingFace actually publishes.
 
+## Model policy
+
+`files/model-policy.json` records upstream creation dates, denied model IDs,
+and hosted-provider exemptions. CI measures upstream age against the current
+UTC date and requires `as_of` to be within the preceding 30 days.
+
+Global roles, host role overrides, and host resident and swap selections use
+the same eligibility checks. Selected self-hosted models require all 5 dossier
+sections and their populated evidence fields. The field names are defined in
+[`DOSSIER_FIELDS`](../../../tests/llm_model_catalog/test_model_policy.py).
+Each required section rejects `UNVERIFIED` evidence, including continuation
+lines. Dossiers for unassigned catalog models can remain in progress.
+
+The evidence fields cover upstream identity, artifacts, runtime support,
+memory budgets, task-matched evaluations, and promotion criteria. Benchmark
+evidence records applicable use cases, dated results and versions, matched
+settings, quantization fidelity, and expected results.
+
 ## Installation
 
 Ships in this collection — see the [collection README](../../README.md) for
