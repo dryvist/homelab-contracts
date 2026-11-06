@@ -2,6 +2,8 @@
 
 ## 2026-11-06
 
+* **Update**: Individual catalog dossiers reference shared runtime, evaluation,
+  classification, and trial fields with model-specific overrides.
 * **Update**: Recorded publisher benchmarks, pinned sources, and publication
   dates for every admitted model family.
 * **Creation**: Added priority classification, generation, retrieval, document,

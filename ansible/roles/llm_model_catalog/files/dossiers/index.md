@@ -46,6 +46,11 @@ The date records evaluation or publication, and cannot be in the future.
 `UNVERIFIED` entries do not count. Other incomplete fields remain visible
 alongside verified benchmark entries.
 
+For pinned publisher cards, the date is the cited card revision's publication
+day in the linked history. It does not establish the evaluation run date.
+Upstream scores describe the original checkpoint; converted-artifact fidelity,
+local capacity, and trial authorization require their own evidence.
+
 * LFM3: conversion pins/bytes, classification and schema-validity results.
 * Super-VL: BF16 source pin, complete shard bytes, RULER and parser support.
 * Lightning: BF16 source pin, conversion provenance, long-context comparison.
@@ -74,6 +79,11 @@ alongside verified benchmark entries.
 * [OpenDecider Nano](manjunathshiva-opendecider-nano.md) - Catalog artifact evidence.
 * [Nemotron 3.5 Bolt BF16](nvidia-NVIDIA-Nemotron-3-5-Bolt-74B-A9B-BF16.md)
   Catalog artifact evidence.
+
+## Shared evidence
+
+* [Shared runtime and evaluation evidence](_shared/runtime-and-evaluation.md)
+  Common fields with per-dossier overrides.
 
 ## Change history
 
