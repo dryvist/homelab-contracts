@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### mlx-community/Unlimited-OCR-bf16
 
 - [Artifact metadata](https://huggingface.co/api/models/mlx-community/Unlimited-OCR-bf16?blobs=true),
@@ -36,12 +38,6 @@ status: started
 - Listed weight total: 6672290401 bytes
   (6.21 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ## 3. Runtime and memory
 

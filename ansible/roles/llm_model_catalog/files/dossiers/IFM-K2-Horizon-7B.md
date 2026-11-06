@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### IFM/K2-Horizon-7B-GGUF
 
 - [Artifact metadata](https://huggingface.co/api/models/IFM/K2-Horizon-7B-GGUF?blobs=true),
@@ -40,12 +42,6 @@ status: started
 - Listed weight total: 53372942592 bytes
   (49.71 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ### mlx-community/K2-Horizon-7B-4bit
 
@@ -60,12 +56,6 @@ status: started
 - Listed weight total: 7183832504 bytes
   (6.69 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ### mlx-community/K2-Horizon-7B-oQ6e
 
@@ -80,12 +70,6 @@ status: started
 - Listed weight total: 7536678042 bytes
   (7.02 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ## 3. Runtime and memory
 

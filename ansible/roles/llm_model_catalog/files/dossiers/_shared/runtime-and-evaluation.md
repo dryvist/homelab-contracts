@@ -10,6 +10,16 @@ Individual dossiers reference these sections and state only their differences.
 A local field replaces the corresponding shared field. Referenced required
 fields remain subject to the same completeness checks as local evidence.
 
+## 2. Artifact evidence
+
+- Conversion date and source revision: UNVERIFIED unless recorded for the
+  individual artifact. Upload dates do not establish conversion timestamps.
+- Quantization recipe: UNVERIFIED unless the artifact records its recipe.
+- Calibration provenance: UNVERIFIED unless the publisher identifies it.
+- Observed download date: UNVERIFIED (metadata only; no weights downloaded).
+- Transformation: pruning, merging, distillation, or safety modification
+  evidence is UNVERIFIED unless recorded for the individual artifact.
+
 ## 3. Runtime and memory
 
 - Runtime: MLX or llama.cpp according to the selected artifact.

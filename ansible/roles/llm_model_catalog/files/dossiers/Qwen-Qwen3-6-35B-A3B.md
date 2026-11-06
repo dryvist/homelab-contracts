@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### bartowski/Qwen_Qwen3.6-35B-A3B-GGUF
 
 - [Artifact metadata](https://huggingface.co/api/models/bartowski/Qwen_Qwen3.6-35B-A3B-GGUF?blobs=true),
@@ -35,12 +37,6 @@ status: started
 - Listed weight total: 22285080192 bytes
   (20.75 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ### mlx-community/Qwen3.6-35B-A3B-4bit
 
@@ -57,12 +53,6 @@ status: started
 - Listed weight total: 20402204271 bytes
   (19.00 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ### mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit
 
@@ -82,12 +72,6 @@ status: started
 - Listed weight total: 23516214244 bytes
   (21.90 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ## 3. Runtime and memory
 

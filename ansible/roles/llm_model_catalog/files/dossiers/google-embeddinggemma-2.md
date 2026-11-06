@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### nativ-community/embeddinggemma-2-mxfp8
 
 - [Artifact metadata](https://huggingface.co/api/models/nativ-community/embeddinggemma-2-mxfp8?blobs=true),
@@ -38,10 +40,6 @@ status: started
 - Conversion date, source revision, recipe, and calibration provenance:
   source `google/embeddinggemma-2@914f7f89142e33e77833254d9c9b90c3cef7303b`
   is declared in the catalog; remaining conversion fields: UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ## 3. Runtime and memory
 

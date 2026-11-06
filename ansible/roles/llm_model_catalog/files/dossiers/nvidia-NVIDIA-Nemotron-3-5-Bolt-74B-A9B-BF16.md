@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF
 
 - [Artifact metadata](https://huggingface.co/api/models/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF?blobs=true),
@@ -35,12 +37,6 @@ status: started
 - Listed weight total: 22018326528 bytes
   (20.51 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ## 3. Runtime and memory
 

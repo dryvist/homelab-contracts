@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### convaiinnovations/laya-typed-decisions
 
 - [Artifact metadata](https://huggingface.co/api/models/convaiinnovations/laya-typed-decisions?blobs=true),
@@ -35,12 +37,7 @@ status: started
 - Listed weight total: 842609220 bytes
   (0.78 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: source checkpoint;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
+- Artifact type: source checkpoint.
 
 ## 3. Runtime and memory
 

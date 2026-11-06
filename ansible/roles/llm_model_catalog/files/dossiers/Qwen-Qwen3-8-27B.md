@@ -33,6 +33,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### unsloth/Qwen3.8-27B-GGUF
 
 - [Artifact metadata](https://huggingface.co/api/models/unsloth/Qwen3.8-27B-GGUF?blobs=true),
@@ -45,12 +47,6 @@ status: started
 - Listed weight total: 10934860704 bytes
   (10.18 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ### mlx-community/Qwen3.8-27B-4bit
 

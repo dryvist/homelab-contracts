@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### manjunathshiva/opendecider-nano
 
 - [Artifact metadata](https://huggingface.co/api/models/manjunathshiva/opendecider-nano?blobs=true),
@@ -36,12 +38,7 @@ status: started
 - Listed weight total: 791686130 bytes
   (0.74 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: source checkpoint;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
+- Artifact type: source checkpoint.
 
 ## 3. Runtime and memory
 

@@ -23,6 +23,8 @@ status: started
 
 ## 2. Artifact evidence
 
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
 ### unsloth/Qwen3.5-9B-GGUF
 
 - [Artifact metadata](https://huggingface.co/api/models/unsloth/Qwen3.5-9B-GGUF?blobs=true),
@@ -35,12 +37,6 @@ status: started
 - Listed weight total: 5680522464 bytes
   (5.29 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ### mlx-community/Qwen3.5-9B-MLX-4bit
 
@@ -55,12 +51,6 @@ status: started
 - Listed weight total: 5950221072 bytes
   (5.54 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ### mlx-community/Qwen3.5-9B-OptiQ-4bit
 
@@ -77,12 +67,6 @@ status: started
 - Listed weight total: 8197888312 bytes
   (7.63 GiB); tokenizer, configuration,
   cache, and runtime allocations are additional.
-- Conversion date, source revision, recipe, and calibration provenance:
-  UNVERIFIED.
-- Weight download date: UNVERIFIED (metadata only; no weights downloaded).
-- Transformation: artifact declares this upstream as its base;
-  unchanged conversion versus pruning, merging, distillation, or safety
-  modification: UNVERIFIED.
 
 ## 3. Runtime and memory
 
