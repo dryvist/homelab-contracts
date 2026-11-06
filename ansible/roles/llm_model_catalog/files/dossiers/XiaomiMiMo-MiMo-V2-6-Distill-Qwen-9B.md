@@ -16,7 +16,7 @@ status: started
 - License: mit. [License evidence](https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/tree/1f09ddcc1a0ea45751ae0dfe2af20d533168c46f).
   Additional restrictions: UNVERIFIED.
 - Architecture: Qwen3_5ForConditionalGeneration.
-- Intended task: Small requests, judging, and recording.
+- Intended task: Short-request inference and output evaluation.
 - Role-assigned artifacts: `mlx-community/MiMo-V2.6-Distill-Qwen-9B-OptiQ-4bit`.
 - Official evidence: upstream Hub metadata and card. Conversion evidence is
   third-party unless the artifact and upstream publishers match.
