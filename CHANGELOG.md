@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.53.0](https://github.com/dryvist/homelab-contracts/compare/v5.52.0...v5.53.0) (2026-11-06)
+
+
+### Features
+
+* **ansible:** add lxc_mount_masks role for unusable container mounts ([#328](https://github.com/dryvist/homelab-contracts/issues/328)) ([fa49a19](https://github.com/dryvist/homelab-contracts/commit/fa49a19f36dc2225ef6047a6512fc7558f3b0a25))
+
 ## [5.52.0](https://github.com/dryvist/homelab-contracts/compare/v5.51.0...v5.52.0) (2026-11-05)
 
 
