@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.54.0](https://github.com/dryvist/homelab-contracts/compare/v5.53.0...v5.54.0) (2026-11-07)
+
+
+### Features
+
+* **model-policy:** add shared model eligibility policy ([#326](https://github.com/dryvist/homelab-contracts/issues/326)) ([4fc4281](https://github.com/dryvist/homelab-contracts/commit/4fc42813b90144406c14e6684c3bda1d8aea7e11))
+
 ## [5.53.0](https://github.com/dryvist/homelab-contracts/compare/v5.52.0...v5.53.0) (2026-11-06)
 
 
