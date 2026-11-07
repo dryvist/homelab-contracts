@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.57.0](https://github.com/dryvist/homelab-contracts/compare/v5.56.0...v5.57.0) (2026-11-07)
+
+
+### Features
+
+* **llm_model_catalog:** add the 4080 small lane row ([#347](https://github.com/dryvist/homelab-contracts/issues/347)) ([26a333c](https://github.com/dryvist/homelab-contracts/commit/26a333c0c621ffbb1d928c21a0047af83c9078a3))
+
 ## [5.56.0](https://github.com/dryvist/homelab-contracts/compare/v5.55.1...v5.56.0) (2026-11-07)
 
 
