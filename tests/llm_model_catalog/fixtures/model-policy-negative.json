@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "as_of": "2026-11-06",
+  "max_age_days": 365,
+  "deny": [],
+  "models": [
+    {
+      "id": "policy-negative/policy-negative-old",
+      "upstream_id": "policy-negative/upstream-old",
+      "upstream_created": "2025-10-01",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/policy-negative-old.md"
+    }
+  ],
+  "exempt_hosted": []
+}

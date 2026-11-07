@@ -156,6 +156,37 @@ class CommittedPolicyTest(unittest.TestCase):
         validate_policy(policy, catalog, roles)
 
 
+class NegativeFixtureTest(unittest.TestCase):
+    """Out-of-age fixtures stay outside the committed policy data.
+
+    The fixture dossier is intentionally absent: validate_policy rejects on
+    upstream age before any dossier evidence is read.
+    """
+
+    FIXTURE = Path(__file__).with_name("fixtures") / "model-policy-negative.json"
+
+    def load(self, *, age_days=0):
+        policy = json.loads(self.FIXTURE.read_text())
+        today = (datetime.date.fromisoformat(policy["as_of"])
+                 + datetime.timedelta(days=age_days))
+        policy["as_of"] = today.isoformat()
+        return policy, today
+
+    def test_rejects_fixture_model_past_max_age(self):
+        policy, today = self.load()
+        with self.assertRaisesRegex(
+                ValueError, "upstream age: policy-negative/policy-negative-old"):
+            validate_policy(policy, {"llm_model_catalog_models": []},
+                            {"models": {}, "roles": {}, "hosts": {}}, today=today)
+
+    def test_rejects_fixture_model_as_policy_clock_advances(self):
+        policy, today = self.load(age_days=30)
+        with self.assertRaisesRegex(
+                ValueError, "upstream age: policy-negative/policy-negative-old"):
+            validate_policy(policy, {"llm_model_catalog_models": []},
+                            {"models": {}, "roles": {}, "hosts": {}}, today=today)
+
+
 class PolicyRegressionTest(unittest.TestCase):
     def setUp(self):
         self.today = datetime.date(2026, 11, 6)
