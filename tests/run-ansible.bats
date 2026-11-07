@@ -499,6 +499,70 @@ with_origin() {
   [[ $output == *"continuing without it"* ]]
 }
 
+@test "a failed optional pinned checkout removes the stale pin directory" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  git init -q -b main "$REPO/stale-checkout"
+  printf 'old\n' > "$REPO/stale-checkout/content.txt"
+  git -C "$REPO/stale-checkout" add content.txt
+  git -C "$REPO/stale-checkout" -c user.name=test -c user.email=test@example.invalid commit -q -m stale
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=stale-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  export RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS=site.yml
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"the pinned checkout directory was removed"* ]]
+  [[ $output == *"continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)"* ]]
+  [ ! -e "$REPO/stale-checkout" ]
+  mkdir -p "$REPO/stale-checkout"
+  printf 'old\n' > "$REPO/stale-checkout/content.txt"
+  unset RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS
+  export RUN_ANSIBLE_PIN_OPTIONAL=1
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"the pinned checkout directory was removed"* ]]
+  [[ $output == *"continuing without it (RUN_ANSIBLE_PIN_OPTIONAL is set)"* ]]
+  [ ! -e "$REPO/stale-checkout" ]
+}
+
+@test "the stale-directory removal refuses an unsafe RUN_ANSIBLE_PIN_DIR" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  mkdir -p "$BATS_TEST_TMPDIR/outside/stale-checkout"
+  printf 'old\n' > "$BATS_TEST_TMPDIR/outside/stale-checkout/content.txt"
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=../outside/stale-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  export RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS=site.yml
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)"* ]]
+  [[ $output != *"was removed"* ]]
+  [ -f "$BATS_TEST_TMPDIR/outside/stale-checkout/content.txt" ]
+  unset RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS
+  export RUN_ANSIBLE_PIN_OPTIONAL=1 RUN_ANSIBLE_PIN_DIR="$BATS_TEST_TMPDIR/outside/stale-checkout"
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"continuing without it (RUN_ANSIBLE_PIN_OPTIONAL is set)"* ]]
+  [ -f "$BATS_TEST_TMPDIR/outside/stale-checkout/content.txt" ]
+  unset RUN_ANSIBLE_PIN_DIR
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"continuing without it (RUN_ANSIBLE_PIN_OPTIONAL is set)"* ]]
+  [[ $output != *"was removed"* ]]
+}
+
+@test "a required pinned checkout failure keeps the stale pin directory and stops the run" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  mkdir -p "$REPO/stale-checkout"
+  printf 'old\n' > "$REPO/stale-checkout/content.txt"
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=stale-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  export RUN_ANSIBLE_PIN_PLAYBOOKS=site.yml
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 1 ]
+  [[ $output == *"pinned checkout failed"* ]]
+  [ -f "$REPO/stale-checkout/content.txt" ]
+  [ ! -s "$FIXTURE_RUN_LOG" ]
+}
+
 @test "RUN_ANSIBLE_LIMIT_LOCALHOST appends localhost to the final --limit" {
   static_key
   export RUN_ANSIBLE_LIMIT_LOCALHOST=1
