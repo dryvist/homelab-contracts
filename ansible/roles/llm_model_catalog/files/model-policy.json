@@ -154,6 +154,18 @@
       "upstream_id": "Qwen/Qwen3.6-27B",
       "upstream_created": "2026-04-21",
       "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-6-27B.md"
+    },
+    {
+      "id": "policy-negative/policy-negative-old",
+      "upstream_id": "policy-negative/upstream-old",
+      "upstream_created": "2025-10-01",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/policy-negative-old.md"
+    },
+    {
+      "id": "policy-negative/policy-negative-undated",
+      "upstream_id": "policy-negative/upstream-undated",
+      "upstream_created": "",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/policy-negative-undated.md"
     }
   ],
   "exempt_hosted": [
