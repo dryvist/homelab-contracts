@@ -127,10 +127,20 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
             require(name not in entries, f"duplicate catalog name: {name}")
             entries[name] = entry
 
+    def repository_id(entry):
+        stage0 = entry.get("stage0", {})
+        artifact = stage0.get("serving", {}).get("converted_artifact", {})
+        return (entry.get("hf_repo") or artifact.get("repo_id")
+                or stage0.get("source_checkpoint", {}).get("repo_id")
+                or entry["name"])
+
     def catalog_entry(name, seen=()):
         require(name not in seen, f"catalog reference cycle: {name}")
         if name not in entries:
-            return {}
+            matches = [entry for entry in catalog["llm_model_catalog_models"]
+                       if repository_id(entry) == name]
+            require(len(matches) <= 1, f"ambiguous catalog repository: {name}")
+            return matches[0] if matches else {}
         entry = entries[name]
         if "catalog_model" in entry:
             target = entry["catalog_model"]
@@ -143,10 +153,7 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
         if not entry:
             return name
         stage0 = entry.get("stage0", {})
-        artifact = stage0.get("serving", {}).get("converted_artifact", {})
-        model_id = (entry.get("hf_repo") or artifact.get("repo_id")
-                    or stage0.get("source_checkpoint", {}).get("repo_id")
-                    or entry["name"])
+        model_id = repository_id(entry)
         local = ("hf_repo" in entry or bool(stage0)
                  or "mlx" in entry.get("profiles", {})
                  or entry["name"].startswith(("mlx-community/", "IFM/")))
@@ -235,6 +242,17 @@ class PolicyRegressionTest(unittest.TestCase):
     def check(self):
         validate_policy(self.policy, self.catalog, self.roles,
                         root=self.root, today=self.today)
+
+    def select_model(self, selection):
+        self.roles["roles"] = {}
+        self.roles["hosts"] = {"server": {}}
+        assignment = {"default": {"model": "active"}}
+        if selection == "global":
+            self.roles["roles"] = assignment
+        elif selection == "override":
+            self.roles["hosts"]["server"]["roles"] = assignment
+        else:
+            self.roles["hosts"]["server"][selection] = ["active"]
 
     def test_default_clock_uses_today_in_utc(self):
         instant = datetime.datetime(2026, 11, 7, tzinfo=datetime.timezone.utc)
@@ -348,15 +366,7 @@ class PolicyRegressionTest(unittest.TestCase):
 
     def test_reject_unverified_evidence_for_every_selection(self):
         for selection in ("global", "override", "resident", "swap"):
-            self.roles["roles"] = {}
-            self.roles["hosts"] = {"server": {}}
-            if selection == "global":
-                self.roles["roles"] = {"default": {"model": "active"}}
-            elif selection == "override":
-                self.roles["hosts"]["server"]["roles"] = {
-                    "fast": {"model": "active"}}
-            else:
-                self.roles["hosts"]["server"][selection] = ["active"]
+            self.select_model(selection)
             for fields in DOSSIER_FIELDS.values():
                 for field in required_fields(fields, admission_only=True):
                     with self.subTest(selection=selection, field=field):
