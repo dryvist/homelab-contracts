@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.55.1](https://github.com/dryvist/homelab-contracts/compare/v5.55.0...v5.55.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* remove pin directory after optional checkout failure ([#343](https://github.com/dryvist/homelab-contracts/issues/343)) ([3f1d163](https://github.com/dryvist/homelab-contracts/commit/3f1d163e2168e2b35c44876d2accb185c7c4a4fd))
+
 ## [5.55.0](https://github.com/dryvist/homelab-contracts/compare/v5.54.2...v5.55.0) (2026-11-07)
 
 
