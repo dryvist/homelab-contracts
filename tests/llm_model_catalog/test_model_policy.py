@@ -155,6 +155,15 @@ class CommittedPolicyTest(unittest.TestCase):
         self.assertEqual(model["upstream_id"], "Qwen/Qwen3.8-27B")
         self.assertEqual(model["upstream_created"], "2026-08-05")
 
+    def test_4080_small_lane_points_at_the_admitted_baseline(self):
+        catalog = json.loads((ROOT / FILES / "model-catalog.json").read_text())
+        rows = {row["name"]: row for row in catalog["llm_model_catalog_models"]}
+        lane = rows["qwen3.5-9b-4080"]
+        self.assertEqual(lane["catalog_model"], "qwen3.5-9b")
+        self.assertEqual(lane["max_parallel_requests"], 2)
+        policy = json.loads((ROOT / FILES / "model-policy.json").read_text())
+        self.assertIn(rows["qwen3.5-9b"]["hf_repo"], [entry["id"] for entry in policy["models"]])
+
     def test_committed_data(self):
         policy = json.loads((ROOT / FILES / "model-policy.json").read_text())
         catalog = json.loads((ROOT / FILES / "model-catalog.json").read_text())
