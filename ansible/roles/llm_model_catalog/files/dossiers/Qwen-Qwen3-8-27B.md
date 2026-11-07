@@ -83,6 +83,9 @@ status: started
 
 ## 4. Evaluation and comparison
 
+- Benchmark: IFBench, upstream instruction following; score: 79.5; date: 2026-11-07;
+  source: <https://huggingface.co/Qwen/Qwen3.8-27B/blob/8c0b3d30f3ae96f5c7f774de704bf0ada83e422a/README.md>
+
 - Dated upstream evaluations, observed 2026-11-06:
   - [Text Arena overall](https://arena.ai/leaderboard/chat/text), board dated
     2026-11-06: `Qwen3.8-27B`, rank 108, score 1435 ± 5, 32,347 votes.

@@ -55,9 +55,9 @@ class DossierStatusTest(unittest.TestCase):
             for field in policy.required_fields(fields):
                 with self.subTest(field=field):
                     self.write("complete", self.fixture.complete_dossier.replace(
-                        f"- {field}: synthetic regression evidence",
+                        f"- {field}: {self.fixture.evidence(field)}",
                         f"- {field}: UNVERIFIED"))
-                    with self.assertRaisesRegex(ValueError, "unverified dossier"):
+                    with self.assertRaisesRegex(ValueError, "unverified dossier|benchmark evidence"):
                         self.check()
 
     def test_complete_missing_section_fails(self):

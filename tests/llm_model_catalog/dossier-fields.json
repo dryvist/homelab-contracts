@@ -34,6 +34,7 @@
     "Comparable published peak": "complete"
   },
   "4. Evaluation and comparison": {
+    "Benchmark": "admission",
     "Applicable use cases": "complete",
     "Dated task-matched benchmarks and versions": "complete",
     "Settings, scaffold, and reasoning budget": "complete",

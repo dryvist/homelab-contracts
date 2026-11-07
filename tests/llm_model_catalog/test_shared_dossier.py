@@ -20,9 +20,12 @@ class SharedDossierTest(unittest.TestCase):
             for heading in self.shared_headings)
         self.shared.write_text(self.shared_text)
         reference = "[Shared evidence](_shared/runtime-and-evaluation.md)"
+        self.benchmark = f"- Benchmark: {self.fixture.evidence('Benchmark')}\n"
         self.local_text = "\n\n".join(
             f"## {heading}\n" + (
-                reference if heading in self.shared_headings else sections[heading])
+                reference + ("\n" + self.benchmark
+                             if "Benchmark" in policy.DOSSIER_FIELDS[heading] else "")
+                if heading in self.shared_headings else sections[heading])
             for heading in policy.DOSSIER_FIELDS)
         self.fixture.dossier.write_text(self.local_text)
 
@@ -33,13 +36,14 @@ class SharedDossierTest(unittest.TestCase):
     def test_reference_is_required_for_inherited_sections(self):
         self.fixture.dossier.write_text(self.local_text.replace(
             "[Shared evidence](_shared/runtime-and-evaluation.md)", ""))
-        with self.assertRaisesRegex(ValueError, "missing dossier field"):
+        with self.assertRaisesRegex(ValueError, "missing dossier field|benchmark evidence"):
             self.fixture.check()
 
     def test_shared_sections_are_inherited_once(self):
         sections = policy.dossier_sections(self.fixture.complete_dossier, "example")
         text = (f"## 1. Upstream evidence\n{sections['1. Upstream evidence']}\n\n"
-                "[Shared evidence](_shared/runtime-and-evaluation.md)")
+                "[Shared evidence](_shared/runtime-and-evaluation.md)\n\n"
+                "## 4. Evaluation and comparison\n" + self.benchmark)
         policy.validate_dossier(text, "example", self.fixture.root)
 
     def test_missing_shared_file_fails_closed(self):
@@ -50,6 +54,8 @@ class SharedDossierTest(unittest.TestCase):
     def test_missing_and_unverified_inherited_fields_fail_closed(self):
         for heading in self.shared_headings:
             for field in policy.required_fields(policy.DOSSIER_FIELDS[heading]):
+                if field == "Benchmark":
+                    continue
                 for replacement, message in (
                         (f"- {field}:", "missing dossier field"),
                         (f"- {field}:\n  UNVERIFIED", "unverified dossier evidence")):

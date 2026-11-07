@@ -15,7 +15,7 @@ class DossierAdmissionTest(unittest.TestCase):
         text = "\n\n".join(
             f"## {heading}\n\n" + "\n".join(
                 f"- {field}: " + (
-                    "synthetic regression evidence" if gate == "admission"
+                    self.fixture.evidence(field) if gate == "admission"
                     else "UNVERIFIED")
                 for field, gate in fields.items())
             for heading, fields in policy.DOSSIER_FIELDS.items())

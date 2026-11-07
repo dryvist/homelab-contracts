@@ -2,6 +2,9 @@
 
 ## 2026-11-07
 
+* **Update**: Recorded live benchmark scores, dates, and source links for
+  policy models.
+* **Update**: Documented benchmark admission and complete-dossier validation.
 * **Update**: Priority candidates reference shared provenance defaults.
 * **Update**: Bundle navigation and history retain their reserved document roles.
 

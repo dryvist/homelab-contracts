@@ -17,6 +17,11 @@ status: started
   Additional restrictions: UNVERIFIED.
 - Architecture: Qwen3_5MoeForConditionalGeneration.
 
+## 4. Evaluation and comparison
+
+- Benchmark: SWE-bench Verified, upstream Qwen3.6-35B-A3B; score: 73.4; date: 2026-11-07;
+  source: <https://huggingface.co/Qwen/Qwen3.6-35B-A3B/blob/995ad96eacd98c81ed38be0c5b274b04031597b0/README.md>
+
 ## 2. Artifact evidence
 
 [Shared evidence](_shared/runtime-and-evaluation.md)

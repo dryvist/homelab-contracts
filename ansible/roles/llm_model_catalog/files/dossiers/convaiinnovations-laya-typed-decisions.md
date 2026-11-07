@@ -22,6 +22,12 @@ status: started
 - Intended task: System One classification and typed decisions.
 - Role-assigned artifacts: `convaiinnovations/laya-typed-decisions`.
 
+## 4. Evaluation and comparison
+
+- Benchmark: typed-decisions official test split accuracy, Laya typed-decisions;
+  score: 0.766; date: 2026-11-07;
+  source: <https://huggingface.co/convaiinnovations/laya-typed-decisions/blob/e929ae5cf69bc34259cd2f95c9e91145b818b1f0/README.md>
+
 ## 2. Artifact evidence
 
 [Shared evidence](_shared/runtime-and-evaluation.md)

@@ -21,6 +21,11 @@ status: started
 - Intended task: Classification, evaluation, and summarization.
 - Role-assigned artifacts: `mlx-community/Qwen3.5-9B-OptiQ-4bit`.
 
+## 4. Evaluation and comparison
+
+- Benchmark: MMLU-Pro, upstream Qwen3.5-9B; score: 82.5; date: 2026-11-07;
+  source: <https://huggingface.co/Qwen/Qwen3.5-9B/blob/c202236235762e1c871ad0ccb60c8ee5ba337b9a/README.md>
+
 ## 2. Artifact evidence
 
 [Shared evidence](_shared/runtime-and-evaluation.md)

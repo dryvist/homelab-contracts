@@ -66,6 +66,20 @@ status: started
 
 ## 4. Evaluation and comparison
 
+- Benchmark: MTEB multilingual v2 Mean(Task), upstream 768d;
+  score: 61.36; date: 2026-10-06;
+  source: <https://huggingface.co/google/embeddinggemma-2/blob/914f7f89142e33e77833254d9c9b90c3cef7303b/README.md>
+- Benchmark: MTEB code v1 NDCG@10, upstream 768d;
+  score: 78.68; date: 2026-10-06;
+  source: <https://huggingface.co/google/embeddinggemma-2/blob/914f7f89142e33e77833254d9c9b90c3cef7303b/README.md>
+- Benchmark date basis: publisher card revision dated 2026-10-06 in the
+  [card history](https://huggingface.co/google/embeddinggemma-2/commits/main/README.md),
+  observed 2026-11-07. This is the converter's published source checkpoint.
+- MXFP8 evidence: the [card](https://huggingface.co/nativ-community/embeddinggemma-2-mxfp8/blob/a35a0bd2132265bc29a9130a1b2bcd545ad4b765/README.md)
+  reports text minimum cosine 0.998305 against PyTorch FP32; its conversion
+  checks explicitly exclude MTEB and retrieval-quality evaluation. Observed
+  2026-11-07. The MTEB scores above measure upstream full precision.
+
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 - Retrieval: task-matched MTEB/code retrieval, ViDoRe, dimensions,

@@ -22,6 +22,12 @@ status: started
 - Intended task: Classification, evaluation, and summarization.
 - Role-assigned artifacts: `mlx-community/MiMo-V2.6-Distill-Qwen-9B-OptiQ-4bit`.
 
+## 4. Evaluation and comparison
+
+- Benchmark: AutomationBench v1.0.6 avg@1, released SFT checkpoint;
+  score: 30.3; date: 2026-11-07;
+  source: <https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/blob/1f09ddcc1a0ea45751ae0dfe2af20d533168c46f/README.md>
+
 ## 2. Artifact evidence
 
 [Shared evidence](_shared/runtime-and-evaluation.md)

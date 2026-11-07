@@ -54,6 +54,11 @@ status: started
 
 ## 4. Evaluation and comparison
 
+- Benchmark: OmniDocBench v1.6 overall, upstream; score: 93.92; date: 2026-06-22;
+  source: <https://arxiv.org/html/2606.23050v1#S5.SS2>
+- OCR result basis: section 5.2 of the publisher report, v1 dated 2026-06-22,
+  observed 2026-11-07; this does not measure the MLX bf16 conversion.
+
 [Shared evidence](_shared/runtime-and-evaluation.md)
 
 - Documents: OCRBench and OmniDocBench/olmOCR, text error, tables,
