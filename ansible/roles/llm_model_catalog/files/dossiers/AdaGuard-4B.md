@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Publisher checkpoint card](https://huggingface.co/Yunhao-Feng/AdaGuard-4B).
@@ -15,9 +17,8 @@ status: started
 - Exact checkpoint repository is linked above; immutable revision:
   UNVERIFIED. Base: Qwen3Guard-Gen-4B; architecture: Qwen3ForCausalLM.
 - License: Apache-2.0 with upstream attribution retained.
-  Full restrictions/component-notice review: UNVERIFIED.
 - Intended comparison: policy-conditioned moderation of requests and agent
-  trajectories. Evidence is publisher-reported; no independent/local run.
+  trajectories.
 
 ## 2. Artifact evidence
 
@@ -29,7 +30,6 @@ status: started
   UNVERIFIED. BF16 is a load-time precision, not the stored file format.
 - Selected quantization, conversion date/recipe/calibration: none selected;
   any converted artifact requires its own evidence.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

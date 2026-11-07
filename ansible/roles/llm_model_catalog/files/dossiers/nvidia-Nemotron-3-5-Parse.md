@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/nvidia/Nemotron-3.5-Parse).
@@ -15,9 +17,7 @@ status: started
 - Architecture: C-RADIOv4 vision encoder plus 10-layer mBART decoder,
   approximately 0.631B parameters with an included MTP head.
 - License: OpenMDW-1.1; tokenizer has separate MIT attribution.
-  Full restrictions/component-notice review: UNVERIFIED.
 - Intended comparison: document text, tables, formulas, layout, reading order.
-  Evidence is publisher-reported; no independent evaluation or local run.
 
 ## 2. Artifact evidence
 
@@ -27,7 +27,6 @@ status: started
 - Conversion date/recipe/calibration: not applicable to original weights.
   Source checkpoint revisions and complete transformation audit:
   UNVERIFIED. A separate optional DFlash2 drafter needs its own byte budget.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/nvidia/Nemotron-3.5-Embed-1B-NVFP4).
@@ -13,9 +15,8 @@ status: started
 - Upstream: `nvidia/Nemotron-3.5-Embed-1B-BF16`;
   immutable upstream revision: UNVERIFIED.
 - Architecture: distilled multimodal Transformer, 1.55B parameters.
-  License: OpenMDW-1.1; full restrictions/component-notice review: UNVERIFIED.
+  License: OpenMDW-1.1.
 - Intended comparison: compact text/image retrieval embeddings.
-  Evidence is publisher-reported; no independent evaluation or local run.
 
 ## 2. Artifact evidence
 
@@ -27,7 +28,6 @@ status: started
 - NVFP4 quantization of the BF16 model. Conversion date, source revision,
   quantization recipe, calibration provenance, and additional pruning,
   merging, distillation, or safety modifications: UNVERIFIED.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

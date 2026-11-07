@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official NVFP4 card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4).
@@ -13,9 +15,8 @@ status: started
 - Upstream: `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16`.
   Immutable BF16 revision: UNVERIFIED.
 - Architecture: Nemotron-H hybrid mixture of experts; text generation.
-  License: OpenMDW-1.1. Full restriction/component-notice review: UNVERIFIED.
+  License: OpenMDW-1.1.
 - Intended comparison: agent efficiency and long-context tasks.
-  Evidence is publisher-reported; no independent evaluation or local run.
 
 ## 2. Artifact evidence
 
@@ -29,7 +30,6 @@ status: started
 - Official NVFP4 artifact. Conversion date, source revision, quantization
   recipe, calibration provenance, and unchanged conversion versus pruning,
   merging, distillation, or safety modification: UNVERIFIED.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

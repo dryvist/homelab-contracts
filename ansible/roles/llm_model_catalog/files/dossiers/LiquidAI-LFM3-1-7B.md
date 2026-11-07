@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/LiquidAI/LFM3-1.7B).
@@ -16,10 +18,8 @@ status: started
 - Architecture: tri-hybrid, 1.73B parameters; convolution, sliding-window
   attention, and global attention. Advertised context: 262,144 total tokens.
 - License: LFM Open License v1.0, according to the official card.
-  Full restriction review: UNVERIFIED; Apache-2.0 eligibility is not asserted.
 - Intended comparison: small classification and structured extraction;
   tool-use results are supporting evidence, not classification accuracy.
-- Evidence is publisher-reported. No independent evaluation or local run.
 
 ## 2. Artifact evidence
 
@@ -34,7 +34,6 @@ status: started
 - Unchanged conversion versus pruning, merging, distillation, or safety
   modification: UNVERIFIED for each conversion. BF16 scores are not
   transferred to converted weights.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

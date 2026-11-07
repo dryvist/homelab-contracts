@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/Qwen/Qwen3Guard-Gen-8B).
@@ -14,11 +16,9 @@ status: started
 - Immutable upstream revision:
   [4505cb1a6f1864f21f8b27f7daf1b9a1aab6edbb](https://huggingface.co/Qwen/Qwen3Guard-Gen-8B/commit/4505cb1a6f1864f21f8b27f7daf1b9a1aab6edbb).
 - Architecture: Qwen3-based generative guard, 8B class.
-  License: Apache-2.0; full restrictions/component-notice review: UNVERIFIED.
+  License: Apache-2.0.
 - Intended comparison: prompt/response moderation. The Gen checkpoint is
   distinct from the streaming guard family.
-- Evidence is publisher-reported; no independent evaluation or local run.
-  Metadata or conversion updates do not renew upstream age.
 
 ## 2. Artifact evidence
 
@@ -30,7 +30,6 @@ status: started
 - Quantization conversion date/recipe/calibration: not applicable to this
   BF16 selection. Exact fine-tuning source revision and complete
   transformation audit: UNVERIFIED.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

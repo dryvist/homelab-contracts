@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/nvidia/Nemotron-3.5-Rerank-8B-BF16).
@@ -15,8 +17,7 @@ status: started
 - Architecture: Pixtral vision encoder and bidirectional Ministral3 tower.
   Intended comparison: multilingual text/image query-document relevance.
 - License: OpenMDW-1.1; base-model Apache-2.0 terms and component notices
-  also apply. Full restriction review: UNVERIFIED.
-- Evidence is publisher-reported; no independent evaluation or local run.
+  also apply.
 
 ## 2. Artifact evidence
 
@@ -28,7 +29,6 @@ status: started
 - Quantization conversion date/recipe/calibration: not applicable to this
   BF16 selection. Training lineage is described in the card; exact source
   checkpoint revision and additional transformation audit: UNVERIFIED.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

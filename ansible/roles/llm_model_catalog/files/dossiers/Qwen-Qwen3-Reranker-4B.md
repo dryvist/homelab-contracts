@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/Qwen/Qwen3-Reranker-4B).
@@ -14,9 +16,8 @@ status: started
 - Immutable upstream revision:
   [22e683669bc0f0bd69640a1354a6d0aebcfeede5](https://huggingface.co/Qwen/Qwen3-Reranker-4B/commit/22e683669bc0f0bd69640a1354a6d0aebcfeede5).
 - Architecture: Qwen3 text reranker, 4B parameters; 32K context.
-  License: Apache-2.0; full restriction/component-notice review: UNVERIFIED.
-- Intended comparison: text reranking. Publisher evidence only;
-  no independent evaluation or local run. Recent card edits do not renew age.
+  License: Apache-2.0.
+- Intended comparison: text reranking.
 
 ## 2. Artifact evidence
 
@@ -27,7 +28,6 @@ status: started
   Exact byte counts: UNVERIFIED.
 - Conversion date/recipe/calibration: not applicable to original BF16.
   Fine-tuning source revision and transformation audit: UNVERIFIED.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

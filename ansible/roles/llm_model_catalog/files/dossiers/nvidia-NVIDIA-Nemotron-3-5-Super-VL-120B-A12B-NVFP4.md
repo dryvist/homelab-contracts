@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official NVFP4 card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4).
@@ -14,10 +16,8 @@ status: started
   Immutable BF16 revision: UNVERIFIED; artifact revision is recorded below.
 - Architecture: Nemotron-H hybrid vision-language mixture of experts.
   Exact architecture/configuration qualification: UNVERIFIED.
-- License: OpenMDW-1.1. Full restriction and component-notice review:
-  UNVERIFIED.
+- License: OpenMDW-1.1.
 - Intended comparison: agent tasks, document understanding, and long context.
-  Evidence is publisher-reported, not a local qualification.
 
 ## 2. Artifact evidence
 
@@ -31,7 +31,6 @@ status: started
 - Official NVFP4 artifact. Conversion date, source revision, recipe,
   calibration provenance, and unchanged conversion versus distillation or
   other weight modification: UNVERIFIED. Precision is not assumed uniform.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

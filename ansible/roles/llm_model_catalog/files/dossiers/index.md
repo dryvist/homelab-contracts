@@ -35,8 +35,8 @@ target runtime qualification, full memory budget, dated task-matched
 comparison, incumbent revision, and numeric acceptance thresholds.
 Rounded storage estimates are not runtime capacity measurements.
 
-Policy admission requires at least 1 dated benchmark entry with a numeric
-score and source URL, with an optional indented source continuation:
+Benchmark evidence records a numeric score, publication or evaluation date,
+and source URL, with an optional indented source continuation:
 
 ```text
 - Benchmark: NAME VERSION; score: NUMBER; date: YYYY-MM-DD;
@@ -85,6 +85,8 @@ local capacity, and trial authorization require their own evidence.
 
 * [Shared runtime and evaluation evidence](_shared/runtime-and-evaluation.md)
   Common fields with per-dossier overrides.
+* [Priority candidate provenance](_shared/candidate-provenance.md)
+  Publisher attribution, license review, and download evidence defaults.
 
 ## Change history
 

@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/xiaomi-research/Xiaomi-OCR-0).
@@ -15,9 +17,8 @@ status: started
   [e4d1c4a6804bd9ef342b93d705a73af003e2ef4e](https://huggingface.co/xiaomi-research/Xiaomi-OCR-0/commit/e4d1c4a6804bd9ef342b93d705a73af003e2ef4e).
   Current-card results may postdate that weight-upload revision.
 - Architecture: Qwen3.5-0.8B-based vision-language model.
-  License: Apache-2.0; full restrictions/component-notice review: UNVERIFIED.
+  License: Apache-2.0.
 - Intended comparison: compact document parsing, tables, and formulas.
-  Evidence is publisher-reported; no independent evaluation or local run.
 
 ## 2. Artifact evidence
 
@@ -26,7 +27,6 @@ status: started
 - Conversion date/recipe/calibration: not applicable until a conversion
   is selected. Fine-tuning source revision and complete transformation
   audit: UNVERIFIED. Community conversions do not inherit upstream scores.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 

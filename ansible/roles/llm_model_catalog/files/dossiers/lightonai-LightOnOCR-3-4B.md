@@ -6,6 +6,8 @@ timestamp: "2026-11-06T00:00:00Z"
 status: started
 ---
 
+[Shared provenance](_shared/candidate-provenance.md)
+
 ## 1. Upstream evidence
 
 - Observed: 2026-11-06. [Official card](https://huggingface.co/lightonai/LightOnOCR-3-4B).
@@ -14,9 +16,8 @@ status: started
 - Exact upstream: `lightonai/LightOnOCR-3-4B`; immutable revision:
   [b71010f095dc3735de7ee6b9969bff8f8f50b39a](https://huggingface.co/lightonai/LightOnOCR-3-4B/commit/b71010f095dc3735de7ee6b9969bff8f8f50b39a).
 - Architecture: Qwen3.5 vision-language architecture.
-  License: Apache-2.0; full restrictions/component-notice review: UNVERIFIED.
+  License: Apache-2.0.
 - Intended comparison: OCR, document transcription, and layout extraction.
-  Evidence is publisher-reported; no independent evaluation or local run.
 
 ## 2. Artifact evidence
 
@@ -26,7 +27,6 @@ status: started
 - Quantization conversion date/recipe/calibration: not applicable to the
   original selection. Fine-tuning source revision and transformation audit:
   UNVERIFIED. No community conversion receives these upstream scores.
-- Weight download date: UNVERIFIED; no weights downloaded.
 
 ## 3. Runtime and memory
 
