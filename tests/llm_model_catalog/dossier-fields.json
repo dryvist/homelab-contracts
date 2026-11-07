@@ -1,0 +1,49 @@
+{
+  "1. Upstream evidence": {
+    "Upstream repository and immutable revision": "complete",
+    "Upstream creation or release date": "admission",
+    "Release date": "complete",
+    "License and restrictions": "complete",
+    "Architecture": "complete",
+    "Intended task": "complete",
+    "Official versus third-party evidence": "complete",
+    "Lane rationale": "complete"
+  },
+  "2. Artifact evidence": {
+    "Artifact repository": "admission",
+    "Artifact publisher": "admission",
+    "Immutable artifact revision": "admission",
+    "Artifact created date": "admission",
+    "Evidence observed date": "admission",
+    "Filename/shards and bytes": "complete",
+    "Upstream source revision": "optional",
+    "Quantization recipe": "admission",
+    "Calibration provenance": "admission",
+    "Transformation": "complete"
+  },
+  "3. Runtime and memory": {
+    "Tagged runtime/container revision": "complete",
+    "Supported architecture and hardware path": "complete",
+    "Precision kernels": "complete",
+    "Tokenizer/chat template": "complete",
+    "Reasoning and tool parsers": "complete",
+    "Endpoint behavior and unsupported features": "complete",
+    "Weights, cache/state, vision, graph/compiler, drafter, and co-resident bytes": "complete",
+    "Input/output length and concurrency": "complete",
+    "Analytical estimate and assumptions": "complete",
+    "Comparable published peak": "complete"
+  },
+  "4. Evaluation and comparison": {
+    "Applicable use cases": "complete",
+    "Dated task-matched benchmarks and versions": "complete",
+    "Settings, scaffold, and reasoning budget": "complete",
+    "Quant fidelity": "complete",
+    "Candidate/incumbent comparison": "complete",
+    "Expected results": "complete"
+  },
+  "5. Trial status": {
+    "Dated promotion decision": "complete",
+    "Predeclared acceptance criteria": "complete",
+    "Unresolved fields": "complete"
+  }
+}

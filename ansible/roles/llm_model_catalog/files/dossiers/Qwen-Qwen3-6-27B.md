@@ -1,0 +1,36 @@
+---
+type: Model Dossier
+title: "Qwen/Qwen3.6-27B"
+description: "Upstream and artifact evidence for the shared model policy."
+timestamp: "2026-11-06T00:00:00Z"
+status: started
+---
+
+## 1. Upstream evidence
+
+- Observed: 2026-11-06. [Hub metadata](https://huggingface.co/api/models/Qwen/Qwen3.6-27B).
+- Upstream repository created: 2026-04-21 (Hub `createdAt`).
+  Release date: UNVERIFIED. Conversion dates do not renew upstream age.
+- Observed immutable upstream revision: `6a9e13bd6fc8f0983b9b99948120bc37f49c13e9`.
+  [Pinned upstream card](https://huggingface.co/Qwen/Qwen3.6-27B/blob/6a9e13bd6fc8f0983b9b99948120bc37f49c13e9/README.md).
+- License: apache-2.0. [License evidence](https://huggingface.co/Qwen/Qwen3.6-27B/tree/6a9e13bd6fc8f0983b9b99948120bc37f49c13e9).
+  Additional restrictions: UNVERIFIED.
+- Architecture: Qwen3_5ForConditionalGeneration.
+
+## 2. Artifact evidence
+
+[Shared evidence](_shared/runtime-and-evaluation.md)
+
+### mlx-community/Qwen3.6-27B-mxfp4
+
+- [Artifact metadata](https://huggingface.co/api/models/mlx-community/Qwen3.6-27B-mxfp4?blobs=true),
+  observed 2026-11-06; artifact repository created 2026-04-22.
+- Artifact revision: `b4ac73652af626fd653d0e4fe48a4e9c468a82f6`.
+  [Pinned files](https://huggingface.co/mlx-community/Qwen3.6-27B-mxfp4/tree/b4ac73652af626fd653d0e4fe48a4e9c468a82f6).
+- Listed files match the observed artifact revision.
+- Weight files:
+  - `model-00001-of-00003.safetensors`: 5348727346 bytes.
+  - `model-00002-of-00003.safetensors`: 5349386469 bytes.
+  - `model-00003-of-00003.safetensors`: 4515944397 bytes.
+- Listed weight total: 15214058212 bytes
+  (14.17 GiB).
