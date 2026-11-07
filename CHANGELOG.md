@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.55.0](https://github.com/dryvist/homelab-contracts/compare/v5.54.2...v5.55.0) (2026-11-07)
+
+
+### Features
+
+* **model-policy:** admit the MLX cluster model until its age limit ([#336](https://github.com/dryvist/homelab-contracts/issues/336)) ([ba55482](https://github.com/dryvist/homelab-contracts/commit/ba55482fd76e2cfc70939ff045156addb65934c2))
+
 ## [5.54.2](https://github.com/dryvist/homelab-contracts/compare/v5.54.1...v5.54.2) (2026-11-07)
 
 
