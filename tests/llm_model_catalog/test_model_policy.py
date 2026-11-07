@@ -10,81 +10,10 @@ import unittest
 from unittest import mock
 
 
-ROOT = Path(__file__).resolve().parents[2]
-FILES = Path("ansible/roles/llm_model_catalog/files")
-DOSSIER_FIELDS = json.loads(Path(__file__).with_name("dossier-fields.json").read_text())
-
-
-def required_fields(fields, *, admission_only=False):
-    """Keep admission and complete-evidence requirements in one contract."""
-    return [field for field, gate in fields.items()
-            if gate == "admission" or (gate == "complete" and not admission_only)]
-
-
-def dossier_sections(text, model_id):
-    """Read dossier sections, rejecting ambiguous duplicate headings."""
-    sections = {}
-    heading = None
-    for line in text.splitlines():
-        if line.startswith("## "):
-            heading = line[3:].strip()
-            if heading in sections:
-                raise ValueError(f"duplicate dossier section: {model_id}: {heading}")
-            sections[heading] = []
-        elif heading is not None:
-            sections[heading].append(line)
-    return {heading: "\n".join(lines) for heading, lines in sections.items()}
-
-
-def validate_dossier(text, model_id, root=ROOT, *, admission_only=False,
-                     expected_revision=None):
-    """Validate local evidence and explicitly referenced shared defaults."""
-    sections = dossier_sections(text, model_id)
-    reference = "[Shared evidence](_shared/runtime-and-evaluation.md)"
-    shared = {}
-    if reference in text:
-        path = root / FILES / "dossiers/_shared/runtime-and-evaluation.md"
-        shared = dossier_sections(path.read_text(), model_id)
-    for heading, fields in DOSSIER_FIELDS.items():
-        if heading not in sections and heading not in shared:
-            raise ValueError(f"missing dossier section: {model_id}: {heading}")
-        body = sections.get(heading, "")
-        bodies = [body]
-        if heading == "2. Artifact evidence":
-            artifacts = re.findall(r"^### ([^\n]+)\n(.*?)(?=^### |\Z)",
-                                   body, re.MULTILINE | re.DOTALL)
-            if artifacts:
-                bodies = [evidence for name, evidence in artifacts
-                          if not admission_only or name == model_id]
-                if (len({name for name, _ in artifacts}) != len(artifacts)
-                        or (admission_only and len(bodies) != 1)):
-                    raise ValueError(f"missing or duplicate artifact evidence: {model_id}")
-        for body in bodies:
-            if heading == "2. Artifact evidence" and expected_revision is not None:
-                revision = re.search(
-                    r"^- Immutable artifact revision:[ \t]*`([a-f0-9]{40})`",
-                    body, re.MULTILINE)
-                if revision is None or revision[1] != expected_revision:
-                    raise ValueError(f"artifact revision mismatch: {model_id}")
-            for field in required_fields(fields, admission_only=admission_only):
-                pattern = (rf"^- {re.escape(field)}:[ \t]*(?:\n[ \t]+)?\S[^\n]*"
-                           r"(?:\n[ \t]+\S[^\n]*)*")
-                evidence = re.search(pattern, body, re.MULTILINE)
-                if evidence is None and reference in text:
-                    evidence = re.search(pattern, shared.get(heading, ""), re.MULTILINE)
-                if evidence is None:
-                    raise ValueError(f"missing dossier field: {model_id}: {field}")
-                if re.search(r"\bUNVERIFIED\b", evidence.group(), re.IGNORECASE):
-                    raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
-            if not admission_only:
-                # Optional converter metadata cannot block complete evidence.
-                for field, gate in fields.items():
-                    if gate == "optional":
-                        body = re.sub(
-                            rf"^- {re.escape(field)}:[^\n]*(?:\n[ \t]+[^\n]*)*",
-                            "", body, flags=re.MULTILINE)
-                if re.search(r"\bUNVERIFIED\b", body, re.IGNORECASE):
-                    raise ValueError(f"unverified dossier evidence: {model_id}: {heading}")
+from dossier_evidence import (
+    DOSSIER_FIELDS, FILES, ROOT, dossier_sections, required_fields,
+    validate_benchmarks, validate_dossier,
+)
 
 
 def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
@@ -120,6 +49,8 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
         path = root / dossier
         require(path.is_file() and bool(path.read_text().strip()),
                 f"missing dossier: {model_id}")
+        validate_benchmarks(dossier_sections(path.read_text(), model_id).get(
+            "4. Evaluation and comparison", ""), model_id, today=today)
 
     entries = {}
     for entry in catalog["llm_model_catalog_models"]:
@@ -195,7 +126,7 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
                         else artifact.get("revision"))
             validate_dossier((root / models[model_id]["dossier"]).read_text(),
                              model_id, root, admission_only=True,
-                             expected_revision=revision)
+                             expected_revision=revision, today=today)
 
 
 class CommittedPolicyTest(unittest.TestCase):
@@ -217,7 +148,7 @@ class PolicyRegressionTest(unittest.TestCase):
         self.dossier.parent.mkdir(parents=True)
         self.complete_dossier = "\n\n".join(
             f"## {heading}\n\n" + "\n".join(
-                f"- {field}: synthetic regression evidence" for field in fields)
+                f"- {field}: {self.evidence(field)}" for field in fields)
             for heading, fields in DOSSIER_FIELDS.items())
         self.dossier.write_text(self.complete_dossier)
         self.policy = {
@@ -242,6 +173,13 @@ class PolicyRegressionTest(unittest.TestCase):
     def check(self):
         validate_policy(self.policy, self.catalog, self.roles,
                         root=self.root, today=self.today)
+
+    @staticmethod
+    def evidence(field):
+        if field == "Benchmark":
+            return ("Fixture v1; score: 1; date: 2026-11-06; "
+                    "source: https://example.test/benchmark")
+        return "synthetic regression evidence"
 
     def select_model(self, selection):
         self.roles["roles"] = {}
@@ -355,13 +293,13 @@ class PolicyRegressionTest(unittest.TestCase):
             with self.subTest(heading=heading):
                 self.dossier.write_text(self.complete_dossier.replace(
                     f"## {heading}", "## Unrelated section"))
-                with self.assertRaisesRegex(ValueError, "missing dossier section"):
+                with self.assertRaisesRegex(ValueError, "missing dossier section|benchmark evidence"):
                     self.check()
             for field in required_fields(fields, admission_only=True):
                 with self.subTest(field=field):
                     self.dossier.write_text(self.complete_dossier.replace(
-                        f"- {field}: synthetic regression evidence", f"- {field}:"))
-                    with self.assertRaisesRegex(ValueError, "missing dossier field"):
+                        f"- {field}: {self.evidence(field)}", f"- {field}:"))
+                    with self.assertRaisesRegex(ValueError, "missing dossier field|benchmark evidence"):
                         self.check()
 
     def test_reject_unverified_evidence_for_every_selection(self):
@@ -371,14 +309,17 @@ class PolicyRegressionTest(unittest.TestCase):
                 for field in required_fields(fields, admission_only=True):
                     with self.subTest(selection=selection, field=field):
                         self.dossier.write_text(self.complete_dossier.replace(
-                            f"- {field}: synthetic regression evidence",
+                            f"- {field}: {self.evidence(field)}",
                             f"- {field}:\n  UNVERIFIED"))
-                        with self.assertRaisesRegex(ValueError, "unverified dossier"):
+                        with self.assertRaisesRegex(ValueError, "unverified dossier|benchmark evidence"):
                             self.check()
 
     def test_unassigned_dossier_can_remain_in_progress(self):
         self.roles["roles"] = {}
-        self.dossier.write_text("## 1. Upstream evidence\n\n- Release date: UNVERIFIED")
+        sections = dossier_sections(self.complete_dossier, "example")
+        self.dossier.write_text("## 1. Upstream evidence\n\n- Release date: UNVERIFIED\n"
+                                "## 4. Evaluation and comparison\n"
+                                + sections["4. Evaluation and comparison"])
         self.check()
 
     def test_reject_duplicate_ids_and_overlapping_exemptions(self):

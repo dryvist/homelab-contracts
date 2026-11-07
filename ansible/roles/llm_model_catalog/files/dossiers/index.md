@@ -26,8 +26,10 @@
 
 Observed 2026-11-06. No priority candidate has a completed trial dossier.
 No new entry is added to [policy models](../model-policy.json).
-The existing EmbeddingGemma MXFP8 entry remains inherited policy data;
-it does not certify conversion fidelity or trial readiness.
+EmbeddingGemma MXFP8 admission references dated upstream MTEB results at
+the converter's source checkpoint. The dossier separately records MXFP8
+smoke-check results; admission does not certify quantized retrieval quality
+or trial readiness.
 
 Every priority dossier lists its own completion gaps. Shared UNVERIFIED
 fields include exact artifact/source provenance, restrictions review,
@@ -35,22 +37,25 @@ target runtime qualification, full memory budget, dated task-matched
 comparison, incumbent revision, and numeric acceptance thresholds.
 Rounded storage estimates are not runtime capacity measurements.
 
-Benchmark evidence records a numeric score, publication or evaluation date,
-and source URL, with an optional indented source continuation:
+Benchmark evidence records a numeric score, publication, evaluation, or
+observation date, and source URL, with indented continuations:
 
 ```text
 - Benchmark: NAME VERSION; score: NUMBER; date: YYYY-MM-DD;
   source: https://SOURCE
 ```
 
-The date records evaluation or publication, and cannot be in the future.
+The date records evaluation, publication, or source observation, and cannot
+be in the future.
 `UNVERIFIED` entries do not count. Other incomplete fields remain visible
 alongside verified benchmark entries.
 
-For pinned publisher cards, the date is the cited card revision's publication
-day in the linked history. It does not establish the evaluation run date.
+For pinned publisher cards, a publication date cites the card revision's
+history; an observation date records retrieval. Neither dates the evaluation run.
 Upstream scores describe the original checkpoint; converted-artifact fidelity,
 local capacity, and trial authorization require their own evidence.
+Every entry in policy `models[]` passes this benchmark gate, including entries
+without role assignments. Shared defaults cannot supply model-specific scores.
 
 * LFM3: conversion pins/bytes, classification and schema-validity results.
 * Super-VL: BF16 source pin, complete shard bytes, RULER and parser support.

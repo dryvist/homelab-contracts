@@ -17,6 +17,12 @@ status: started
   Additional restrictions: UNVERIFIED.
 - Architecture: NemotronH_Omni_Reasoning_V3.
 
+## 4. Evaluation and comparison
+
+- Benchmark: Terminal-Bench 2.1, Nemotron 3.5 Bolt 24GB IQ2;
+  score: 50.98; date: 2026-11-07;
+  source: <https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16/blob/e09a4cedb1787db1760375ee5539f222cae0c672/README.md>
+
 ## 2. Artifact evidence
 
 [Shared evidence](_shared/runtime-and-evaluation.md)

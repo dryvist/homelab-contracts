@@ -69,6 +69,12 @@ remain UNVERIFIED. Their endpoint contract is `/v1/systemone`.
 
 ## 4. Evaluation and comparison
 
+Each policy model records its own `Benchmark` entries with score, date, and
+source URL. For publisher-card rows dated 2026-11-07, the date records live
+source observation in UTC, not an unpublished evaluation-run date. Upstream
+scores describe original weights; conversion fidelity and trial readiness
+remain separate evidence. Published report/card dates are identified locally.
+
 - Applicable use cases: the intended tasks stated in each dossier.
 - Dated task-matched benchmarks and versions: UNVERIFIED.
 - Settings, scaffold, and reasoning budget: UNVERIFIED.

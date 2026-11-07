@@ -22,6 +22,14 @@ status: started
 - Intended task: System One classification and typed decisions.
 - Role-assigned artifacts: `manjunathshiva/opendecider-nano`.
 
+## 4. Evaluation and comparison
+
+- Benchmark: typed-decisions official test split accuracy, OpenDecider-nano;
+  score: 0.796; date: 2026-09-27;
+  source: <https://huggingface.co/blog/manjunathshiva/opendecider-beats-laya-and-jev>
+- Decision result basis: publisher article dated 2026-09-27, observed
+  2026-11-07; 2,000 decisions, trained only on the training split.
+
 ## 2. Artifact evidence
 
 [Shared evidence](_shared/runtime-and-evaluation.md)

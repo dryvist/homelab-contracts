@@ -68,6 +68,9 @@ Admission requires an upstream creation or release date, artifact repository,
 publisher, immutable Hub `sha`, artifact `createdAt`, observation date, and a
 quantization method from the artifact's own configuration or metadata. The
 artifact identity, publisher, revision, and creation date cite the Hub API.
+Every admitted policy model also records at least 1 model-specific benchmark
+with a numeric score, a valid nonfuture date, and an HTTP(S) source URL.
+The same benchmark rule applies to complete dossiers and every selection.
 Calibration provenance is required for calibrated methods; calibration-free
 methods record "not applicable" with their method and source. Every required
 field rejects missing or `UNVERIFIED` evidence, including continuation lines.
@@ -84,7 +87,7 @@ conversion timestamp.
 Dossier front matter accepts `status: started` or `status: complete`. Every
 complete model dossier passes the full evidence gate, including models without
 role assignments and every artifact in the dossier. Started dossiers can pass
-admission while runtime, evaluation, and trial evidence remains unfinished.
+admission while runtime, further evaluation, and trial evidence remains unfinished.
 Shared evidence supplies sections and field defaults through one
 `[Shared evidence](_shared/runtime-and-evaluation.md)` reference; local fields
 override only their matching defaults.

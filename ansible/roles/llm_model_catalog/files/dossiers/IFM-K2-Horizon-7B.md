@@ -17,6 +17,12 @@ status: started
   Additional restrictions: UNVERIFIED.
 - Architecture: K2HorizonForCausalLM.
 
+## 4. Evaluation and comparison
+
+- Benchmark: Terminal-Bench 2.1 terminus-2, upstream 7B after FTPO;
+  score: 44.6; date: 2026-11-07;
+  source: <https://huggingface.co/IFM/K2-Horizon-7B/blob/1ad5223c80f635ede5fb926f6304dc7228246a4b/README.md>
+
 ## 2. Artifact evidence
 
 [Shared evidence](_shared/runtime-and-evaluation.md)
