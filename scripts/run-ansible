@@ -330,11 +330,12 @@ checkout_pin() {
 # Removes the pinned checkout under the repo root, so a failed optional checkout cannot leave an older checkout
 # behind for the playbook to run. Refuses to act when RUN_ANSIBLE_PIN_DIR is empty, absolute, or contains '..'.
 remove_stale_pin_dir() {
-  local dir=${RUN_ANSIBLE_PIN_DIR:-}
+  local dir=${RUN_ANSIBLE_PIN_DIR:-} checkout
   if [[ -z $dir || $dir == /* || $dir == *..* ]]; then
     return 1
   fi
-  rm -rf "$REPO_ROOT/$dir"
+  checkout="$REPO_ROOT/$dir"
+  rm -rf "$checkout"
 }
 
 pin_list_contains_playbook() {
