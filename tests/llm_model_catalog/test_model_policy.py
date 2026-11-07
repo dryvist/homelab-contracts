@@ -127,10 +127,20 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
             require(name not in entries, f"duplicate catalog name: {name}")
             entries[name] = entry
 
+    def repository_id(entry):
+        stage0 = entry.get("stage0", {})
+        artifact = stage0.get("serving", {}).get("converted_artifact", {})
+        return (entry.get("hf_repo") or artifact.get("repo_id")
+                or stage0.get("source_checkpoint", {}).get("repo_id")
+                or entry["name"])
+
     def catalog_entry(name, seen=()):
         require(name not in seen, f"catalog reference cycle: {name}")
         if name not in entries:
-            return {}
+            matches = [entry for entry in catalog["llm_model_catalog_models"]
+                       if repository_id(entry) == name]
+            require(len(matches) <= 1, f"ambiguous catalog repository: {name}")
+            return matches[0] if matches else {}
         entry = entries[name]
         if "catalog_model" in entry:
             target = entry["catalog_model"]
@@ -143,10 +153,7 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
         if not entry:
             return name
         stage0 = entry.get("stage0", {})
-        artifact = stage0.get("serving", {}).get("converted_artifact", {})
-        model_id = (entry.get("hf_repo") or artifact.get("repo_id")
-                    or stage0.get("source_checkpoint", {}).get("repo_id")
-                    or entry["name"])
+        model_id = repository_id(entry)
         local = ("hf_repo" in entry or bool(stage0)
                  or "mlx" in entry.get("profiles", {})
                  or entry["name"].startswith(("mlx-community/", "IFM/")))

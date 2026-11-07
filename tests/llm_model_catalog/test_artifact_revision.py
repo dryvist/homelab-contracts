@@ -34,7 +34,7 @@ class ArtifactRevisionTest(unittest.TestCase):
     def test_catalog_pins_match_for_aliases_routes_and_host_selections(self):
         for entry in self.catalog_entries():
             self.fixture.catalog["llm_model_catalog_models"][0] = entry
-            for name in ("alias", "local-route"):
+            for name in ("local", "alias", "local-route", "example/quant"):
                 self.fixture.roles["models"]["active"]["id"] = name
                 for selection in ("global", "override", "resident", "swap"):
                     self.fixture.roles["roles"] = {}
@@ -61,6 +61,14 @@ class ArtifactRevisionTest(unittest.TestCase):
             artifact, f"### example/other\n{artifact}\n### example/quant\n"
             + artifact.replace(self.revision, "b" * 40)))
         with self.assertRaisesRegex(ValueError, "artifact revision mismatch"):
+            self.fixture.check()
+
+    def test_repository_reference_rejects_ambiguous_catalog_selections(self):
+        entries = self.fixture.catalog["llm_model_catalog_models"]
+        entries.append(dict(entries[0], name="other", aliases=[],
+                            hf_revision="b" * 40))
+        self.fixture.roles["models"]["active"]["id"] = "example/quant"
+        with self.assertRaisesRegex(ValueError, "ambiguous catalog repository"):
             self.fixture.check()
 
     def test_each_catalog_selection_keeps_its_own_pin(self):
