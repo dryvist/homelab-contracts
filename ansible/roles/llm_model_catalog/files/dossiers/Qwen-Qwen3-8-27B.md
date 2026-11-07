@@ -49,6 +49,22 @@ status: started
 - Listed weight total: 10934860704 bytes
   (10.18 GiB).
 
+### nvidia/Qwen3.8-27B-NVFP4
+
+- [Artifact metadata](https://huggingface.co/api/models/nvidia/Qwen3.8-27B-NVFP4?blobs=true),
+  observed 2026-11-07; artifact repository created 2026-09-04T21:43:04.000Z
+  (`createdAt`). Conversion dates do not renew upstream age.
+- Artifact publisher: `nvidia`. `base_model`: `Qwen/Qwen3.8-27B`. License: apache-2.0.
+- Immutable artifact revision: `482ca0f3832238542f8f5295dde86b5f22711d80` (`sha`).
+  [Pinned files](https://huggingface.co/nvidia/Qwen3.8-27B-NVFP4/tree/482ca0f3832238542f8f5295dde86b5f22711d80).
+- Filename/shards and bytes:
+  - `model-00001-of-00003.safetensors`: 9965652544 bytes.
+  - `model-00002-of-00003.safetensors`: 9985757064 bytes.
+  - `model-00003-of-00003.safetensors`: 1970287672 bytes.
+- Listed weight total: 21921697280 bytes (20.42 GiB).
+- Upstream source revision, quantization recipe, calibration provenance, and
+  transformation audit: UNVERIFIED.
+
 ### mlx-community/Qwen3.8-27B-4bit
 
 - [Artifact metadata](https://huggingface.co/api/models/mlx-community/Qwen3.8-27B-4bit?blobs=true),

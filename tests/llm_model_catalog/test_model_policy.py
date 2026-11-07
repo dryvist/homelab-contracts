@@ -148,6 +148,13 @@ class CommittedPolicyTest(unittest.TestCase):
             validate_policy(policy, catalog, roles,
                             today=datetime.date(2026, 12, 23))
 
+    def test_rtx6000_medium_quant_inherits_upstream_age(self):
+        policy = json.loads((ROOT / FILES / "model-policy.json").read_text())
+        model = next(entry for entry in policy["models"]
+                     if entry["id"] == "nvidia/Qwen3.8-27B-NVFP4")
+        self.assertEqual(model["upstream_id"], "Qwen/Qwen3.8-27B")
+        self.assertEqual(model["upstream_created"], "2026-08-05")
+
     def test_committed_data(self):
         policy = json.loads((ROOT / FILES / "model-policy.json").read_text())
         catalog = json.loads((ROOT / FILES / "model-catalog.json").read_text())
