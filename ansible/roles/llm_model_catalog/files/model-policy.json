@@ -84,6 +84,12 @@
       "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-8-27B.md"
     },
     {
+      "id": "nvidia/Qwen3.8-27B-NVFP4",
+      "upstream_id": "Qwen/Qwen3.8-27B",
+      "upstream_created": "2026-08-05",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/Qwen-Qwen3-8-27B.md"
+    },
+    {
       "id": "nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF",
       "upstream_id": "nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-BF16",
       "upstream_created": "2026-10-09",
