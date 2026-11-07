@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.57.1](https://github.com/dryvist/homelab-contracts/compare/v5.57.0...v5.57.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **llm_model_catalog:** declare the 4080 lane context window ([#349](https://github.com/dryvist/homelab-contracts/issues/349)) ([699a1c0](https://github.com/dryvist/homelab-contracts/commit/699a1c06ebffddd79dfbc9198d43eb841081189f))
+* **llm_model_catalog:** declare the 4080 lane's context window ([699a1c0](https://github.com/dryvist/homelab-contracts/commit/699a1c06ebffddd79dfbc9198d43eb841081189f))
+
 ## [5.57.0](https://github.com/dryvist/homelab-contracts/compare/v5.56.0...v5.57.0) (2026-11-07)
 
 
