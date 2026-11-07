@@ -79,7 +79,7 @@ status: started
 ## 4. Evaluation and comparison
 
 - Benchmark: SWE-bench Verified, upstream GLM-4.7; score: 73.8; date: 2025-12-22;
-  source: https://huggingface.co/zai-org/GLM-4.7/blob/294238269c0a7040598a453fd0e39c07876572a4/README.md
+  source: <https://huggingface.co/zai-org/GLM-4.7/blob/294238269c0a7040598a453fd0e39c07876572a4/README.md>
 - Benchmark date basis: the linked card revision is dated 2025-12-22T16:22:08Z
   in [upstream history](https://huggingface.co/api/models/zai-org/GLM-4.7/commits/main),
   observed 2026-11-07. This dates publication, not benchmark execution.
