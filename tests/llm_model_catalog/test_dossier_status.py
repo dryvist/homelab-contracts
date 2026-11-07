@@ -9,7 +9,8 @@ import test_model_policy as policy
 def validate_dossier_statuses(root=policy.ROOT):
     """Check real dossiers; shared defaults are evidence fragments, not models."""
     for path in sorted((root / policy.FILES / "dossiers").rglob("*.md")):
-        if "_shared" in path.relative_to(root / policy.FILES / "dossiers").parts:
+        if (path.name in {"index.md", "log.md"}
+                or "_shared" in path.relative_to(root / policy.FILES / "dossiers").parts):
             continue
         text = path.read_text()
         frontmatter = re.match(r"\A---\n(.*?)\n---(?:\n|\Z)", text, re.DOTALL)
@@ -88,3 +89,10 @@ class DossierStatusTest(unittest.TestCase):
         shared.parent.mkdir()
         shared.write_text("## Fragment\n\nUNVERIFIED")
         self.check()
+
+    def test_bundle_navigation_and_history_are_not_model_dossiers(self):
+        self.write("started")
+        for name in ("index.md", "log.md"):
+            with self.subTest(name=name):
+                (self.fixture.dossier.parent / name).write_text("# Bundle metadata\n")
+                self.check()
