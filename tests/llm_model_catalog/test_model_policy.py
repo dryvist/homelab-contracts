@@ -243,6 +243,17 @@ class PolicyRegressionTest(unittest.TestCase):
         validate_policy(self.policy, self.catalog, self.roles,
                         root=self.root, today=self.today)
 
+    def select_model(self, selection):
+        self.roles["roles"] = {}
+        self.roles["hosts"] = {"server": {}}
+        assignment = {"default": {"model": "active"}}
+        if selection == "global":
+            self.roles["roles"] = assignment
+        elif selection == "override":
+            self.roles["hosts"]["server"]["roles"] = assignment
+        else:
+            self.roles["hosts"]["server"][selection] = ["active"]
+
     def test_default_clock_uses_today_in_utc(self):
         instant = datetime.datetime(2026, 11, 7, tzinfo=datetime.timezone.utc)
         with mock.patch(f"{__name__}.datetime.datetime") as clock:
@@ -355,15 +366,7 @@ class PolicyRegressionTest(unittest.TestCase):
 
     def test_reject_unverified_evidence_for_every_selection(self):
         for selection in ("global", "override", "resident", "swap"):
-            self.roles["roles"] = {}
-            self.roles["hosts"] = {"server": {}}
-            if selection == "global":
-                self.roles["roles"] = {"default": {"model": "active"}}
-            elif selection == "override":
-                self.roles["hosts"]["server"]["roles"] = {
-                    "fast": {"model": "active"}}
-            else:
-                self.roles["hosts"]["server"][selection] = ["active"]
+            self.select_model(selection)
             for fields in DOSSIER_FIELDS.values():
                 for field in required_fields(fields, admission_only=True):
                     with self.subTest(selection=selection, field=field):

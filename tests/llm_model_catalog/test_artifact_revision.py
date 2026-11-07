@@ -37,15 +37,7 @@ class ArtifactRevisionTest(unittest.TestCase):
             for name in ("local", "alias", "local-route", "example/quant"):
                 self.fixture.roles["models"]["active"]["id"] = name
                 for selection in ("global", "override", "resident", "swap"):
-                    self.fixture.roles["roles"] = {}
-                    self.fixture.roles["hosts"] = {"server": {}}
-                    if selection == "global":
-                        self.fixture.roles["roles"] = {"default": {"model": "active"}}
-                    elif selection == "override":
-                        self.fixture.roles["hosts"]["server"]["roles"] = {
-                            "default": {"model": "active"}}
-                    else:
-                        self.fixture.roles["hosts"]["server"][selection] = ["active"]
+                    self.fixture.select_model(selection)
                     with self.subTest(entry=entry, name=name, selection=selection):
                         self.fixture.dossier.write_text(self.text)
                         self.fixture.check()
