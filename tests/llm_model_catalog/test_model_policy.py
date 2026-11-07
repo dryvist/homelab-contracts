@@ -160,8 +160,10 @@ class CommittedPolicyTest(unittest.TestCase):
         rows = {row["name"]: row for row in catalog["llm_model_catalog_models"]}
         lane = rows["qwen3.5-9b-4080"]
         self.assertEqual(lane["catalog_model"], "qwen3.5-9b")
+        profile = rows["qwen3.5-9b"]["profiles"]["small-c2-32k"]
         self.assertEqual(lane["max_parallel_requests"], 2)
-        self.assertEqual(lane["context_window"], rows["qwen3.5-9b"]["profiles"]["small-c4-64k"]["context_window"])
+        self.assertEqual(lane["max_parallel_requests"], profile["max_parallel_requests"])
+        self.assertEqual(lane["context_window"], profile["context_window"])
         policy = json.loads((ROOT / FILES / "model-policy.json").read_text())
         self.assertIn(rows["qwen3.5-9b"]["hf_repo"], [entry["id"] for entry in policy["models"]])
 
