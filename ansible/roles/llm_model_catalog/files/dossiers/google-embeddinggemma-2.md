@@ -75,7 +75,7 @@ status: started
 - Benchmark date basis: publisher card revision dated 2026-10-06 in the
   [card history](https://huggingface.co/google/embeddinggemma-2/commits/main/README.md),
   observed 2026-11-07. This is the converter's published source checkpoint.
-- MXFP8 evidence: the [pinned conversion card](https://huggingface.co/nativ-community/embeddinggemma-2-mxfp8/blob/a35a0bd2132265bc29a9130a1b2bcd545ad4b765/README.md)
+- MXFP8 evidence: the [card](https://huggingface.co/nativ-community/embeddinggemma-2-mxfp8/blob/a35a0bd2132265bc29a9130a1b2bcd545ad4b765/README.md)
   reports text minimum cosine 0.998305 against PyTorch FP32; its conversion
   checks explicitly exclude MTEB and retrieval-quality evaluation. Observed
   2026-11-07. The MTEB scores above measure upstream full precision.
