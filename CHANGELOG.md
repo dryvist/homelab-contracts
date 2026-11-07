@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.56.0](https://github.com/dryvist/homelab-contracts/compare/v5.55.1...v5.56.0) (2026-11-07)
+
+
+### Features
+
+* **model-policy:** add the RTX 6000 medium quant record ([#345](https://github.com/dryvist/homelab-contracts/issues/345)) ([977672c](https://github.com/dryvist/homelab-contracts/commit/977672ccc1db0e58bb884e57e97cef58e81c14d9))
+
 ## [5.55.1](https://github.com/dryvist/homelab-contracts/compare/v5.55.0...v5.55.1) (2026-11-07)
 
 
