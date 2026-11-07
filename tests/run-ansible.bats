@@ -457,12 +457,15 @@ with_origin() {
 @test "RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS warns and continues on a matching checkout failure" {
   static_key
   printf 'not-a-commit\n' > "$REPO/bad-pin"
+  mkdir -p "$REPO/optional-checkout"
+  printf 'stale\n' > "$REPO/optional-checkout/content.txt"
   export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=optional-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
   export RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS=site.yml
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
   [[ $output == *"40-character lowercase hexadecimal"* ]]
-  [[ $output == *"continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)"* ]]
+  [[ $output == *"removed the pin directory and continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)"* ]]
+  [ ! -e "$REPO/optional-checkout" ]
 }
 
 @test "an unlisted playbook skips pin checkout when a per-playbook list is set" {
@@ -490,13 +493,35 @@ with_origin() {
   static_key
   printf 'not-a-commit\n' > "$REPO/bad-pin"
   export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_DIR=bad-checkout RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none"
+  mkdir -p "$REPO/bad-checkout"
+  printf 'stale\n' > "$REPO/bad-checkout/content.txt"
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 1 ]
   [[ $output == *"40-character lowercase hexadecimal"* ]]
+  [ -e "$REPO/bad-checkout/content.txt" ]
   export RUN_ANSIBLE_PIN_OPTIONAL=1
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
-  [[ $output == *"continuing without it"* ]]
+  [[ $output == *"removed the pin directory and continuing without it (RUN_ANSIBLE_PIN_OPTIONAL is set)"* ]]
+  [ ! -e "$REPO/bad-checkout" ]
+}
+
+@test "optional pin cleanup refuses empty, absolute, parent-traversing, and symlinked paths" {
+  static_key
+  printf 'not-a-commit\n' > "$REPO/bad-pin"
+  outside="$BATS_TEST_TMPDIR/outside-checkout"
+  mkdir -p "$outside"
+  printf 'stale\n' > "$outside/content.txt"
+  ln -s "$outside" "$REPO/pin-link"
+  export RUN_ANSIBLE_PIN_FILE=bad-pin RUN_ANSIBLE_PIN_URL="$BATS_TEST_TMPDIR/none" RUN_ANSIBLE_PIN_OPTIONAL=1
+  for unsafe_dir in "" "$outside" ../outside-checkout pin-link/nested; do
+    export RUN_ANSIBLE_PIN_DIR="$unsafe_dir"
+    run "$RUN_ANSIBLE" site.yml
+    [ "$status" -eq 1 ]
+    [[ $output == *"refusing to remove"* ]]
+    [ -e "$outside/content.txt" ]
+    [ ! -s "$FIXTURE_RUN_LOG" ]
+  done
 }
 
 @test "RUN_ANSIBLE_LIMIT_LOCALHOST appends localhost to the final --limit" {
