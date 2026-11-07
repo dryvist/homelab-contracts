@@ -130,6 +130,24 @@ def validate_policy(policy, catalog, role_map, root=ROOT, *, today=None):
 
 
 class CommittedPolicyTest(unittest.TestCase):
+    def test_glm47_inherits_upstream_age_and_expires_after_day_365(self):
+        policy = json.loads((ROOT / FILES / "model-policy.json").read_text())
+        model = next(entry for entry in policy["models"]
+                     if entry["id"] == "mlx-community/GLM-4.7-REAP-50-mxfp4")
+        self.assertEqual(model["upstream_id"], "zai-org/GLM-4.7")
+        self.assertEqual(model["upstream_created"], "2025-12-22")
+        policy["models"] = [model]
+        catalog = {"llm_model_catalog_models": []}
+        roles = {"models": {}, "roles": {}, "hosts": {}}
+        for day in (datetime.date(2026, 11, 7), datetime.date(2026, 12, 22)):
+            with self.subTest(day=day):
+                policy["as_of"] = day.isoformat()
+                validate_policy(policy, catalog, roles, today=day)
+        policy["as_of"] = "2026-12-23"
+        with self.assertRaisesRegex(ValueError, "upstream age"):
+            validate_policy(policy, catalog, roles,
+                            today=datetime.date(2026, 12, 23))
+
     def test_committed_data(self):
         policy = json.loads((ROOT / FILES / "model-policy.json").read_text())
         catalog = json.loads((ROOT / FILES / "model-catalog.json").read_text())

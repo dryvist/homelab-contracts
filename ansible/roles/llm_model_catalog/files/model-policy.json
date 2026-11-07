@@ -42,6 +42,12 @@
   ],
   "models": [
     {
+      "id": "mlx-community/GLM-4.7-REAP-50-mxfp4",
+      "upstream_id": "zai-org/GLM-4.7",
+      "upstream_created": "2025-12-22",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/zai-org-glm-4-7.md"
+    },
+    {
       "id": "nativ-community/embeddinggemma-2-mxfp8",
       "upstream_id": "google/embeddinggemma-2",
       "upstream_created": "2026-09-14",
