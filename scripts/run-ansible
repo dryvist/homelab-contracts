@@ -327,6 +327,35 @@ checkout_pin() {
   fi
 }
 
+remove_pin_dir() {
+  local pin_dir=${RUN_ANSIBLE_PIN_DIR:-} checkout component
+  local -a pin_components
+  if [[ -z $pin_dir || $pin_dir == /* || $pin_dir == *..* || $REPO_ROOT != /* ]]; then
+    echo "run-ansible: refusing to remove unsafe RUN_ANSIBLE_PIN_DIR" >&2
+    return 1
+  fi
+  IFS=/ read -r -a pin_components <<< "$pin_dir"
+  checkout=$REPO_ROOT
+  for component in "${pin_components[@]}"; do
+    if [[ -z $component || $component == . ]]; then
+      echo "run-ansible: refusing to remove unsafe RUN_ANSIBLE_PIN_DIR" >&2
+      return 1
+    fi
+    checkout="$checkout/$component"
+    if [[ -L $checkout ]]; then
+      echo "run-ansible: refusing to remove a pinned checkout path with a symlink component" >&2
+      return 1
+    fi
+  done
+  if [[ -e $checkout ]]; then
+    if [[ ! -d $checkout ]]; then
+      echo "run-ansible: refusing to remove a pinned checkout path that is not a directory" >&2
+      return 1
+    fi
+    rm -rf -- "$checkout"
+  fi
+}
+
 pin_list_contains_playbook() {
   local playbook=$1
   local playbooks=$2
@@ -423,14 +452,16 @@ main() {
         checkout_pin || die "pinned checkout failed"
       elif pin_list_contains_playbook "$PLAYBOOK" "${RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS:-}"; then
         if ! checkout_pin; then
-          echo "WARNING: pinned checkout failed; continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)." >&2
+          remove_pin_dir || die "unable to safely remove the pinned checkout after failure"
+          echo "WARNING: pinned checkout failed; removed the pin directory and continuing without it (RUN_ANSIBLE_PIN_OPTIONAL_PLAYBOOKS includes this playbook)." >&2
         fi
       fi
     elif ! checkout_pin; then
       if [[ -z ${RUN_ANSIBLE_PIN_OPTIONAL:-} ]]; then
         die "pinned checkout failed"
       fi
-      echo "WARNING: pinned checkout failed; continuing without it (RUN_ANSIBLE_PIN_OPTIONAL is set)." >&2
+      remove_pin_dir || die "unable to safely remove the pinned checkout after failure"
+      echo "WARNING: pinned checkout failed; removed the pin directory and continuing without it (RUN_ANSIBLE_PIN_OPTIONAL is set)." >&2
     fi
   fi
 
