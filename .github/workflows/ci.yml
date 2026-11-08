@@ -298,6 +298,11 @@ jobs:
           ANSIBLE_ROLES_PATH: ansible/roles
         run: ansible-playbook -i localhost, tests/cribl_edge/handlers_flushed.yml
 
+      - name: Verify the cribl_edge UniFi firewall metrics leg renders only when enabled and configured
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
+        run: ansible-playbook -i localhost, tests/cribl_edge/unifi_fw_metrics.yml
+
   test-converge-telemetry:
     name: pytest converge_telemetry callback
     runs-on: ubuntu-latest

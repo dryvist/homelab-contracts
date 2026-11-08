@@ -115,6 +115,7 @@
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_traces_phoenix"
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/otel_non_trace_splunk"
     - "{{ cribl_edge_install_dir }}/local/edge/pipelines/node_exporter_hwmon"
+    - "{{ cribl_edge_install_dir }}/local/edge/pipelines/unifi_fw_metrics"
 
 - name: Deploy Cribl Edge outputs configuration
   ansible.builtin.template:
@@ -139,6 +140,16 @@
   ansible.builtin.template:
     src: pipelines/syslog/conf.yml.j2
     dest: "{{ cribl_edge_install_dir }}/local/edge/pipelines/syslog/conf.yml"
+    owner: "{{ cribl_edge_user }}"
+    group: "{{ cribl_edge_group }}"
+    mode: "0644"
+  notify: Restart cribl edge
+
+- name: Deploy UniFi firewall metrics pipeline configuration
+  ansible.builtin.template:
+    src: pipelines/unifi_fw_metrics/conf.yml.j2
+    dest: >-
+      {{ cribl_edge_install_dir }}/local/edge/pipelines/unifi_fw_metrics/conf.yml
     owner: "{{ cribl_edge_user }}"
     group: "{{ cribl_edge_group }}"
     mode: "0644"

@@ -35,6 +35,17 @@ inputs:
       - output: unifi_ids_router
         pipeline: "pack:{{ cribl_edge_unifi_ids_pack }}"
 {% endif %}
+{% if name == 'unifi'
+      and (cribl_edge_unifi_fw_metrics_enabled | default(true) | bool)
+      and (cribl_edge_stream_s2s_metrics_host
+           | default('', true) | string | length > 0)
+      and (cribl_edge_stream_s2s_metrics_port
+           | default('', true) | string | length > 0) %}
+      # Firewall-only metrics fan-out to the existing S2S receiver; the
+      # syslog pipeline and Splunk connection above remain unchanged.
+      - output: cribl_stream_s2s_metrics
+        pipeline: unifi_fw_metrics
+{% endif %}
     host: "0.0.0.0"
     tcpPort: {{ port }}
     udpPort: {{ port }}
