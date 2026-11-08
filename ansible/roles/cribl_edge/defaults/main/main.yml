@@ -205,6 +205,11 @@ cribl_edge_unifi_ids_enabled: >-
   {{ (cribl_edge_unifi_ids_pack_deployed | bool)
      and (cribl_edge_unifi_ids_slack_webhook | length > 0) }}
 
+# Firewall syslog gets a separate Edge-side metrics leg to the existing S2S
+# metrics output. The input connection is emitted only when the receiver
+# address and port are configured; Splunk and optional IDS legs stay separate.
+cribl_edge_unifi_fw_metrics_enabled: true
+
 # =============================================================================
 # GPU metrics (System Metrics source). Default is `disabled` — Cribl's own
 # shipped default for this group — so this role change is a no-op on every

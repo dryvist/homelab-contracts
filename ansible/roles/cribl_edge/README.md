@@ -34,6 +34,12 @@ All variables in `defaults/main/` are user-configurable.
 | `cribl_edge_node_exporter_scrape_enabled` | false | Scrape the local node_exporter for fan/temperature (hwmon) series; per-host opt-in |
 | `cribl_edge_node_exporter_keep_match` | hwmon fan/pwm/temp names | Metric-name regex kept; all other node_exporter series are dropped |
 | `cribl_edge_stream_s2s_metrics_host` | `syslog.<PROXMOX_SUBDOMAIN>` | Cribl Stream S2S metrics receiver FQDN |
+| `cribl_edge_unifi_fw_metrics_enabled` | true | Fan UniFi firewall event counters to the existing S2S metrics receiver |
+
+UniFi firewall counters are parsed on Edge and sent through the existing
+`cribl_stream_s2s_metrics` output. The metric `unifi_fw_events_total` is
+grouped by rule, action, ingress/egress network, and Edge publisher. The
+Splunk and optional IDS connections remain independent.
 
 ## Examples
 

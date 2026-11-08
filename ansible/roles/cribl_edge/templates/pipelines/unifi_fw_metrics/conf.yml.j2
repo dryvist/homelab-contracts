@@ -1,0 +1,74 @@
+---
+# Count UniFi gateway firewall events on Edge and publish the cumulative
+# counter through the existing S2S metrics output.
+output: cribl_stream_s2s_metrics
+streamtags: []
+groups: {}
+asyncFuncTimeout: 1000
+functions:
+  - id: drop
+    filter: >-
+      !/\[[A-Z0-9_.-]+-(?:[ADR]-\d+|\d+-[ADR])\]/.test(_raw)
+    disabled: false
+  - id: eval
+    filter: "true"
+    disabled: false
+    conf:
+      add:
+        - name: rule
+          value: >-
+            (/\[([A-Z0-9_.-]+)-[ADR]-\d+\]/.exec(_raw) ||
+            /\[([A-Z0-9_.-]+)-\d+-[ADR]\]/.exec(_raw) || [])[1] || 'unknown'
+        - name: action
+          value: >-
+            ((/\[[A-Z0-9_.-]+-([ADR])-\d+\]/.exec(_raw) ||
+            /\[[A-Z0-9_.-]+-\d+-([ADR])\]/.exec(_raw) || [])[1] || 'R')
+            === 'A' ? 'accept' :
+            ((/\[[A-Z0-9_.-]+-([ADR])-\d+\]/.exec(_raw) ||
+            /\[[A-Z0-9_.-]+-\d+-([ADR])\]/.exec(_raw) || [])[1] || 'R')
+            === 'D' ? 'deny' : 'reject'
+        - name: in_vlan
+          value: >-
+            ((/\bIN=br(\d+)\b/.exec(_raw) || [])[1] ||
+            (/\bIN=eth\d+\b/.test(_raw) ? 'wan' :
+            ((/\bIN=(\S*)/.exec(_raw) || [])[1] || 'gateway')))
+        - name: out_vlan
+          value: >-
+            ((/\bOUT=br(\d+)\b/.exec(_raw) || [])[1] ||
+            (/\bOUT=eth\d+\b/.test(_raw) ? 'wan' :
+            ((/\bOUT=(\S*)/.exec(_raw) || [])[1] || 'gateway')))
+        - name: cribl_host
+          value: "C.os.hostname()"
+  # Edge runs one worker process per node, so this publisher dimension keeps
+  # each cumulative counter unique to one Edge process across flushes.
+  - id: aggregation
+    filter: "true"
+    disabled: false
+    conf:
+      aggregates:
+        - "count().as(count)"
+      groupByFields:
+        - rule
+        - action
+        - in_vlan
+        - out_vlan
+        - cribl_host
+      timeWindow: 10s
+      lagTolerance: 10s
+      idleBucketTimeLimit: 10s
+      cumulative: true
+      flushOnInputClose: false
+  - id: publish_metrics
+    filter: "true"
+    disabled: false
+    conf:
+      metrics:
+        - field: count
+          metricName: "'unifi_fw_events_total'"
+          type: counter
+      dimensions:
+        - rule
+        - action
+        - in_vlan
+        - out_vlan
+        - cribl_host

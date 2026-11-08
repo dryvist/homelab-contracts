@@ -1,0 +1,142 @@
+---
+# Contract for the UniFi firewall metric fan-out: it is independently gated,
+# retains the Splunk and IDS legs, and renders the Edge counter pipeline.
+- name: Render cribl_edge UniFi firewall metrics
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    role_dir: "{{ playbook_dir }}/../../ansible/roles/cribl_edge"
+    cribl_edge_syslog_port_mappings:
+      unifi: 5515
+    cribl_edge_syslog_routing:
+      unifi:
+        index: firewall
+    cribl_edge_hec_namespace: ns
+    cribl_edge_hec_input_port: 8088
+    cribl_edge_hec_input_token: ""
+    cribl_edge_unifi_ids_enabled: true
+    cribl_edge_unifi_ids_pack: cc-edge-internal-unifi-ids
+    cribl_edge_unifi_fw_metrics_enabled: true
+    cribl_edge_stream_s2s_metrics_host: 192.0.2.15
+    cribl_edge_stream_s2s_metrics_port: 10080
+    cribl_edge_langfuse_public_key: ""
+    cribl_edge_phoenix_api_key: ""
+    cribl_edge_gpu_mode: disabled
+    cribl_edge_gpu_per_gpu: true
+    cribl_edge_gpu_detail: false
+    cribl_edge_node_exporter_scrape_enabled: false
+    expected_drop_filter: >-
+      !/\[[A-Z0-9_.-]+-(?:[ADR]-\d+|\d+-[ADR])\]/.test(_raw)
+    expected_rule: >-
+      (/\[([A-Z0-9_.-]+)-[ADR]-\d+\]/.exec(_raw) ||
+      /\[([A-Z0-9_.-]+)-\d+-[ADR]\]/.exec(_raw) || [])[1] || 'unknown'
+    expected_action: >-
+      ((/\[[A-Z0-9_.-]+-([ADR])-\d+\]/.exec(_raw) ||
+      /\[[A-Z0-9_.-]+-\d+-([ADR])\]/.exec(_raw) || [])[1] || 'R')
+      === 'A' ? 'accept' :
+      ((/\[[A-Z0-9_.-]+-([ADR])-\d+\]/.exec(_raw) ||
+      /\[[A-Z0-9_.-]+-\d+-([ADR])\]/.exec(_raw) || [])[1] || 'R')
+      === 'D' ? 'deny' : 'reject'
+    expected_in_vlan: >-
+      ((/\bIN=br(\d+)\b/.exec(_raw) || [])[1] ||
+      (/\bIN=eth\d+\b/.test(_raw) ? 'wan' :
+      ((/\bIN=(\S*)/.exec(_raw) || [])[1] || 'gateway')))
+    expected_out_vlan: >-
+      ((/\bOUT=br(\d+)\b/.exec(_raw) || [])[1] ||
+      (/\bOUT=eth\d+\b/.test(_raw) ? 'wan' :
+      ((/\bOUT=(\S*)/.exec(_raw) || [])[1] || 'gateway')))
+  tasks:
+    - name: Read the firewall metrics default
+      ansible.builtin.set_fact:
+        fw_metrics_default: >-
+          {{ (lookup('ansible.builtin.file',
+          role_dir ~ '/defaults/main/main.yml') | from_yaml)
+          .cribl_edge_unifi_fw_metrics_enabled }}
+    - name: Render the enabled input and firewall pipeline
+      ansible.builtin.set_fact:
+        inputs_enabled: >-
+          {{ lookup('ansible.builtin.template',
+          role_dir ~ '/templates/inputs.yml.j2') | from_yaml }}
+        pipe: >-
+          {{ lookup('ansible.builtin.template',
+          role_dir ~ '/templates/pipelines/unifi_fw_metrics/conf.yml.j2')
+          | from_yaml }}
+    - name: Render with firewall metrics disabled
+      ansible.builtin.set_fact:
+        inputs_disabled: >-
+          {{ lookup('ansible.builtin.template',
+          role_dir ~ '/templates/inputs.yml.j2') | from_yaml }}
+      vars:
+        cribl_edge_unifi_fw_metrics_enabled: false
+    - name: Render without the metrics output host
+      ansible.builtin.set_fact:
+        inputs_without_host: >-
+          {{ lookup('ansible.builtin.template',
+          role_dir ~ '/templates/inputs.yml.j2') | from_yaml }}
+      vars:
+        cribl_edge_stream_s2s_metrics_host: ""
+    - name: Render without the metrics output port
+      ansible.builtin.set_fact:
+        inputs_without_port: >-
+          {{ lookup('ansible.builtin.template',
+          role_dir ~ '/templates/inputs.yml.j2') | from_yaml }}
+      vars:
+        cribl_edge_stream_s2s_metrics_port: ""
+    - name: Assert the UniFi firewall metrics contract
+      ansible.builtin.assert:
+        that:
+          - fw_metrics_default | bool
+          - >-
+            inputs_enabled.inputs.in_syslog_5515.connections |
+            map(attribute='output') | list ==
+            ['splunk_hec_firewall', 'unifi_ids_router',
+            'cribl_stream_s2s_metrics']
+          - >-
+            inputs_enabled.inputs.in_syslog_5515.connections[0].pipeline ==
+            'syslog'
+          - >-
+            inputs_enabled.inputs.in_syslog_5515.connections[1].pipeline ==
+            'pack:cc-edge-internal-unifi-ids'
+          - >-
+            inputs_enabled.inputs.in_syslog_5515.connections[2].pipeline ==
+            'unifi_fw_metrics'
+          - >-
+            inputs_disabled.inputs.in_syslog_5515.connections |
+            map(attribute='output') | list ==
+            ['splunk_hec_firewall', 'unifi_ids_router']
+          - >-
+            inputs_without_host.inputs.in_syslog_5515.connections |
+            map(attribute='output') | list ==
+            ['splunk_hec_firewall', 'unifi_ids_router']
+          - >-
+            inputs_without_port.inputs.in_syslog_5515.connections |
+            map(attribute='output') | list ==
+            ['splunk_hec_firewall', 'unifi_ids_router']
+          - pipe.functions[0].id == 'drop'
+          - pipe.functions[0].filter == expected_drop_filter
+          - pipe.functions[1].id == 'eval'
+          - >-
+            pipe.functions[1].conf.add | map(attribute='name') | list ==
+            ['rule', 'action', 'in_vlan', 'out_vlan', 'cribl_host']
+          - pipe.functions[1].conf.add[0].value == expected_rule
+          - pipe.functions[1].conf.add[1].value == expected_action
+          - pipe.functions[1].conf.add[2].value == expected_in_vlan
+          - pipe.functions[1].conf.add[3].value == expected_out_vlan
+          - pipe.functions[1].conf.add[4].value == 'C.os.hostname()'
+          - pipe.functions[2].id == 'aggregation'
+          - pipe.functions[2].conf.aggregates == ['count().as(count)']
+          - pipe.functions[2].conf.timeWindow == '10s'
+          - pipe.functions[2].conf.cumulative | bool
+          - >-
+            pipe.functions[2].conf.groupByFields ==
+            ['rule', 'action', 'in_vlan', 'out_vlan', 'cribl_host']
+          - pipe.functions[3].id == 'publish_metrics'
+          - pipe.functions[3].conf.metrics[0].field == 'count'
+          - >-
+            pipe.functions[3].conf.metrics[0].metricName ==
+            "'unifi_fw_events_total'"
+          - pipe.functions[3].conf.metrics[0].type == 'counter'
+          - >-
+            pipe.functions[3].conf.dimensions ==
+            ['rule', 'action', 'in_vlan', 'out_vlan', 'cribl_host']
