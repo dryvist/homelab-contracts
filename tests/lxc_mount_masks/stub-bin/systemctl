@@ -1,0 +1,12 @@
+#!/bin/bash
+# Test stand-in for systemctl. Logs every invocation as one prefixed line and
+# answers show queries with the unit state named in
+# LXC_MOUNT_MASKS_STUB_STATE, so the contract test can pose failed and active
+# units without a real systemd.
+set -euo pipefail
+log=${LXC_MOUNT_MASKS_STUB_LOG:?LXC_MOUNT_MASKS_STUB_LOG must point at the stub call log}
+printf '%s\n' "systemctl $*" >>"$log"
+if [[ "${1:-}" == show ]]; then
+  printf '%s\n' "${LXC_MOUNT_MASKS_STUB_STATE:-inactive}"
+fi
+exit 0

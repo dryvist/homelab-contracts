@@ -1,0 +1,241 @@
+---
+# Contract for lxc_mount_masks: the role masks its configured mount units and
+# resets their failed state only on an unprivileged, non-nested LXC guest, and
+# leaves VMs, bare metal, privileged containers, nested containers, and
+# disabled runs untouched. systemd-detect-virt and systemctl are PATH stubs so
+# each guest shape is posed without touching real unit state, and the uid-map
+# / nesting probes point at fixtures through the role's path variables.
+#
+# Run: PATH="$PWD/tests/lxc_mount_masks/stub-bin:$PATH" \
+#        ANSIBLE_ROLES_PATH=ansible/roles \
+#        ansible-playbook -i localhost, tests/lxc_mount_masks/test_contract.yml
+- name: Make the PATH stubs executable
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Ensure the stub scripts carry the exec bit
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/stub-bin/{{ item }}"
+        mode: "0755"
+      loop:
+        - systemd-detect-virt
+        - systemctl
+
+- name: Mask and reset failed units on an unprivileged, non-nested LXC guest
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    LXC_MOUNT_MASKS_STUB_LOG: /tmp/lxc_mount_masks_stub.log
+    LXC_MOUNT_MASKS_STUB_STATE: failed
+  vars:
+    stub_log: /tmp/lxc_mount_masks_stub.log
+  tasks:
+    - name: Discard the previous scenario's stub log
+      ansible.builtin.file:
+        path: "{{ stub_log }}"
+        state: absent
+
+    - name: Run the role as an LXC guest known through gathered facts
+      ansible.builtin.include_role:
+        name: lxc_mount_masks
+      vars:
+        ansible_virtualization_type: lxc
+        lxc_mount_masks_uid_map_path: "{{ playbook_dir }}/fixtures/uid_map_unprivileged"
+        lxc_mount_masks_nesting_path: "{{ playbook_dir }}/fixtures/nesting_absent"
+        lxc_mount_masks_units:
+          - tmp.mount
+          - run-lock.mount
+
+    - name: Read the stub call log
+      ansible.builtin.slurp:
+        src: "{{ stub_log }}"
+      register: calls
+
+    - name: Assert both units were masked and their failed state reset
+      ansible.builtin.assert:
+        that:
+          - lxc_mount_masks_target_guest | bool
+          - "'systemd-detect-virt --container' in stub_lines"
+          - "'systemctl mask tmp.mount' in stub_lines"
+          - "'systemctl reset-failed tmp.mount' in stub_lines"
+          - "'systemctl mask run-lock.mount' in stub_lines"
+          - "'systemctl reset-failed run-lock.mount' in stub_lines"
+      vars:
+        stub_lines: "{{ (calls.content | b64decode).splitlines() }}"
+
+- name: Mask active units too, without inventing a failed state to reset
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    LXC_MOUNT_MASKS_STUB_LOG: /tmp/lxc_mount_masks_stub.log
+    LXC_MOUNT_MASKS_STUB_VIRT: lxc
+    LXC_MOUNT_MASKS_STUB_STATE: active
+  vars:
+    stub_log: /tmp/lxc_mount_masks_stub.log
+  tasks:
+    - name: Discard the previous scenario's stub log
+      ansible.builtin.file:
+        path: "{{ stub_log }}"
+        state: absent
+
+    - name: Run the role as an LXC guest known through systemd-detect-virt only
+      ansible.builtin.include_role:
+        name: lxc_mount_masks
+      vars:
+        lxc_mount_masks_uid_map_path: "{{ playbook_dir }}/fixtures/uid_map_unprivileged"
+        lxc_mount_masks_nesting_path: "{{ playbook_dir }}/fixtures/nesting_absent"
+
+    - name: Read the stub call log
+      ansible.builtin.slurp:
+        src: "{{ stub_log }}"
+      register: calls
+
+    - name: Assert the default unit list is masked and never reset
+      ansible.builtin.assert:
+        that:
+          - lxc_mount_masks_target_guest | bool
+          - "'systemctl mask tmp.mount' in stub_lines"
+          - "'systemctl reset-failed' not in stub_lines"
+          - "'run-lock.mount' not in (stub_lines | join(' '))"
+      vars:
+        stub_lines: "{{ (calls.content | b64decode).splitlines() }}"
+
+- name: Do nothing on a privileged LXC container
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    LXC_MOUNT_MASKS_STUB_LOG: /tmp/lxc_mount_masks_stub.log
+    LXC_MOUNT_MASKS_STUB_VIRT: lxc
+  vars:
+    stub_log: /tmp/lxc_mount_masks_stub.log
+  tasks:
+    - name: Discard the previous scenario's stub log
+      ansible.builtin.file:
+        path: "{{ stub_log }}"
+        state: absent
+
+    - name: Run the role as a privileged LXC guest
+      ansible.builtin.include_role:
+        name: lxc_mount_masks
+      vars:
+        lxc_mount_masks_uid_map_path: "{{ playbook_dir }}/fixtures/uid_map_privileged"
+        lxc_mount_masks_nesting_path: "{{ playbook_dir }}/fixtures/nesting_absent"
+
+    - name: Read the stub call log
+      ansible.builtin.slurp:
+        src: "{{ stub_log }}"
+      register: calls
+
+    - name: Assert no unit was touched
+      ansible.builtin.assert:
+        that:
+          - not (lxc_mount_masks_target_guest | bool)
+          - "'systemctl mask' not in stub_lines"
+      vars:
+        stub_lines: "{{ (calls.content | b64decode).splitlines() }}"
+
+- name: Do nothing on a nested LXC container
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    LXC_MOUNT_MASKS_STUB_LOG: /tmp/lxc_mount_masks_stub.log
+    LXC_MOUNT_MASKS_STUB_VIRT: lxc
+  vars:
+    stub_log: /tmp/lxc_mount_masks_stub.log
+  tasks:
+    - name: Discard the previous scenario's stub log
+      ansible.builtin.file:
+        path: "{{ stub_log }}"
+        state: absent
+
+    - name: Run the role as a nested LXC guest
+      ansible.builtin.include_role:
+        name: lxc_mount_masks
+      vars:
+        lxc_mount_masks_uid_map_path: "{{ playbook_dir }}/fixtures/uid_map_unprivileged"
+        lxc_mount_masks_nesting_path: "{{ playbook_dir }}/fixtures/nesting_present"
+
+    - name: Read the stub call log
+      ansible.builtin.slurp:
+        src: "{{ stub_log }}"
+      register: calls
+
+    - name: Assert no unit was touched
+      ansible.builtin.assert:
+        that:
+          - not (lxc_mount_masks_target_guest | bool)
+          - "'systemctl mask' not in stub_lines"
+      vars:
+        stub_lines: "{{ (calls.content | b64decode).splitlines() }}"
+
+- name: Do nothing on a VM or bare-metal host
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    LXC_MOUNT_MASKS_STUB_LOG: /tmp/lxc_mount_masks_stub.log
+  vars:
+    stub_log: /tmp/lxc_mount_masks_stub.log
+  tasks:
+    - name: Discard the previous scenario's stub log
+      ansible.builtin.file:
+        path: "{{ stub_log }}"
+        state: absent
+
+    - name: Run the role off any container, with an otherwise LXC-like shape
+      ansible.builtin.include_role:
+        name: lxc_mount_masks
+      vars:
+        lxc_mount_masks_uid_map_path: "{{ playbook_dir }}/fixtures/uid_map_unprivileged"
+        lxc_mount_masks_nesting_path: "{{ playbook_dir }}/fixtures/nesting_absent"
+
+    - name: Read the stub call log
+      ansible.builtin.slurp:
+        src: "{{ stub_log }}"
+      register: calls
+
+    - name: Assert no unit was touched
+      ansible.builtin.assert:
+        that:
+          - not (lxc_mount_masks_target_guest | bool)
+          - "'systemctl mask' not in stub_lines"
+      vars:
+        stub_lines: "{{ (calls.content | b64decode).splitlines() }}"
+
+- name: Skip detection entirely when the role is disabled
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    LXC_MOUNT_MASKS_STUB_LOG: /tmp/lxc_mount_masks_stub.log
+    LXC_MOUNT_MASKS_STUB_VIRT: lxc
+  vars:
+    stub_log: /tmp/lxc_mount_masks_stub.log
+  tasks:
+    - name: Discard the previous scenario's stub log
+      ansible.builtin.file:
+        path: "{{ stub_log }}"
+        state: absent
+
+    - name: Run the disabled role on an otherwise LXC-like guest
+      ansible.builtin.include_role:
+        name: lxc_mount_masks
+      vars:
+        lxc_mount_masks_enabled: false
+        lxc_mount_masks_uid_map_path: "{{ playbook_dir }}/fixtures/uid_map_unprivileged"
+        lxc_mount_masks_nesting_path: "{{ playbook_dir }}/fixtures/nesting_absent"
+
+    - name: Check for any stub call
+      ansible.builtin.stat:
+        path: "{{ stub_log }}"
+      register: calls
+
+    - name: Assert neither detection nor masking ran
+      ansible.builtin.assert:
+        that:
+          - not calls.stat.exists

@@ -2,5 +2,6 @@
 lxc_mount_masks_enabled: true
 lxc_mount_masks_units:
   - tmp.mount
-  - dev-mqueue.mount
-  - run-lock.mount
+# Probe paths, overridable so the contract test can pose each guest shape.
+lxc_mount_masks_uid_map_path: /proc/self/uid_map
+lxc_mount_masks_nesting_path: /dev/.lxc

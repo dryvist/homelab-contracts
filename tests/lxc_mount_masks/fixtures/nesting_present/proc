@@ -1,0 +1,2 @@
+Placeholder for the /proc bind mount LXC exposes at /dev/.lxc/proc when
+nesting is enabled; the contract test stats the containing directory.

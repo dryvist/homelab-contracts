@@ -1,5 +1,8 @@
 ---
-- name: Detect the container type
+# Guard: act only on an unprivileged, non-nested LXC guest. Virtual machines,
+# bare metal, privileged containers, and nested containers never reach the
+# masking tasks.
+- name: Detect the container runtime
   ansible.builtin.command: systemd-detect-virt --container
   register: _lxc_mount_masks_virt
   changed_when: false
@@ -7,13 +10,43 @@
   check_mode: false
   when: lxc_mount_masks_enabled | bool
 
-- name: Manage failed LXC mount units
+- name: Read the container uid map
+  ansible.builtin.slurp:
+    src: "{{ lxc_mount_masks_uid_map_path }}"
+  register: _lxc_mount_masks_uid_map
+  failed_when: false
+  check_mode: false
+  when: lxc_mount_masks_enabled | bool
+
+- name: Look for the LXC nesting bind mounts
+  ansible.builtin.stat:
+    path: "{{ lxc_mount_masks_nesting_path }}"
+  register: _lxc_mount_masks_nesting
+  check_mode: false
+  when: lxc_mount_masks_enabled | bool
+
+- name: Classify the guest
+  ansible.builtin.set_fact:
+    lxc_mount_masks_target_guest: >-
+      {{ (ansible_virtualization_type | default('') == 'lxc'
+          or _lxc_mount_masks_virt.stdout | default('') | trim == 'lxc')
+         and ((_lxc_mount_masks_uid_map.content | default('') | b64decode | trim).split() | length > 2)
+         and ((_lxc_mount_masks_uid_map.content | default('') | b64decode | trim).split()[1] | int(0) != 0)
+         and not (_lxc_mount_masks_nesting.stat.exists | default(false)) }}
+  when: lxc_mount_masks_enabled | bool
+
+- name: Mask unusable mount units in the guest
   when:
     - lxc_mount_masks_enabled | bool
-    - ansible_virtualization_type | default('') == 'lxc' or _lxc_mount_masks_virt.stdout | default('') == 'lxc'
+    - lxc_mount_masks_target_guest | default(false) | bool
   block:
-    # A failed unit is the systemd signal that this specific mount could not be used.
-    - name: Inspect mount unit state
+    - name: Mask the configured mount units
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        masked: true
+      loop: "{{ lxc_mount_masks_units }}"
+
+    - name: Read the active state of the configured mount units
       ansible.builtin.command:
         argv:
           - systemctl
@@ -26,16 +59,7 @@
       changed_when: false
       check_mode: false
 
-    - name: Mask failed mount units
-      ansible.builtin.systemd_service:
-        name: "{{ item.item }}"
-        masked: true
-      loop: "{{ _lxc_mount_masks_states.results }}"
-      loop_control:
-        label: "{{ item.item }}"
-      when: item.stdout == 'failed'
-
-    - name: Clear mount unit failures
+    - name: Reset the failed state of the masked mount units
       ansible.builtin.command:
         argv:
           - systemctl
@@ -44,7 +68,5 @@
       loop: "{{ _lxc_mount_masks_states.results }}"
       loop_control:
         label: "{{ item.item }}"
-      when:
-        - item.stdout == 'failed'
-        - not ansible_check_mode
+      when: item.stdout | trim == 'failed'
       changed_when: true

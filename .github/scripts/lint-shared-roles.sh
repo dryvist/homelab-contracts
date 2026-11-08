@@ -10,6 +10,7 @@ exec ansible-lint \
   ansible/roles/bao_approle_cli \
   ansible/roles/syslog_forwarder \
   ansible/roles/systemd_restart_policy \
+  ansible/roles/lxc_mount_masks \
   ansible/roles/openbao_secrets \
   ansible/roles/converge_gate \
   ansible/roles/llm_model_catalog \

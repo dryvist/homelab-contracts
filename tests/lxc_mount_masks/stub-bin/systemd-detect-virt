@@ -1,0 +1,13 @@
+#!/bin/bash
+# Test stand-in for systemd-detect-virt --container. Logs every call, then
+# reports the type named in LXC_MOUNT_MASKS_STUB_VIRT; when that is unset it
+# exits 1 with no output, which is what systemd-detect-virt prints off a
+# container. The log lets the contract test prove detection was skipped.
+set -euo pipefail
+log=${LXC_MOUNT_MASKS_STUB_LOG:?LXC_MOUNT_MASKS_STUB_LOG must point at the stub call log}
+printf '%s\n' "systemd-detect-virt $*" >>"$log"
+if [[ -n "${LXC_MOUNT_MASKS_STUB_VIRT:-}" ]]; then
+  printf '%s\n' "$LXC_MOUNT_MASKS_STUB_VIRT"
+  exit 0
+fi
+exit 1

@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: JacobPEvans
-  description: Mask failed mount units in LXC guests
+  description: Mask container-incompatible mount units in unprivileged, non-nested LXC guests
   license: MIT
   min_ansible_version: "2.15"
   platforms:
