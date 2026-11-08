@@ -26,7 +26,7 @@ roles:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `lxc_mount_masks_enabled` | `true` | Set to `false` to skip the role entirely, detection included. |
-| `lxc_mount_masks_units` | `["tmp.mount"]` | Mount units to mask and reset. Add further container-incompatible units, for example `dev-mqueue.mount` or `run-lock.mount`. |
+| `lxc_mount_masks_units` | `["tmp.mount"]` | Mount units to mask and reset. Add further container-incompatible units, such as `dev-mqueue.mount`. |
 | `lxc_mount_masks_uid_map_path` | `/proc/self/uid_map` | Probe path for the uid map; overridable so tests can pose privileged and unprivileged guests. |
 | `lxc_mount_masks_nesting_path` | `/dev/.lxc` | Probe path for the nesting bind mounts; overridable so tests can pose a nested guest. |
 
