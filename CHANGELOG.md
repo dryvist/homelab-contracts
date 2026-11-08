@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.58.0](https://github.com/dryvist/homelab-contracts/compare/v5.57.2...v5.58.0) (2026-11-08)
+
+
+### Features
+
+* **cribl_edge:** publish UniFi firewall event counters ([#353](https://github.com/dryvist/homelab-contracts/issues/353)) ([d735cd3](https://github.com/dryvist/homelab-contracts/commit/d735cd39516accc025c1fb073de2af8c568ac719))
+
 ## [5.57.2](https://github.com/dryvist/homelab-contracts/compare/v5.57.1...v5.57.2) (2026-11-07)
 
 
