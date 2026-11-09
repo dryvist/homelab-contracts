@@ -93,3 +93,17 @@ def test_non_pending_lane_absent_from_router_fails(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "review-local" in result.stdout
     assert "non-pending lane and harness alias names missing" in result.stdout
+
+
+def test_pending_lane_absent_from_router_passes(tmp_path: Path) -> None:
+    contract = json.loads(ROUTER_NAMES.read_text(encoding="utf-8"))
+    contract["router_names"]["route_groups"].remove("ocr")
+    contract["router_names"]["all"].remove("ocr")
+    pending_lane_contract = tmp_path / "pending-lane-missing-router-names.json"
+    pending_lane_contract.write_text(json.dumps(contract), encoding="utf-8")
+
+    result = run_checker(FIXTURES / "router-names-pass.json", pending_lane_contract)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PASS: all 4 router name(s) are allowed" in result.stdout
+    assert "non-pending lane and harness alias name(s) are served" in result.stdout
