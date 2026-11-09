@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.58.1](https://github.com/dryvist/homelab-contracts/compare/v5.58.0...v5.58.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **llm_roles:** treat the OCR lane as pending until a router serves it ([#356](https://github.com/dryvist/homelab-contracts/issues/356)) ([96adf29](https://github.com/dryvist/homelab-contracts/commit/96adf29b713e09d49990b6738378b7f6db9defc4))
+
 ## [5.58.0](https://github.com/dryvist/homelab-contracts/compare/v5.57.2...v5.58.0) (2026-11-08)
 
 
