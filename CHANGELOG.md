@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.59.0](https://github.com/dryvist/homelab-contracts/compare/v5.58.1...v5.59.0) (2026-11-10)
+
+
+### Features
+
+* **agent:** zcode run j-d57b3cbdd66d8725 ([d27cb73](https://github.com/dryvist/homelab-contracts/commit/d27cb73fecb958c9555a48d4d30dac728e783cc0))
+
+
+### Bug Fixes
+
+* replace private names with role words ([#359](https://github.com/dryvist/homelab-contracts/issues/359)) ([d27cb73](https://github.com/dryvist/homelab-contracts/commit/d27cb73fecb958c9555a48d4d30dac728e783cc0))
+
 ## [5.58.1](https://github.com/dryvist/homelab-contracts/compare/v5.58.0...v5.58.1) (2026-11-09)
 
 
