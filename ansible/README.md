@@ -13,13 +13,13 @@ This directory is the collection root: `galaxy.yml` sits beside `roles/`.
 | `cribl_edge` | Install and configure Cribl Edge (native, non-Docker) | `ansible-proxmox` (hosts), `ansible-proxmox-apps` (LXC) |
 | `cribl_packs` | Install versioned `.crbl` pack assets onto Edge/Stream | `ansible-proxmox`, `ansible-proxmox-apps` |
 | `inventory_resolve` | Resolve the published OpenTofu inventory (RustFS/S3) | `ansible-proxmox`, `ansible-proxmox-apps` |
-| `docker_engine` | Bootstrap Docker CE + compose plugin in an LXC | `ansible-proxmox-apps`, `ansible-servarr` |
-| `ntp` | Time synchronization via chrony | `ansible-proxmox-apps`, `ansible-servarr` |
-| `ssh_ca_trust` | Guest-side pinned-fingerprint SSH CA trust | `ansible-proxmox-apps`, `ansible-servarr` |
-| `syslog_forwarder` | Forward host + service logs to the central syslog pipeline | `ansible-proxmox-apps`, `ansible-servarr` |
-| `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, `ansible-servarr` |
+| `docker_engine` | Bootstrap Docker CE + compose plugin in an LXC | `ansible-proxmox-apps`, a private consumer repo |
+| `ntp` | Time synchronization via chrony | `ansible-proxmox-apps`, a private consumer repo |
+| `ssh_ca_trust` | Guest-side pinned-fingerprint SSH CA trust | `ansible-proxmox-apps`, a private consumer repo |
+| `syslog_forwarder` | Forward host + service logs to the central syslog pipeline | `ansible-proxmox-apps`, a private consumer repo |
+| `systemd_restart_policy` | systemd unit override enforcing a restart policy | `ansible-proxmox-apps`, a private consumer repo |
 | `lxc_mount_masks` | Mask failed mount units in LXC guests | Guest plays opting into the role |
-| `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, `ansible-servarr` |
+| `openbao_secrets` | Controller-side pre-play fetching per-domain OpenBao KV secrets | `ansible-proxmox-apps`, a private consumer repo |
 | `bao_approle_cli` | Install the shared OpenBao AppRole CLI on Debian guests | Shared CLI consumers |
 | `llm_model_catalog` | Shared JSON model limits and optional GGUF artifacts | `ansible-proxmox`, `ansible-proxmox-ai`, `nix-ai` |
 | `llm_router_key_catalog` | Shared benchmark key field | `ansible-proxmox-apps`, `ansible-proxmox-ai` |
