@@ -60,6 +60,7 @@
     {"name":"minimax/minimax-m3","context_window":1048576},
     {"name":"openrouter/free","context_window":200000},
     {"name":"openrouter/auto","context_window":2000000},
+    {"name":"qwen4-max-preview","context_window":1000000,"max_output_tokens":393216},
     {"name":"go-deepseek-pro","context_window":616000,"max_output_tokens":384000},
     {"name":"go-glm-5.2","context_window":868928,"max_output_tokens":131072},
     {"name":"go-glm-5.3","context_window":868928,"max_output_tokens":131072},
