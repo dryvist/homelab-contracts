@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.60.0](https://github.com/dryvist/homelab-contracts/compare/v5.59.0...v5.60.0) (2026-11-12)
+
+
+### Features
+
+* **catalog:** add the qwen4-max-preview model ([#361](https://github.com/dryvist/homelab-contracts/issues/361)) ([5197061](https://github.com/dryvist/homelab-contracts/commit/51970616bc97dbf7fc0860f021792e49e4152033))
+
 ## [5.59.0](https://github.com/dryvist/homelab-contracts/compare/v5.58.1...v5.59.0) (2026-11-10)
 
 
