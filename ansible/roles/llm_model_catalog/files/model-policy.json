@@ -288,6 +288,10 @@
       "reason": "hosted provider"
     },
     {
+      "id": "qwen4-max-preview",
+      "reason": "hosted provider"
+    },
+    {
       "id": "go-deepseek-pro",
       "reason": "hosted provider"
     },
