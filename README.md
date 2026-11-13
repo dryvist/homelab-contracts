@@ -1,6 +1,6 @@
 # homelab-contracts
 
-[![CI](https://github.com/jpe-ansible/homelab-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/jpe-ansible/homelab-contracts/actions/workflows/ci.yml)
+[![CI][ci-badge]][ci]
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Single source of truth for the **dryvist homelab cross-repo contracts** —
@@ -189,3 +189,6 @@ MIT — see [LICENSE](LICENSE).
 ---
 
 > Part of a [larger ecosystem of ~40 repos](https://docs.jacobpevans.com) — see how it all fits together.
+
+[ci]: https://github.com/jpe-ansible/homelab-contracts/actions/workflows/ci.yml
+[ci-badge]: https://github.com/jpe-ansible/homelab-contracts/actions/workflows/ci.yml/badge.svg
