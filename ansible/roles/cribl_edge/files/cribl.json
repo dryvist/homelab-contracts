@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "version": "4.20.1-590ec085",
+  "version": "4.20.4-9651be2b",
   "packs": {
     "edge_linux": ["cc-edge-copilot-otel", "cc-edge-vscode-io"],
     "edge_macos": [
