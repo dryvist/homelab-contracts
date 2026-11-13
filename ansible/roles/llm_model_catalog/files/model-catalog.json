@@ -21,6 +21,7 @@
     {"name":"mlx-community/Qwen3.6-35B-A3B-4bit","context_window":65536},
     {"name":"mlx-community/Qwen3.5-9B-MLX-4bit","context_window":32768},
     {"name":"mlx-community/Unlimited-OCR-bf16","aliases":["unlimited-ocr"],"context_window":32768,"max_parallel_requests":1},
+    {"name":"ggml-org/GLM-OCR-GGUF","aliases":["glm-ocr"],"context_window":16384,"max_output_tokens":4096,"max_parallel_requests":2,"request_timeout":90},
     {"name":"mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit","context_window":65536},
     {"name":"mlx-community/Qwen3-Next-80B-A3B-Thinking-4bit","context_window":32768},
     {"name":"mlx-community/Qwen3-Next-80B-A3B-Instruct-4bit","context_window":65536},
