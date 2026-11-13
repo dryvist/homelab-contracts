@@ -11,23 +11,23 @@ status: started
 - Observed: 2026-11-13. [Hub metadata](https://huggingface.co/api/models/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B).
 - Upstream repository: `nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B`.
 - Observed immutable upstream revision: `c17667641642c4265ff2b7037dd101b7d4567634` (`sha`).
-  [Pinned upstream card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B/blob/c17667641642c4265ff2b7037dd101b7d4567634/README.md).
+  [Pinned upstream card][upstream-card].
 - Upstream creation or release date: 2026-10-07T22:50:21.000Z (Hub `createdAt`
   of the repository, used for `upstream_created`), observed 2026-11-13. The pinned
   card's Release Date section lists 10/28/2026 for Hugging Face, GitHub, NGC, and
   build.nvidia.com.
-- Release date: 2026-10-28,
-  [pinned card, Release Date section][upstream-card].
-- License and restrictions: OpenMDW-1.1 (`license_name: openmdw-1.1` in card metadata;
-  [license link](https://openmdw.ai/license/1-1/)). Third-party notices shipped with the
-  upstream repository: UNVERIFIED.
+- Release date: 2026-10-28, [pinned card, Release Date section][upstream-card].
+- License and restrictions: OpenMDW-1.1 (Hub metadata `license: other` with
+  `license_name: openmdw-1.1`; [license link](https://openmdw.ai/license/1-1/)).
+  Third-party notices shipped with the upstream repository: UNVERIFIED.
 - Architecture: speech-augmented language model. Audio perception uses a transformer ASR
   encoder, a speaker encoder, and a CTC timestamp alignment head, feeding a Nemotron-3.5
   Lightning 30B-A3B language backbone (base model `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16`).
   Card states 34B total parameters, 4.3B active, including the audio encoder.
 - Intended task: offline speech transcription, speech translation, speaker-attributed
   transcription, rich transcription, and audio question answering, for 40 languages and
-  recordings up to one hour, per the pinned card.
+  recordings up to one hour, per the pinned card. Deployment intent for this catalog entry:
+  speech-to-text only.
 - Official versus third-party evidence: `nvidia` publishes the upstream checkpoint. The
   4-bit MLX artifact is a third-party conversion by `nativ-community`.
 - Lane rationale: UNVERIFIED.
@@ -40,6 +40,8 @@ status: started
   observed 2026-11-13.
 - Artifact repository: `nativ-community/Nemotron-3.5-Transcribe-30B-A4B-EA-4bit`.
 - Artifact publisher: `nativ-community` (`author`).
+- Artifact license: none declared. The card metadata has no license field, and the file
+  listing has no LICENSE file. Whether OpenMDW-1.1 applies to this export: UNVERIFIED.
 - Immutable artifact revision: `c47153ca2ce4024d43e216b81e6db4f67b886545` (`sha`).
   [Pinned files](https://huggingface.co/nativ-community/Nemotron-3.5-Transcribe-30B-A4B-EA-4bit/tree/c47153ca2ce4024d43e216b81e6db4f67b886545).
 - Artifact created date: 2026-10-28T15:04:50.000Z (`createdAt`).
@@ -47,24 +49,32 @@ status: started
   [Hub API](https://huggingface.co/api/models/nativ-community/Nemotron-3.5-Transcribe-30B-A4B-EA-4bit?blobs=true).
 - Quantization recipe: affine 4-bit, group size 64, on language-model weights (164 quantized
   modules). Speech and speaker encoders are unquantized.
-  [Pinned conversion record][nativ-conversion],
-  observed 2026-11-13.
+  [Pinned conversion record][nativ-conversion], observed 2026-11-13.
 - Calibration provenance: not applicable; affine MLX quantization is calibration-free.
   Method and source: `conversion.json` in the pinned revision, observed 2026-11-13.
 - Upstream source revision: not published by converter. `conversion.json` names the source as
   `Nemotron-3.5-Transcribe-30B-A4B-EA` with source weights SHA-256
   `3c8fea7c469945ade54def8340e2f3c9571f6383b9bf379edcc476419c35caaf`. Mapping that
   source to the `nvidia` repository revision above: UNVERIFIED.
-- Transformation: MLX conversion of the upstream checkpoint, mlx 0.32.4, quantization as above;
-  optional MTP heads omitted (`conversion.json`).
-- Weight files: four safetensors shards, 19,258,638,574 bytes in total (about 19.3 GB), per the
-  pinned file listing.
+- Transformation: MLX conversion of the upstream checkpoint, mlx 0.32.4, quantization as above.
+- Omitted components: MTP heads (`conversion.json`: `optional_mtp_heads_included: false`).
+  The CTC timestamp head is also absent from the weights. The
+  [pinned weight index][nativ-index] lists 1,581 tensors, and none has an MTP or CTC name.
+  The perception modules are the ASR encoder, speaker model, normalization, preprocessor, and
+  projection. `config.json` still declares an `mtp` block (`num_nextn_predict_layers: 2`),
+  which the weights do not contain.
+- Weight files: four safetensors shards, 19,258,638,574 bytes in total (19.26 GB), per the
+  pinned file listing. Safetensors parameters: 32,311,569,792 (32.3B), stored as U32, F32,
+  and BF16 tensors.
 
 ## 3. Runtime and memory
 
 - Runtime: mlx-audio, pinned to implementation commit
   `92decb7577878ef8e9274c1a7e33084760be03aa` (install line on the pinned artifact card).
-  Released mlx-audio version: UNVERIFIED.
+  The pinned commit is not in the v0.6.5 release history. A [comparison of the tag with the
+  commit][tag-compare] is diverged, 2 commits ahead and 123 behind. PyPI lists 0.6.5 uploaded
+  2026-11-09, [release page][pypi-release]. Validation used the pinned commit, not 0.6.5. The
+  upstream repository now lives at `Neywa-Labs/mlx-audio`; the card's install URL redirects there.
 - Tagged runtime/container revision: `92decb7577878ef8e9274c1a7e33084760be03aa`.
 - Supported architecture and hardware path: Apple silicon with MLX 0.32.4. The publisher's
   validation ran on Apple M3 Ultra with strict reload (`validation.json`).
@@ -75,6 +85,13 @@ status: started
   (`load`, then `generate` with task options). OpenAI-compatible serving: UNVERIFIED. Card
   limitations: no timestamps for speaker tags, streaming is not incremental microphone
   recognition, output is text only.
+- Word timestamps: not available from this export, because the CTC head is absent from the
+  weights. The upstream card's word-timestamp server example uses the BF16 checkpoint and does
+  not state a precision limit.
+- Speculative decoding: not available from this export, because the MTP heads are absent. The
+  upstream MTP and DFlash2 throughput table is for BF16 on one H100. The upstream serving chart
+  covers BF16, FP8, and NVFP4 with and without speculative decoding, and its NIM section names
+  NVFP4 with DFlash2. Support for either method in this runtime: UNVERIFIED.
 - Weights, cache/state, vision, graph/compiler, drafter, and co-resident bytes: weight shards
   19,258,638,574 bytes. Cache, graph, and co-resident bytes: UNVERIFIED.
 - Input/output length and concurrency: upstream card states recordings up to one hour and a
@@ -102,9 +119,13 @@ status: started
 
 - Dated promotion decision: UNVERIFIED.
 - Predeclared acceptance criteria: UNVERIFIED.
-- Unresolved fields: quantized-artifact benchmark, source-to-upstream revision mapping, third-party
-  notices review, runtime and endpoint details, memory budget beyond weight bytes, comparison and
-  acceptance criteria.
+- Unresolved fields: artifact license compatibility, quantized-artifact benchmark,
+  source-to-upstream revision mapping, third-party notices review, runtime and endpoint details
+  (including word timestamps and speculative decoding), memory budget beyond weight bytes,
+  comparison and acceptance criteria.
 
 [upstream-card]: https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B/blob/c17667641642c4265ff2b7037dd101b7d4567634/README.md
 [nativ-conversion]: https://huggingface.co/nativ-community/Nemotron-3.5-Transcribe-30B-A4B-EA-4bit/blob/c47153ca2ce4024d43e216b81e6db4f67b886545/conversion.json
+[nativ-index]: https://huggingface.co/nativ-community/Nemotron-3.5-Transcribe-30B-A4B-EA-4bit/blob/c47153ca2ce4024d43e216b81e6db4f67b886545/model.safetensors.index.json
+[tag-compare]: https://github.com/Neywa-Labs/mlx-audio/compare/v0.6.5...92decb7577878ef8e9274c1a7e33084760be03aa
+[pypi-release]: https://pypi.org/project/mlx-audio/0.6.5/
