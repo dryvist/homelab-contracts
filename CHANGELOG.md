@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.61.1](https://github.com/jpe-ansible/homelab-contracts/compare/v5.61.0...v5.61.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* keep the server host class on its own ocr model ([#372](https://github.com/jpe-ansible/homelab-contracts/issues/372)) ([0af3720](https://github.com/jpe-ansible/homelab-contracts/commit/0af3720f7878f3664e65a0c70a33c6ecbd011d22))
+
 ## [5.61.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.60.0...v5.61.0) (2026-11-13)
 
 
