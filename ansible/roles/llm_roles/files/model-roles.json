@@ -42,8 +42,10 @@
     },
     "server": {
       "resident": ["qwen38-27b", "mimo-9b"],
-      "swap": ["glm-ocr"],
-      "roles": {}
+      "swap": ["unlimited-ocr"],
+      "roles": {
+        "ocr": { "model": "unlimited-ocr", "egress": "none" }
+      }
     }
   }
 }
