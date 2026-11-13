@@ -1,0 +1,177 @@
+---
+# Upgrade an existing Edge Node using the vendor's manual Linux tarball
+# procedure: stop the service and unpack the new release over the install.
+# The local/ archive is a safety copy; no install-path directory is removed.
+
+- name: Read the installed Cribl Edge version
+  ansible.builtin.command:
+    cmd: "{{ cribl_edge_install_dir }}/bin/cribl version"
+  register: cribl_edge_upgrade_version_command
+  changed_when: false
+  check_mode: false
+
+- name: Parse installed and catalog Cribl Edge versions
+  ansible.builtin.set_fact:
+    cribl_edge_running_version: >-
+      {{ cribl_edge_upgrade_version_command.stdout
+         | regex_search('Version:\s*(\S+)', '\1')
+         | default([], true) | first | default('', true) }}
+    cribl_edge_running_release: >-
+      {{ cribl_edge_upgrade_version_command.stdout
+         | regex_search('Version:\s*(\d+\.\d+\.\d+)', '\1')
+         | default([], true) | first | default('', true) }}
+    cribl_edge_catalog_release: >-
+      {{ cribl_edge_version
+         | regex_search('^(\d+\.\d+\.\d+)', '\1')
+         | default([], true) | first | default('', true) }}
+  changed_when: false
+
+- name: Require parseable installed and catalog Cribl Edge versions
+  ansible.builtin.assert:
+    that:
+      - cribl_edge_running_version | length > 0
+      - cribl_edge_running_release | length > 0
+      - cribl_edge_catalog_release | length > 0
+    fail_msg: >-
+      Could not compare installed Cribl Edge version
+      '{{ cribl_edge_running_version }}' with catalog version
+      '{{ cribl_edge_version }}'.
+  changed_when: false
+
+- name: Keep a newer Cribl Edge version without downgrading
+  ansible.builtin.debug:
+    msg: >-
+      Installed Cribl Edge {{ cribl_edge_running_version }} is newer than
+      catalog {{ cribl_edge_version }}; leaving it unchanged.
+  when: >-
+    cribl_edge_running_release is version(
+      cribl_edge_catalog_release, '>', version_type='semver')
+
+- name: Upgrade Cribl Edge to the catalog version
+  vars:
+    _cribl_edge_backup_path: >-
+      {{ cribl_edge_install_dir | dirname }}/cribl-edge-backups/local-{{
+      cribl_edge_running_version }}-{{ ansible_facts.date_time.epoch }}.tgz
+  when:
+    - >-
+      not (cribl_edge_running_version is match(
+        '^' ~ cribl_edge_version ~ '(\W|$)'))
+    - >-
+      not (cribl_edge_running_release is version(
+        cribl_edge_catalog_release, '>', version_type='semver'))
+  block:
+    - name: Ensure the Cribl Edge backup directory exists
+      ansible.builtin.file:
+        path: "{{ cribl_edge_install_dir | dirname }}/cribl-edge-backups"
+        state: directory
+        mode: "0700"
+
+    # Check both remote objects before stopping Edge, so an unpublished
+    # tarball or checksum leaves the current service running.
+    - name: Confirm the catalog tarball and checksum are downloadable
+      ansible.builtin.uri:
+        url: "{{ item }}"
+        method: HEAD
+        status_code: [200]
+      loop:
+        - "{{ cribl_edge_tarball_url }}"
+        - "{{ cribl_edge_tarball_url }}.sha256"
+
+    - name: Stop, replace and restart Cribl Edge
+      block:
+        - name: Stop Cribl Edge before upgrading
+          ansible.builtin.systemd:
+            name: "{{ cribl_edge_service_name }}"
+            state: stopped
+
+        - name: Back up local/ before upgrading
+          ansible.builtin.command:
+            argv:
+              - tar
+              - -czf
+              - "{{ _cribl_edge_backup_path }}"
+              - -C
+              - "{{ cribl_edge_install_dir }}"
+              - local
+          changed_when: true
+
+        - name: Set Cribl Edge local backup permissions
+          ansible.builtin.file:
+            path: "{{ _cribl_edge_backup_path }}"
+            mode: "0600"
+
+        - name: Download the catalog Cribl Edge tarball with checksum verification
+          ansible.builtin.get_url:
+            url: "{{ cribl_edge_tarball_url }}"
+            dest: /tmp/cribl-edge-upgrade.tgz
+            checksum: "sha256:{{ cribl_edge_tarball_url }}.sha256"
+            mode: "0644"
+
+        - name: Extract the new version over the existing Cribl Edge install
+          ansible.builtin.unarchive:
+            src: /tmp/cribl-edge-upgrade.tgz
+            dest: "{{ cribl_edge_install_dir | dirname }}"
+            remote_src: true
+            owner: "{{ cribl_edge_user }}"
+            group: "{{ cribl_edge_group }}"
+          when: not ansible_check_mode
+
+        - name: Start Cribl Edge after upgrading
+          ansible.builtin.systemd:
+            name: "{{ cribl_edge_service_name }}"
+            state: started
+
+        - name: Wait for Cribl Edge health after the upgrade
+          ansible.builtin.uri:
+            url: "http://127.0.0.1:{{ cribl_edge_api_port }}/api/v1/health"
+            method: GET
+            status_code: [200]
+            timeout: 30
+          register: cribl_edge_upgrade_health
+          check_mode: false
+          until: cribl_edge_upgrade_health.status | default(0) == 200
+          retries: 24
+          delay: 5
+          changed_when: false
+
+        - name: Read the Cribl Edge version after upgrading
+          ansible.builtin.command:
+            cmd: "{{ cribl_edge_install_dir }}/bin/cribl version"
+          register: cribl_edge_upgrade_verified_version
+          changed_when: false
+          check_mode: false
+          when: not ansible_check_mode
+
+        - name: Verify Cribl Edge reports the catalog version
+          ansible.builtin.assert:
+            that:
+              - >-
+                (cribl_edge_upgrade_verified_version.stdout
+                 | regex_search('Version:\s*(\S+)', '\1')
+                 | default([], true) | first | default('', true))
+                is match('^' ~ cribl_edge_version ~ '(\W|$)')
+            fail_msg: >-
+              Cribl Edge did not report catalog version {{ cribl_edge_version }}
+              after the upgrade.
+          changed_when: false
+          when: not ansible_check_mode
+
+        - name: Remove the downloaded Cribl Edge upgrade tarball
+          ansible.builtin.file:
+            path: /tmp/cribl-edge-upgrade.tgz
+            state: absent
+
+      # Match the Stream recovery contract: try to start the service, then
+      # fail the run so an incomplete upgrade is never reported as successful.
+      rescue:
+        - name: Start Cribl Edge again after a failed upgrade
+          ansible.builtin.systemd:
+            name: "{{ cribl_edge_service_name }}"
+            state: started
+
+        - name: Fail the run on the Cribl Edge upgrade error
+          ansible.builtin.fail:
+            msg: >-
+              Cribl Edge upgrade to {{ cribl_edge_version }} failed at
+              '{{ ansible_failed_task.name }}'; the service was started again.
+              {{ ansible_failed_result.msg | default('') }}
