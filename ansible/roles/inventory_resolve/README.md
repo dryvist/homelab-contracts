@@ -39,7 +39,7 @@ Pin via `requirements.yml`:
 ```yaml
 roles:
   - name: inventory_resolve
-    src: https://github.com/dryvist/homelab-contracts.git
+    src: https://github.com/jpe-ansible/homelab-contracts.git
     scm: git
     version: <release tag>
 ```

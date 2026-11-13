@@ -40,7 +40,7 @@ In a consumer's `requirements.yml`:
 
 ```yaml
 collections:
-  - name: https://github.com/dryvist/homelab-contracts.git#/ansible/
+  - name: https://github.com/jpe-ansible/homelab-contracts.git#/ansible/
     type: git
     version: <commit SHA>
 ```
