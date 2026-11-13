@@ -1,7 +1,7 @@
 ---
 namespace: dryvist
 name: homelab
-version: 5.60.0
+version: 5.60.0  # x-release-please-version
 readme: README.md
 authors:
   - JacobPEvans <20714140+JacobPEvans-personal@users.noreply.github.com>
