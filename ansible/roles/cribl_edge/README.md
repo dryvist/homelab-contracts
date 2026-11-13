@@ -81,6 +81,15 @@ After Ansible deployment, configure listeners and outputs via Cribl Web UI:
 - Set HEC output credentials
 - Configure network listeners (via templates)
 
+## Version upgrades
+
+The upgrade follows Cribl's [manual Edge Node upgrade procedure](https://docs.cribl.io/edge/upgrade-nodes-manually/).
+When an installed Edge version differs from the catalog, the role stops the
+service, backs up `local/`, extracts the checksum-verified catalog tarball over
+the existing install, restarts Edge, and checks health and the reported version.
+An installed version newer than the catalog is left unchanged. Upgrade the
+Leader before its Edge Nodes; Edge Nodes must not run a newer version than their Leader.
+
 ## Handlers
 
 - `restart cribl edge`: Restart the Cribl Edge service

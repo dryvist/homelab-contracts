@@ -50,6 +50,15 @@
     path: "{{ cribl_edge_install_dir }}/bin/cribl"
   register: cribl_edge_binary
 
+- name: Download Cribl Edge tarball with checksum verification
+  ansible.builtin.get_url:
+    url: "{{ cribl_edge_tarball_url }}"
+    dest: /tmp/cribl-edge-install.tgz
+    checksum: "sha256:{{ cribl_edge_tarball_url }}.sha256"
+    mode: "0644"
+  register: cribl_edge_install_download
+  when: not cribl_edge_binary.stat.exists
+
 - name: Create install directory parent
   ansible.builtin.file:
     path: /opt
@@ -58,12 +67,22 @@
 
 - name: Download and extract Cribl Edge tarball
   ansible.builtin.unarchive:
-    src: "{{ cribl_edge_tarball_url }}"
+    src: /tmp/cribl-edge-install.tgz
     dest: /opt
     remote_src: true
     owner: "{{ cribl_edge_user }}"
     group: "{{ cribl_edge_group }}"
-  when: not cribl_edge_binary.stat.exists
+  when:
+    - not cribl_edge_binary.stat.exists
+    - not (ansible_check_mode and cribl_edge_install_download is changed)
+
+- name: Remove downloaded Cribl Edge install tarball
+  ansible.builtin.file:
+    path: /tmp/cribl-edge-install.tgz
+    state: absent
+  when:
+    - not cribl_edge_binary.stat.exists
+    - not ansible_check_mode
 
 # Fresh-install only: recursing over a RUNNING Edge races its persistent
 # queues (queue *.ndjson.tmp files rotate mid-walk -> ENOENT) and pointlessly
@@ -77,6 +96,11 @@
     recurse: true
     state: directory
   when: not cribl_edge_binary.stat.exists
+
+- name: Upgrade an installed Cribl Edge to the catalog version
+  ansible.builtin.include_tasks:
+    file: upgrade.yml
+  when: cribl_edge_binary.stat.exists
 
 - name: Check current Cribl mode
   ansible.builtin.slurp:
