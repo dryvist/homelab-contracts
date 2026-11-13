@@ -1,5 +1,10 @@
 # Dossier log
 
+## 2026-11-13
+
+* **Creation**: Added the Nemotron 3.5 Transcribe dossier and its policy record,
+  with upstream and 4-bit artifact provenance and the upstream Open ASR score.
+
 ## 2026-11-07
 
 * **Update**: Recorded live benchmark scores, dates, and source links for
