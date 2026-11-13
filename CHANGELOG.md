@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.61.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.60.0...v5.61.0) (2026-11-13)
+
+
+### Features
+
+* map the ocr role to glm-ocr ([#368](https://github.com/jpe-ansible/homelab-contracts/issues/368)) ([0db86d9](https://github.com/jpe-ansible/homelab-contracts/commit/0db86d9b0aba34d91566473b0eeda3b8b6d13e2b))
+* upgrade existing Cribl Edge installs ([#370](https://github.com/jpe-ansible/homelab-contracts/issues/370)) ([56f8547](https://github.com/jpe-ansible/homelab-contracts/commit/56f854755ef9cb426b115723b7247871a1d8bbc6))
+
+
+### Bug Fixes
+
+* **cribl:** update catalog to 4.20.4 ([#367](https://github.com/jpe-ansible/homelab-contracts/issues/367)) ([48e5b56](https://github.com/jpe-ansible/homelab-contracts/commit/48e5b56f7f465b44201c10ad5920aac049f42bd6))
+* keep the YAML start marker in the collection manifest on release ([#371](https://github.com/jpe-ansible/homelab-contracts/issues/371)) ([45edab5](https://github.com/jpe-ansible/homelab-contracts/commit/45edab5f932685bb67c5c5f200d94d887a0e89e1))
+
 ## [5.60.0](https://github.com/dryvist/homelab-contracts/compare/v5.59.0...v5.60.0) (2026-11-12)
 
 
