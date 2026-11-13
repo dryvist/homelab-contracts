@@ -1,7 +1,7 @@
 ---
 skill-groups: [core, git, homelab]
 ---
-# AI Agents Configuration — dryvist/homelab-contracts
+# AI Agents Configuration — jpe-ansible/homelab-contracts
 
 This repo is the **single source of truth** for the dryvist homelab cross-repo
 contracts: the inventory shape, the port constants, and the small shared tools

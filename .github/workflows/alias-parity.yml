@@ -59,7 +59,7 @@ jobs:
       - name: Sparse-checkout the shared lane contract and checker
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: dryvist/homelab-contracts
+          repository: jpe-ansible/homelab-contracts
           ref: ${{ inputs.contracts-ref || job.workflow_sha }}
           path: .homelab-contracts
           sparse-checkout: |

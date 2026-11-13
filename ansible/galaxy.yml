@@ -16,8 +16,8 @@ tags:
   - infrastructure
   - cribl
   - ansible
-repository: https://github.com/dryvist/homelab-contracts
-issues: https://github.com/dryvist/homelab-contracts/issues
+repository: https://github.com/jpe-ansible/homelab-contracts
+issues: https://github.com/jpe-ansible/homelab-contracts/issues
 build_ignore:
   - '*.tar.gz'
   - .DS_Store
