@@ -5,6 +5,7 @@
     "mimo-9b": { "id": "mlx-community/MiMo-V2.6-Distill-Qwen-9B-OptiQ-4bit" },
     "qwen35-9b": { "id": "mlx-community/Qwen3.5-9B-OptiQ-4bit" },
     "unlimited-ocr": { "id": "mlx-community/Unlimited-OCR-bf16" },
+    "glm-ocr": { "id": "ggml-org/GLM-OCR-GGUF" },
     "stage0_embedding": { "id": "nativ-community/embeddinggemma-2-mxfp8" },
     "stage0_systemone_opendecider": { "id": "manjunathshiva/opendecider-nano" },
     "stage0_systemone_laya": { "id": "convaiinnovations/laya-typed-decisions" }
@@ -21,7 +22,7 @@
     "small": { "model": "mimo-9b", "egress": "estate" },
     "judge": { "model": "mimo-9b", "egress": "zdr" },
     "recorder": { "model": "mimo-9b", "egress": "estate" },
-    "ocr": { "model": "unlimited-ocr", "egress": "none" },
+    "ocr": { "model": "glm-ocr", "egress": "none" },
     "embed": { "model": null, "egress": "none" },
     "stage0_embedding": { "model": "stage0_embedding", "egress": "none" },
     "stage0_systemone_opendecider": { "model": "stage0_systemone_opendecider", "egress": "none" },
@@ -41,7 +42,7 @@
     },
     "server": {
       "resident": ["qwen38-27b", "mimo-9b"],
-      "swap": ["unlimited-ocr"],
+      "swap": ["glm-ocr"],
       "roles": {}
     }
   }
