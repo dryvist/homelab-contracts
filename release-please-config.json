@@ -10,7 +10,7 @@
     ".": {
       "package-name": "homelab-contracts",
       "changelog-path": "CHANGELOG.md",
-      "extra-files": ["ansible/galaxy.yml"]
+      "extra-files": [{ "type": "generic", "path": "ansible/galaxy.yml" }]
     }
   },
   "plugins": []
