@@ -1,3 +1,4 @@
+---
 - name: Read the inventory contract
   ansible.builtin.set_fact:
     _agent_inventory_contract: "{{ lookup('ansible.builtin.file', ownership_inventory_file) | from_json }}"

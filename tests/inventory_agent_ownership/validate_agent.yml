@@ -1,3 +1,4 @@
+---
 - name: Assert each capability has one owning agent
   ansible.builtin.assert:
     that:
