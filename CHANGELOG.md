@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.63.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.62.0...v5.63.0) (2026-11-14)
+
+
+### Features
+
+* **run-ansible:** add a fingerprint-checked host CA line to the per-run pin ([#375](https://github.com/jpe-ansible/homelab-contracts/issues/375)) ([e81a0ad](https://github.com/jpe-ansible/homelab-contracts/commit/e81a0ad487ded8d17edf0ef227a1924cf5b0416f))
+
 ## [5.62.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.61.1...v5.62.0) (2026-11-14)
 
 
