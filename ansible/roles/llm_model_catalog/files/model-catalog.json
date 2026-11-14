@@ -21,7 +21,7 @@
     {"name":"mlx-community/Qwen3.6-35B-A3B-4bit","context_window":65536},
     {"name":"mlx-community/Qwen3.5-9B-MLX-4bit","context_window":32768},
     {"name":"mlx-community/Unlimited-OCR-bf16","aliases":["unlimited-ocr"],"context_window":32768,"max_parallel_requests":1},
-    {"name":"ggml-org/GLM-OCR-GGUF","aliases":["glm-ocr"],"context_window":16384,"max_output_tokens":4096,"max_parallel_requests":2,"request_timeout":90},
+    {"name":"ggml-org/GLM-OCR-GGUF","aliases":["glm-ocr"],"context_window":16384,"max_output_tokens":4096,"max_parallel_requests":2,"request_timeout":90,"hf_repo":"ggml-org/GLM-OCR-GGUF","gguf":"GLM-OCR-Q8_0.gguf","hf_revision":"65a42de1148dbed2297e922b5dbc7d9b70c36578","mmproj_file":"mmproj-GLM-OCR-Q8_0.gguf"},
     {"name":"mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit","context_window":65536},
     {"name":"mlx-community/Qwen3-Next-80B-A3B-Thinking-4bit","context_window":32768},
     {"name":"mlx-community/Qwen3-Next-80B-A3B-Instruct-4bit","context_window":65536},
