@@ -151,6 +151,12 @@ jobs:
             echo "bad-missing-class.json unexpectedly validated" >&2
             exit 1
           fi
+      - name: Negative - a non-boolean zone restricted flag must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-restricted-type.json; then
+            echo "bad-restricted-type.json unexpectedly validated" >&2
+            exit 1
+          fi
       - name: Negative - a dense model with concurrency above 1 must fail the schema
         run: |
           if check-jsonschema --schemafile schemas/model-roles-v1.json tests/llm_roles/bad-dense-concurrency.json; then
