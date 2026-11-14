@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.64.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.63.0...v5.64.0) (2026-11-14)
+
+
+### Features
+
+* **catalog:** add download fields for the image-text model ([#378](https://github.com/jpe-ansible/homelab-contracts/issues/378)) ([71f4a3d](https://github.com/jpe-ansible/homelab-contracts/commit/71f4a3d129849ac860e19e30b3265a6e4907ed3b))
+
 ## [5.63.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.62.0...v5.63.0) (2026-11-14)
 
 
