@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.65.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.64.0...v5.65.0) (2026-11-14)
+
+
+### Features
+
+* **schemas:** add the secrets arrangement contract ([#380](https://github.com/jpe-ansible/homelab-contracts/issues/380)) ([fd150c5](https://github.com/jpe-ansible/homelab-contracts/commit/fd150c56afe4f539c7b1caa5f9f5e9bb96270a86))
+
 ## [5.64.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.63.0...v5.64.0) (2026-11-14)
 
 
