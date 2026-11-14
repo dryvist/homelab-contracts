@@ -339,6 +339,24 @@
           The catalog declares a duplicate model name/alias or (hf_repo, gguf)
           pair; each identity must be unique.
 
+    - name: Collect the image-text model catalog entry
+      ansible.builtin.set_fact:
+        glm_ocr_catalog_entry: >-
+          {{ llm_model_catalog_models
+             | selectattr('name', 'equalto', 'ggml-org/GLM-OCR-GGUF')
+             | first | default({}) }}
+
+    - name: Image-text model pins its GGUF and projector files
+      ansible.builtin.assert:
+        that:
+          - glm_ocr_catalog_entry.hf_repo == 'ggml-org/GLM-OCR-GGUF'
+          - glm_ocr_catalog_entry.gguf == 'GLM-OCR-Q8_0.gguf'
+          - glm_ocr_catalog_entry.hf_revision == '65a42de1148dbed2297e922b5dbc7d9b70c36578'
+          - glm_ocr_catalog_entry.mmproj_file == 'mmproj-GLM-OCR-Q8_0.gguf'
+        fail_msg: >-
+          The image-text model must pin its GGUF and projector files to the
+          declared repository revision.
+
     - name: Catalog aliases reference a declared model
       ansible.builtin.assert:
         that:
