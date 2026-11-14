@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.62.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.61.1...v5.62.0) (2026-11-14)
+
+
+### Features
+
+* **models:** add Nemotron 3.5 Transcribe policy record ([#364](https://github.com/jpe-ansible/homelab-contracts/issues/364)) ([d76b040](https://github.com/jpe-ansible/homelab-contracts/commit/d76b04070d304a8d16f223440e06357165bce829))
+
 ## [5.61.1](https://github.com/jpe-ansible/homelab-contracts/compare/v5.61.0...v5.61.1) (2026-11-13)
 
 
