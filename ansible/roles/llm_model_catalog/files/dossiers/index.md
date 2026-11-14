@@ -25,7 +25,9 @@
 ## Admission status
 
 Observed 2026-11-06. No priority candidate has a completed trial dossier.
-No new entry is added to [policy models](../model-policy.json).
+Policy models added after that observation are listed in
+[policy models](../model-policy.json). The Nemotron 3.5 Transcribe record, observed
+2026-11-13, is a started, non-priority dossier: [Nemotron 3.5 Transcribe](nvidia-NVIDIA-Nemotron-3-5-Transcribe-30B-A4B.md).
 EmbeddingGemma MXFP8 admission references dated upstream MTEB results at
 the converter's source checkpoint. The dossier separately records MXFP8
 smoke-check results; admission does not certify quantized retrieval quality

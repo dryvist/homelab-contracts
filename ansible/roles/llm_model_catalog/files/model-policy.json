@@ -166,6 +166,12 @@
       "upstream_id": "zai-org/GLM-OCR",
       "upstream_created": "2026-01-30",
       "dossier": "ansible/roles/llm_model_catalog/files/dossiers/ggml-org-GLM-OCR-GGUF.md"
+    },
+    {
+      "id": "nativ-community/Nemotron-3.5-Transcribe-30B-A4B-EA-4bit",
+      "upstream_id": "nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B",
+      "upstream_created": "2026-10-07",
+      "dossier": "ansible/roles/llm_model_catalog/files/dossiers/nvidia-NVIDIA-Nemotron-3-5-Transcribe-30B-A4B.md"
     }
   ],
   "exempt_hosted": [
