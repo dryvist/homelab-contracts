@@ -232,6 +232,27 @@ use_static_key() {
   fi
 }
 
+# Appends a host-CA line to the per-run pin. Any read failure adds nothing; a CA key that does not match the
+# configured fingerprint warns and adds nothing.
+add_cert_authority() {
+  local mount=${SSH_CA_MOUNT:-ssh-client-ca} conf hosts want key got
+  [[ -n ${BAO_ADDR:-} && -n ${BAO_TOKEN:-} ]] || return 0
+  { set +x; } 2>/dev/null
+  conf=$(curl -fsSL --max-time 10 -H @<(printf 'X-Vault-Token: %s\n' "$BAO_TOKEN") \
+    "$BAO_ADDR/v1/config/data/ssh/converge" 2>/dev/null) || return 0
+  hosts=$(jq -er '.data.data.cert_authority_hosts' <<<"$conf" 2>/dev/null) || return 0
+  want=$(jq -er '.data.data.ca_fingerprint' <<<"$conf" 2>/dev/null) || return 0
+  key=$(curl -fsSL --max-time 10 "$BAO_ADDR/v1/$mount/public_key" 2>/dev/null) || return 0
+  # One host-pattern field and one key line, so the stored values cannot add a second known_hosts line.
+  [[ $hosts =~ ^[^[:space:]]+$ && -n $key && $key != *$'\n'* ]] || return 0
+  got=$(ssh-keygen -lf /dev/stdin <<<"$key" 2>/dev/null | awk '{print $2}') || return 0
+  if [[ -z $got || $got != "$want" ]]; then
+    echo "WARNING: the SSH host CA key does not match the configured fingerprint; no host-CA line was added." >&2
+    return 0
+  fi
+  printf '@cert-authority %s %s\n' "$hosts" "$key" >> "$WORK_DIR/known_hosts"
+}
+
 merge_known_hosts() {
   local merged="$WORK_DIR/known_hosts.merged"
   mkdir -p "$HOME/.ssh"
@@ -465,6 +486,7 @@ main() {
   if [[ -n ${SSH_KNOWN_HOSTS:-} ]]; then
     printf '%s\n' "$SSH_KNOWN_HOSTS" > "$WORK_DIR/known_hosts"
     chmod 600 "$WORK_DIR/known_hosts"
+    add_cert_authority
     # Prepended options win: OpenSSH uses the first value per option, so caller extras cannot weaken the pin.
     pin_args="-o UserKnownHostsFile=$WORK_DIR/known_hosts -o GlobalKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes"
     export ANSIBLE_SSH_COMMON_ARGS="$pin_args${ANSIBLE_SSH_COMMON_ARGS:+ $ANSIBLE_SSH_COMMON_ARGS}"

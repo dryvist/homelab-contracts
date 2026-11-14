@@ -22,7 +22,7 @@ setup() {
   unset RUN_ANSIBLE_LOG_DIR FIXTURE_REFUSED_ROLE FIXTURE_SIGN_FAIL FIXTURE_SIGN_FAIL_ROLE FIXTURE_REVOKE_FAILS FIXTURE_RECAP
   unset RUN_ANSIBLE_FALLBACK_ON_ERROR RUN_ANSIBLE_REQUIRE_RECAP RUN_ANSIBLE_RETIRING_IDENTITIES RUN_ANSIBLE_WARN_NO_ISSUER
   unset OPENBAO_APPROLE_APPROLE_ISSUER_ROLE_ID OPENBAO_APPROLE_APPROLE_ISSUER_SECRET_ID OPENBAO_PROVISIONING_TOKEN
-  unset FIXTURE_ANSIBLE_EXIT
+  unset FIXTURE_ANSIBLE_EXIT FIXTURE_CONVERGE_CONF
 
   export HOME="$BATS_TEST_TMPDIR/home"
   mkdir -p "$HOME"
@@ -87,12 +87,23 @@ case "$method $path" in
     echo 0 > "$FIXTURE_REVOKE_LEFT"
     printf '{}\n'
     ;;
+  "GET /v1/config/data/ssh/converge")
+    [ -n "${FIXTURE_CONVERGE_CONF:-}" ] || exit 22
+    printf '%s\n' "$FIXTURE_CONVERGE_CONF"
+    ;;
+  "GET /v1/"*"/public_key")
+    printf 'ssh-ed25519 AAAACA\n'
+    ;;
   *) exit 22 ;;
 esac
 SH
   cat > "$STUB/ssh-keygen" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
+if [ "${1:-}" = "-lf" ]; then
+  printf '256 SHA256:CAFP no comment (ED25519)\n'
+  exit 0
+fi
 out=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -157,6 +168,7 @@ fi
   printf 'bao_token=%s\n' "${BAO_TOKEN:+set}"
   printf 'host_key_checking=%s\n' "${ANSIBLE_HOST_KEY_CHECKING:-}"
   printf 'known_hosts_file=%s\n' "${SSH_KNOWN_HOSTS_FILE:-}"
+  grep '^@' "${SSH_KNOWN_HOSTS_FILE:-/dev/null}" || true
   printf 'converge=%s:%s:%s\n' "${CONVERGE_IDENTITY:-}" "${CONVERGE_ROLE_ID:-}" "${CONVERGE_SECRET_ID:+set}"
   if [[ -z ${OPENBAO_SEED_WRITER_TOKEN:-} ]]; then
     printf 'seed_writer=unset\n'
@@ -737,4 +749,35 @@ with_origin() {
   run "$RUN_ANSIBLE" site.yml
   [ "$status" -eq 0 ]
   grep -Eq '^known_hosts_file=.+/known_hosts$' "$FIXTURE_RUN_LOG"
+}
+
+converge_conf() {
+  export FIXTURE_CONVERGE_CONF="{\"data\":{\"data\":{\"cert_authority_hosts\":\"*.pin.example\",\"ca_fingerprint\":\"$1\"}}}"
+}
+
+@test "a matching host CA fingerprint adds one host-CA line to the per-run pin" {
+  signer_env
+  converge_conf SHA256:CAFP
+  export SSH_KNOWN_HOSTS='pin.example ssh-ed25519 AAAAPIN'
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  grep -Fqx '@cert-authority *.pin.example ssh-ed25519 AAAACA' "$FIXTURE_RUN_LOG"
+}
+
+@test "a mismatched host CA fingerprint warns and adds no host-CA line" {
+  signer_env
+  converge_conf SHA256:OTHER
+  export SSH_KNOWN_HOSTS='pin.example ssh-ed25519 AAAAPIN'
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  [[ $output == *"does not match the configured fingerprint"* ]]
+  ! grep -q '^@' "$FIXTURE_RUN_LOG"
+}
+
+@test "an unreadable converge config adds no host-CA line" {
+  signer_env
+  export SSH_KNOWN_HOSTS='pin.example ssh-ed25519 AAAAPIN'
+  run "$RUN_ANSIBLE" site.yml
+  [ "$status" -eq 0 ]
+  ! grep -q '^@' "$FIXTURE_RUN_LOG"
 }
