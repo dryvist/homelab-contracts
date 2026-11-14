@@ -115,6 +115,7 @@ Centralising the schema gives us:
 ```text
 schemas/
   ansible-inventory-v1.json    # JSON Schema (draft 2020-12) for the inventory artifact, incl. the `constants` port block
+  secrets-arrangement-v1.json  # JSON Schema (draft 2020-12) for an OpenBao secrets arrangement document
 bin/
   flow-lock                    # Non-IaC mutation lease + gated credential injection
   bao-approle                  # Shared AppRole login, revoke-self and GitHub installation-token CLI
