@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [5.66.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.65.0...v5.66.0) (2026-11-14)
+
+
+### Features
+
+* **schemas:** mark restricted zones in the secrets arrangement ([#382](https://github.com/jpe-ansible/homelab-contracts/issues/382)) ([a449a2e](https://github.com/jpe-ansible/homelab-contracts/commit/a449a2e5f97cacfdd78f1f9a3ad497cf63369f83))
+
 ## [5.65.0](https://github.com/jpe-ansible/homelab-contracts/compare/v5.64.0...v5.65.0) (2026-11-14)
 
 
