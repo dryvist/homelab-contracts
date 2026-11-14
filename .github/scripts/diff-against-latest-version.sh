@@ -30,4 +30,5 @@ check_schema() {
 status=0
 check_schema schemas/ansible-inventory-v1.json ansible-inventory.json || status=1
 check_schema schemas/nautobot-export-v1.json nautobot-export.json || status=1
+check_schema schemas/secrets-arrangement-v1.json secrets-arrangement.json || status=1
 exit "$status"

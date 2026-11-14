@@ -15,6 +15,8 @@ This repo owns:
 - `schemas/ansible-inventory-v1.json` — JSON Schema (draft 2020-12) for the inventory
   artifact, including the `constants` block that carries the service / syslog / NetFlow /
   notification / vector-DB port values
+- `schemas/secrets-arrangement-v1.json` — JSON Schema (draft 2020-12) for an OpenBao secrets
+  arrangement: zones, services, identities, and grants
 - `bin/flow-lock` — the non-IaC mutation lease + gated credential injection (OpenBao KV v2 CAS)
 - `bin/deployment-json` — locked, schema-gated deployment.json fetch/edit/put
 - `ansible/roles/inventory_resolve` — shared inventory-resolution role for the ansible repos

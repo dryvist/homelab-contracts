@@ -107,6 +107,50 @@ jobs:
         run: check-jsonschema --schemafile schemas/lanes-v1.json ansible/roles/llm_roles/files/lanes.json
       - name: Validate the agent_callers registry against its schema
         run: check-jsonschema --schemafile schemas/callers-v1.json ansible/roles/agent_callers/files/callers.json
+      - name: Validate the secrets_arrangement example against its schema
+        run: check-jsonschema --schemafile schemas/secrets-arrangement-v1.json examples/secrets_arrangement.json
+      - name: Negative - an access word outside the vocabulary must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-access-word.json; then
+            echo "bad-access-word.json unexpectedly validated" >&2
+            exit 1
+          fi
+      - name: Negative - a reserved zone name must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-reserved-zone.json; then
+            echo "bad-reserved-zone.json unexpectedly validated" >&2
+            exit 1
+          fi
+      - name: Negative - an unknown identity class must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-unknown-class.json; then
+            echo "bad-unknown-class.json unexpectedly validated" >&2
+            exit 1
+          fi
+      - name: Negative - an extra grant path segment must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-extra-segment.json; then
+            echo "bad-extra-segment.json unexpectedly validated" >&2
+            exit 1
+          fi
+      - name: Negative - an unknown admin scope must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-admin-scope.json; then
+            echo "bad-admin-scope.json unexpectedly validated" >&2
+            exit 1
+          fi
+      - name: Negative - an unknown capability must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-capability.json; then
+            echo "bad-capability.json unexpectedly validated" >&2
+            exit 1
+          fi
+      - name: Negative - a missing identity class must fail the secrets arrangement schema
+        run: |
+          if check-jsonschema --schemafile schemas/secrets-arrangement-v1.json tests/secrets_arrangement/fixtures/bad-missing-class.json; then
+            echo "bad-missing-class.json unexpectedly validated" >&2
+            exit 1
+          fi
       - name: Negative - a dense model with concurrency above 1 must fail the schema
         run: |
           if check-jsonschema --schemafile schemas/model-roles-v1.json tests/llm_roles/bad-dense-concurrency.json; then

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "description": "Invalid capability value.",
+  "zones": [{ "name": "example-zone", "description": "Example KV zone." }],
+  "services": [],
+  "identities": { "example-identity": { "class": "everyday", "login": "approle" } },
+  "grants": [{ "identity": "example-identity", "path": "example-zone/example-svc/example-instance/ro", "capabilities": ["sudo"] }],
+  "raw_grants": []
+}
